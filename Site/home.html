@@ -4,30 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bloom - Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+    <div class="popup-overlay" id="popupOverlay">
+        <div id="createPostPopup" class="popup-box" style="display: none;">
+            <h1>Create Post</h1>
+            <select style="width: 100%;" id="communitySelect">
+                <option id="communitySelect" value="">Select Community</option>
+            </select>
+            <input style="width: 100%;" type="text" id="postTitle" placeholder="Post Title">
+            <textarea style="width: 100%;" id="postContent" placeholder="Post Content"></textarea>
+            <button style="width: 100%; margin: 10px 0;" id="submitPostButton">Submit Post</button>
+            <button style="width: 100%;" id="closePopupButton">Close</button>
+        </div>
+    </div>
     <div class="topbar">
         <h1 class="topbar-logo">Bloom</h1>
         <nav>
-            <button>My Communities</button>
-            <button>Home</button>
-            <button class="activity-button">Activity</button> <!-- This Button Is Only Visible On Mobile Devices -->
-            <button>Profile</button>
+            <button onclick="window.location.href='communities.html'">My Communities</button>
+            <button onclick="window.location.href='home.html'">Home</button>
+            <button class="activity-button" onclick="window.location.href='activity.html'">Activity</button> <!-- This Button Is Only Visible On Mobile Devices -->
+            <button onclick="window.location.href='profile.html'">Profile</button>
         </nav>
     </div>
     <div class="main-layout">
         <div class="sidebar-profile">
             <h1>Me</h1>
-            <div class="posts-container">
-                <div class="post">
-                    <h2>Post Title</h2>
-                    <p>Post content goes here...</p>
-                </div>
-            </div>
+            <p id="username-label" style="font-style: italic; color: grey; text-align: center;">Loading Username</p>
+            <button id="createPostButton" style="margin-top: 10px;">Create Post</button>
+            <div class="posts-container" id="posts-container"></div>
         </div>
         <div class="feed-updates">
             <h1>Updates</h1>
+            <div id="feed"></div>
         </div>
         <div class="info-container">
             <h1>Activity</h1>
@@ -36,4 +46,5 @@
         </div>
     </div>
 </body>
+<script type="module" src="../js/home.js"></script>
 </html>
