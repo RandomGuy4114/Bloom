@@ -1,10 +1,34 @@
 import { supabase } from './supabase.js';
+import {
+  createPostCard,
+  formatDateTime,
+  getCommunityNameFromID,
+  getCurrentUserOrRedirect,
+  getUserProfile,
+  renderEmptyState,
+} from "./main.js";
 
-const { data: { user }, error } = await supabase.auth.getUser();
+const user = await getCurrentUserOrRedirect();
+
+if (!user) {
+    throw new Error('Unable to load communities without a logged-in user.');
+}
 
 // DOM elements
+const usernameLabel = document.getElementById('username-label');
 const postsContainer = document.getElementById('communities-container');
 const myCommunitiesContainer = document.getElementById('my-communities-container');
+
+async function showCurrentUser() {
+    if (!usernameLabel) {
+        return;
+    }
+
+    const profile = await getUserProfile(user.id);
+    usernameLabel.textContent = profile?.username || user.email || 'Logged in user';
+}
+
+showCurrentUser();
 
 // Fetch communities from Supabase
 async function fetchCommunities() {
@@ -37,15 +61,20 @@ async function fetchMyCommunities() {
 // Display communities in the DOM
 function displayCommunities(communities) {
     postsContainer.innerHTML = ''; // Clear existing content
-
+    
     communities.forEach(community => {
+        if (community.owner === user.id) {
+            return;
+        } else if (community.members && community.members.includes(user.id)) {
+            return;
+        }
         const communityElement = document.createElement('div');
         communityElement.classList.add('community');
 
         communityElement.innerHTML = `
             <h2>${community.name}</h2>
             <p>${community.description}</p>
-            <p>Members: ${community.members.length || 0}</p>
+            <p>Members: ${community.members?.length || 0}</p>
             <div class="com-buttons">
                 <button style="padding: 10px; margin: 5px;">View Community</button>
                 <button style="padding: 10px; margin: 5px;">Join Community</button>
@@ -66,7 +95,7 @@ function displayMyCommunities(communities) {
         communityElement.innerHTML = `
             <h2>${community.name}</h2>
             <p>${community.description}</p>
-            <p>Members: ${community.members.length || 0}</p>
+            <p>Members: ${community.members?.length || 0}</p>
             <div class="com-buttons">
                 <button style="padding: 10px; margin: 5px;">View Community</button>
                 <button style="padding: 10px; margin: 5px;">Leave Community</button>
@@ -77,5 +106,10 @@ function displayMyCommunities(communities) {
     });
 }
 
+
 fetchMyCommunities();
 fetchCommunities();
+
+document.getElementById("createCommunityButton").addEventListener("click", () => {
+    
+});

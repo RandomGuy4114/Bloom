@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloom - Dashboard</title>
+    <title>Bloom - Messages</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="app-page">
     <div class="topbar">
         <h1 class="topbar-logo">Bloom <p id="verText">ALPHA</p></h1>
         <nav style="display: flex; align-items: center;">
-            <p id="username-label" style="margin: 10px;">Communities</p>
+            <p id="username-label" style="margin: 10px;">Messages</p>
             <div class="pfp-frame"></div>
         </nav>
         <div class="topbar-actions" aria-label="Mobile navigation">
@@ -37,23 +37,42 @@
         <button class="sidebarButton" onclick="window.location.href='settings.html'">Settings</button>
     </div>
     <div class="rightBar">
-        <p style="margin: 10px;">Community Hub</p>
+        <p style="margin: 10px;">Inbox Status</p>
+        <div class="roadmap-list">
+            <div class="roadmap-item">
+                <strong>Direct messages</strong>
+                <p>Threaded chat and replies will live here next.</p>
+            </div>
+            <div class="roadmap-item">
+                <strong>Requests</strong>
+                <p>Add message requests and friend approvals after inbox basics.</p>
+            </div>
+        </div>
     </div>
     <div class="main-layout">
-        <div class="feed-container">
-            <div class="communities-profile">
-                <h1 style="text-align: center;">My Communities</h1>
-                <input type="text" id="searchInput" placeholder="Search My Communities" style="width: 90%; margin-bottom: 10px;">
-                <button id="createCommunityButton">Create Community</button>
-                <div id="my-communities-container" class="posts-container"></div>
+        <div class="messages-layout">
+            <div class="messages-thread">
+                <h2 style="margin-top: 0;">Conversations</h2>
+                <p style="margin-bottom: 0; color: #666;">This page is ready for your first inbox data source.</p>
+                <div class="messages-list">
+                    <div class="message-thread">
+                        <strong>Bloom Team</strong>
+                        <p>Set up the first welcome thread and system messages.</p>
+                    </div>
+                    <div class="message-thread">
+                        <strong>Community Mods</strong>
+                        <p>Connect moderation tools once communities are live.</p>
+                    </div>
+                </div>
             </div>
-            <div class="feed-updates">
-                <h1>Communities</h1>
-                <input type="text" id="searchInput" placeholder="Search Communities" style="width: 90%; margin-bottom: 10px;">
-                <div class="posts-container" id="communities-container"></div>
+            <div class="message-preview">
+                <h2 style="margin-top: 0;">Conversation Preview</h2>
+                <div class="post">
+                    <h3 style="margin: 0 0 8px 0;">No thread selected</h3>
+                    <p style="margin: 0; color: #333; line-height: 1.4;">Pick a conversation to show message history, composer controls, and attachment actions here.</p>
+                </div>
             </div>
         </div>
     </div>
 </body>
-<script type="module" src="../js/communities.js"></script>
 </html>

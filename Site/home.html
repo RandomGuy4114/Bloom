@@ -6,43 +6,57 @@
     <title>Bloom - Dashboard</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-    <div class="popup-overlay" id="popupOverlay">
-        <div id="createPostPopup" class="popup-box" style="display: none;">
-            <h1>Create Post</h1>
-            <select style="width: 100%;" id="communitySelect">
-                <option id="communitySelect" value="">Select Community</option>
-            </select>
-            <input style="width: 100%;" type="text" id="postTitle" placeholder="Post Title">
-            <textarea style="width: 100%;" id="postContent" placeholder="Post Content"></textarea>
-            <button style="width: 100%; margin: 10px 0;" id="submitPostButton">Submit Post</button>
-            <button style="width: 100%;" id="closePopupButton">Close</button>
-        </div>
-    </div>
+<body class="home-page">
     <div class="topbar">
-        <h1 class="topbar-logo">Bloom</h1>
-        <nav>
-            <button onclick="window.location.href='communities.html'">My Communities</button>
-            <button onclick="window.location.href='home.html'">Home</button>
-            <button class="activity-button" onclick="window.location.href='activity.html'">Activity</button> <!-- This Button Is Only Visible On Mobile Devices -->
-            <button onclick="window.location.href='profile.html'">Profile</button>
+        <h1 class="topbar-logo">Bloom <p id="verText">ALPHA</p></h1>
+        <nav style="display: flex; align-items: center;">
+            <p id="username-label" style="margin: 10px;">Loading...</p>
+            <div class="pfp-frame"></div>
         </nav>
+        <div class="topbar-actions" aria-label="Mobile navigation">
+            <div class="topbar-action-row">
+                <button onclick="window.location.href='home.html'">Home</button>
+                <button onclick="window.location.href='profile.html'">Profile</button>
+                <button onclick="window.location.href='activity.html'">Activity</button>
+            </div>
+            <div class="topbar-action-row">
+                <button onclick="window.location.href='messages.html'">Messages</button>
+                <button onclick="window.location.href='communities.html'">Communities</button>
+                <button onclick="window.location.href='settings.html'">Settings</button>
+            </div>
+        </div>
     </div>
+    <div class="sidebar">
+        <button onclick="window.location.href='home.html'" class="sidebarButton">Home</button>
+        <button onclick="window.location.href='profile.html'" class="sidebarButton">Profile</button>
+        <button onclick="window.location.href='activity.html'" class="sidebarButton">Activity</button>
+        <button class="sidebarButton" onclick="window.location.href='messages.html'">Messages</button>
+        <div class="divider"></div>
+        <button class="sidebarButton" onclick="window.location.href='communities.html'">Communities</button>
+        <!-- Most Used Communities Will Be Listed Here Too -->
+        <div class="divider"></div>
+        <button class="sidebarButton" onclick="window.location.href='settings.html'">Settings</button>
+    </div>
+    <div class="rightBar">
+        <p style="margin: 10px;">Upcoming Events</p>
+    </div>
+
     <div class="main-layout">
-        <div class="sidebar-profile">
-            <h1>Me</h1>
-            <p id="username-label" style="font-style: italic; color: grey; text-align: center;">Loading Username</p>
-            <button id="createPostButton" style="margin-top: 10px;">Create Post</button>
-            <div class="posts-container" id="posts-container"></div>
-        </div>
-        <div class="feed-updates">
-            <h1>Updates</h1>
-            <div id="feed"></div>
-        </div>
-        <div class="info-container">
-            <h1>Activity</h1>
-            <p>0 New Messages</p>
-            <p>0 New Events</p>
+        <div class="feed-container">
+            
+            <div class="sidebar-profile">
+                <div class="CenterLayout">
+                    <div class="pfp-frame"></div>
+                    <select id="communitySelect" class="composer-select"></select>
+                    <input type="text" id="titleInput" placeholder="Post Title">
+                    <input type="text" class="TypeInput" id="postInput" placeholder="Post Content">
+                    <button id="createPostButton">Post</button>
+                </div>
+            </div>
+            <div class="feed-updates">
+                <div id="feed"></div>
+
+            </div>
         </div>
     </div>
 </body>
