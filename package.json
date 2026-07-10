@@ -1,0 +1,23 @@
+{
+  "name": "bloom",
+  "version": "1.0.0",
+  "description": "Bloom is an open-source, location-based social platform designed to bring communities together. By locking communities, events, and interactions to a specific geographic location, Bloom makes it effortless to connect with the people near you, whether it's an apartment building, school campus, or neighborhood.",
+  "homepage": "https://github.com/RandomGuy4114/Bloom#readme",
+  "bugs": {
+    "url": "https://github.com/RandomGuy4114/Bloom/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RandomGuy4114/Bloom.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "supabase": "^2.109.1"
+  }
+}

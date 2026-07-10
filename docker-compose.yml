@@ -1,0 +1,8 @@
+services:
+  bloom:
+    build: .
+    image: bloom:latest
+    container_name: bloom
+    ports:
+      - "${BLOOM_PORT:-8080}:80"
+    restart: unless-stopped
