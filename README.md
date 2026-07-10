@@ -52,3 +52,59 @@ I have big plans for Bloom, so the future for this service is very bright. The l
 
 ## Contributing
 Bloom is completely **Open Source**. Contributions, bug reports, and feature requests are all welcome. Feel free to check the issues page or open a pull request.
+
+---
+
+## Running Locally with Docker
+
+The instructions above describe the original setup, where you point Bloom at a Supabase project hosted in the cloud. This section covers an alternative that runs **everything on your own machine** — the static frontend *and* a full local Supabase backend — inside Docker. After a one-time image download it works completely offline.
+
+### What you'll need
+* [Docker](https://www.docker.com/) (Docker Desktop, or the engine plus the Compose plugin) — installed and running.
+* [Node.js](https://nodejs.org/) and npm, used only to install the Supabase CLI.
+
+### Quick start
+From the project root:
+
+```bash
+npm install      # installs the Supabase CLI (a devDependency)
+./launch.sh      # starts the backend + frontend and opens your browser
+```
+
+`launch.sh` will:
+1. Start the local Supabase stack (`supabase start`) and apply the database schema.
+2. Build and start the frontend in an nginx container.
+3. Wait for the site to respond, then open it in your browser.
+
+> **Note:** The very first run downloads the Docker images (the frontend image plus the Supabase services), so it needs an internet connection once. Every run after that is fully offline.
+
+### Local URLs
+Once it's up:
+
+| Service | URL | Purpose |
+| --- | --- | --- |
+| Site | http://localhost:8080/Site/index.html | The Bloom frontend |
+| Supabase Studio | http://127.0.0.1:54323 | Browse and edit the local database |
+| Email inbox | http://127.0.0.1:54324 | Sign-up / login emails land here (nothing is sent for real) |
+| Supabase API | http://127.0.0.1:54321 | The local backend endpoint |
+
+### Useful commands
+
+```bash
+BLOOM_PORT=9000 ./launch.sh   # serve the frontend on a different port
+./launch.sh --frontend-only   # skip the local backend and use the hosted one
+
+docker compose down           # stop the frontend
+npx supabase stop             # stop the backend
+npx supabase db reset         # wipe the local database and re-apply supabase/schema.sql
+```
+
+### How the backend is chosen
+You no longer need to hand-create `js/supabase.js` for local development — it now ships in the repo and picks its backend automatically:
+
+* Opened on **localhost** → talks to the **local** Supabase stack (`http://127.0.0.1:54321`).
+* Opened **anywhere else** → talks to the **hosted** Supabase project.
+
+To use your own hosted project, replace the URL and anon key in the `hosted` section of `js/supabase.js`. The schema lives in `supabase/migrations/` (applied automatically to the local database) and remains available at `supabase/schema.sql` for pasting into a hosted project's SQL editor.
+
+> The Supabase JS SDK is vendored at `js/vendor/supabase-umd.js` and loaded by each page, so the browser doesn't fetch it from a CDN — this is what makes offline use possible.
