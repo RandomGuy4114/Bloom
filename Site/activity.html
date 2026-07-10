@@ -44,45 +44,37 @@
                 <p style="text-align: center; color: grey;">Here you can view your recent activity and nearby activity.</p>
                 <div class="divider"></div>
                 <div class="activity-search">
-                    <input type="text" id="activitySearchInput" placeholder="Search activity..." style="padding: 10px; width: 90%; border-radius: 5px; border: 1px solid #ccc; height: 40px;">
+                    <input type="search" id="activitySearchInput" aria-label="Search activity" style="padding: 10px; width: 90%; border-radius: 5px; border: 1px solid #ccc; height: 40px;">
                 </div>
                 <div class="divider"></div>
                 <div class="activity-filters">
-                    <button class="filter-button" onclick="filterActivity('all')">All</button>
-                    <button class="filter-button" onclick="filterActivity('my')">My Activity</button>
-                    <button class="filter-button" onclick="filterActivity('nearby')">Nearby</button>
+                    <button type="button" class="filter-button is-active" data-activity-filter="all" aria-pressed="true">All</button>
+                    <button type="button" class="filter-button" data-activity-filter="my" aria-pressed="false">My Activity</button>
+                    <button type="button" class="filter-button" data-activity-filter="nearby" aria-pressed="false">Nearby</button>
                 </div>
                 <div class="divider"></div>
-                <div id="activityFeedContainer" class="posts-container">
-                    <div class="activity-post">
-                        <h2>Post Title</h2>
-                        <p>Post content goes here...</p>
-                    </div>
-                </div>
+                <div id="activityFeedContainer" class="posts-container"></div>
             </div>
             <div class="eventsFeedContainer">
                     <h1>Events</h1>
                     <p style="text-align: center; color: grey;">Here you can view upcoming events in your area.</p>
                     <div class="divider"></div>
                     <div class="event-search">
-                        <input type="text" id="eventSearchInput" placeholder="Search events..." style="padding: 10px; width: 90%; border-radius: 5px; border: 1px solid #ccc; height: 40px;">
+                        <input type="search" id="eventSearchInput" aria-label="Search events" style="padding: 10px; width: 90%; border-radius: 5px; border: 1px solid #ccc; height: 40px;">
                     </div>
                     <div class="event-filters" style="margin-top: 10px; text-align: center;">
-                        <button class="filter-button" onclick="filterEvents('all')">All</button>
-                        <button class="filter-button" onclick="filterEvents('my')">My Events</button>
-                        <button class="filter-button" onclick="filterEvents('nearby')">Nearby</button>
-                        <button class="search-button" onclick="searchEvents(document.getElementById('eventSearchInput').value)">Search</button>
+                        <button type="button" class="filter-button is-active" data-event-filter="all" aria-pressed="true">All</button>
+                        <button type="button" class="filter-button" data-event-filter="my" aria-pressed="false">My Events</button>
+                        <button type="button" class="filter-button" data-event-filter="nearby" aria-pressed="false">Nearby</button>
+                        <button type="button" class="search-button" id="eventSearchButton">Search</button>
                     </div>
                     <div class="divider"></div>
-                    <div class="post">
-                        <h2 style="text-align: center;">Event Title</h2>
-                        <p style="text-align: center;">Event details go here...</p>
-                        <p style="text-align: center; color: grey;">Event Date: (placeholder)</p>
-                        <button style="display: block; margin: 0 auto;" onclick="window.location.href='eventDetails.html'">View Event</button>
-                    </div>
+                    <div id="eventFeedContainer" class="posts-container"></div>
                     </div>
                 </div>
         </div>
     </div>
 </body>
+<script type="module" src="../js/i18n.js"></script>
+<script type="module" src="../js/activity.js"></script>
 </html>

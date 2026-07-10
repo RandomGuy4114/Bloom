@@ -10,13 +10,14 @@
     <div class="CenterBox">
         <h1 style="text-align: center; margin-bottom: 0;">Welcome To Bloom!</h1>
         <p style="text-align: center; margin-top: 4px; font-size: 14px; color: grey;">Please enter your details to create an account.</p>
-        <input id="username" type="text" placeholder="Username">
-        <input id="password" type="password" placeholder="Password">
-        <input id="email" type="email" placeholder="Email">
+        <input id="username" type="text" aria-label="Username">
+        <input id="password" type="password" aria-label="Password">
+        <input id="email" type="email" aria-label="Email">
         <p style="font-size: 15px; color: grey;">Already have an account? <a href="login.html">Log in</a></p>
         <p id="error-message" style="color: red; text-align: center; margin-top: 10px;"></p>
         <button id="LoginButton">Sign Up</button>
         
     </div>
+    <script type="module" src="../js/i18n.js"></script>
     <script type="module" src="../js/register.js"></script>
 </body>

@@ -40,17 +40,18 @@
     <div class="main-layout">
         <div class="feed-container">
             <div class="communities-profile" style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
-                <h1 id="comName" style="text-align: center;">Placeholder</h1>
-                <p id="comDesc" style="text-align: center; color: grey;">Placeholder</p>
+                <h1 id="comName" style="text-align: center;"></h1>
+                <p id="comDesc" style="text-align: center; color: grey;"></p>
                 <button id="joinCommunityButton">Join Community</button>
 
             </div>
             <div class="feed-updates">
-                <input type="text" id="searchPostInput" placeholder="Search Posts" style="width: 90%; margin-bottom: 10px;">
+                <input type="search" id="searchPostInput" aria-label="Search posts" style="width: 90%; margin-bottom: 10px;">
                 <div class="posts-container" id="com-posts"></div>
             </div>
         </div>
     </div>
 </body>
+<script type="module" src="../js/i18n.js"></script>
 <script type="module" src="../js/community-single.js"></script>
 </html>

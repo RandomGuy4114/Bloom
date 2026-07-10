@@ -1,66 +1,42 @@
+// Dependencies
+
 import { supabase } from "./supabase.js";
 import {
+  canUserPostToCommunity,
+  createPopupShell,
   createPostCard,
   formatDateTime,
   getCommunityNameFromID,
   getCurrentUserOrRedirect,
   getUserProfile,
-  PopupIn,
+  isPostOwner,
   renderEmptyState,
-  PopupOut,
-  saveCurrentUser
+  saveCurrentUser,
+  showCurrentUser,
+  withLoadingOverlay,
 } from "./main.js";
 
-// DOM Elements
+// Definitions
+
 const usernameLabel = document.getElementById("username-label");
 const feed = document.getElementById("feed");
 const communitySelect = document.getElementById("communitySelect");
 const titleInput = document.getElementById("titleInput");
 const postInput = document.getElementById("postInput");
 const createPostButton = document.getElementById("createPostButton");
+const postTypeButtons = [...document.querySelectorAll("[data-post-type]")];
 
-let currentUser = null;
+let currentUser;
 let joinedCommunities = [];
+let currentUserIsAdmin = false;
+let postableCommunityIds = new Set();
+let selectedPostType = "post";
 
-async function createFeedCard({ id, title, body, communityName, authorName, createdAt }) {
-  // Pass id down to ensure internal card logic can use it if needed
-  const card = await createPostCard({
-    id, 
-    title,
-    body,
-    authorName, 
-    footer: `Posted on: ${formatDateTime(createdAt)}`,
-  });
-
-  const header = document.createElement("div");
-  header.style.display = "flex";
-  header.style.alignItems = "center";
-  header.style.marginBottom = "10px";
-  header.style.gap = "10px";
-  header.style.flexWrap = "wrap";
-  header.innerHTML = `
-    <div class="pfp-frame" style="width: 30px; height: 30px;"></div>
-    <strong style="color: #618764;">${authorName}</strong>
-    <span style="color: #888; font-size: 0.85rem;">in ${communityName}</span>
-  `;
-  
-  if (authorName === "You") {
-    const manageButton = document.createElement("button");
-    manageButton.textContent = "Manage Post";
-    manageButton.style.marginLeft = "auto";
-    manageButton.addEventListener("click", () => {
-      // FIXED: id will now correctly point to post.id
-      window.location.href = `post.html?postId=${id}`; 
-    });
-    header.appendChild(manageButton);
-  }
-
-  card.insertBefore(header, card.firstChild);
-  return card;
-}
+// Components
 
 async function populateCommunitySelect(selectedCommunityId = null) {
   communitySelect.innerHTML = "";
+  postableCommunityIds = new Set();
 
   if (!joinedCommunities.length) {
     const option = document.createElement("option");
@@ -68,54 +44,88 @@ async function populateCommunitySelect(selectedCommunityId = null) {
     option.textContent = "Join a community to post";
     communitySelect.appendChild(option);
     communitySelect.disabled = true;
-    return;
+    return false;
   }
 
+  const { data: communities, error } = await supabase
+    .from("Communities")
+    .select("id, name, global")
+    .in("id", joinedCommunities);
+
+  if (error) {
+    console.error("Error loading postable communities:", error.message);
+    communitySelect.disabled = true;
+    return false;
+  }
+
+  const postableCommunities = (communities ?? []).filter((community) => (
+    !community.global || currentUserIsAdmin
+  ));
+  postableCommunityIds = new Set(postableCommunities.map((community) => community.id));
+
+  if (!postableCommunities.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Only administrators can post in global communities";
+    communitySelect.appendChild(option);
+    communitySelect.disabled = true;
+    return false;
+  }
+
+  const options = postableCommunities.map((community, index) => {
+    const option = document.createElement("option");
+    option.value = community.id;
+    option.dataset.i18nIgnore = "true";
+    option.textContent = community.name;
+    option.selected = selectedCommunityId
+      ? community.id === selectedCommunityId
+      : index === 0;
+    return option;
+  });
+
+  communitySelect.replaceChildren(...options);
   communitySelect.disabled = false;
-
-  for (const communityID of joinedCommunities) {
-    const communityName = await getCommunityNameFromID(communityID);
-    if (communityName) {
-      const option = document.createElement("option");
-      option.value = communityID;
-      option.textContent = communityName;
-      if (selectedCommunityId ? communityID === selectedCommunityId : communityID === joinedCommunities[0]) {
-        option.selected = true;
-      }
-      communitySelect.appendChild(option);
-    }
-  }
+  return true;
 }
 
 async function renderFeedPosts(posts) {
-  feed.innerHTML = "";
-
-  if (!posts || posts.length === 0) {
+  if (!posts?.length) {
     renderEmptyState(feed, "No posts yet. Join a community or write the first update.");
     return;
   }
 
-  for (const post of posts) {
-    const communityName = await getCommunityNameFromID(post.community) || "Unknown Community";
-    
-    // FIXED: Added id: post.id here so createFeedCard actually receives it
-    const card = await createFeedCard({
-      id: post.id, 
-      title: post.title,
-      body: post.body,
-      communityName,
-      authorName: post.user_id === currentUser.id ? "You" : "Community Member",
-      createdAt: post.created_at,
-    });
-    feed.appendChild(card);
-  }
+  const postDetails = await Promise.all(posts.map(async (post) => {
+    const [communityName, profile] = await Promise.all([
+      getCommunityNameFromID(post.community),
+      isPostOwner(post, currentUser.id) ? null : getUserProfile(post.user_id ?? post.author),
+    ]);
+    return {
+      communityName: communityName || "Unknown Community",
+      authorName: isPostOwner(post, currentUser.id) ? "You" : profile?.username || "Unknown",
+    };
+  }));
+
+  const cards = posts.map((post, index) => createPostCard({
+    postId: post.id,
+    postType: post.post_type,
+    title: post.title,
+    body: post.body,
+    footer: `Posted on: ${formatDateTime(post.created_at)}`,
+    authorName: postDetails[index].authorName,
+    communityName: postDetails[index].communityName,
+    manageHref: isPostOwner(post, currentUser.id) ? `post.html?postId=${post.id}` : null,
+  }));
+  feed.replaceChildren(...cards);
 }
 
-async function getJoinedCommunities() {
-  const { data: communities, error } = await supabase
+// Data
+
+async function loadJoinedCommunities() {
+  const { data: profile, error } = await supabase
     .from("profiles")
-    .select("joined_communities")
-    .eq("id", currentUser.id);
+    .select("joined_communities, admin")
+    .eq("id", currentUser.id)
+    .single();
 
   if (error) {
     console.error("Error fetching joined communities:", error.message);
@@ -123,12 +133,12 @@ async function getJoinedCommunities() {
     return;
   }
 
-  joinedCommunities = communities?.[0]?.joined_communities ?? [];
+  joinedCommunities = profile?.joined_communities ?? [];
+  currentUserIsAdmin = profile?.admin === true;
 
   if (!joinedCommunities.length) {
-    console.log("No joined communities found.");
-    postInput.placeholder = "Join a community to start posting";
     postInput.disabled = true;
+    titleInput.disabled = true;
     createPostButton.disabled = true;
     communitySelect.disabled = true;
     await populateCommunitySelect();
@@ -136,10 +146,10 @@ async function getJoinedCommunities() {
     return;
   }
 
-  postInput.disabled = false;
-  createPostButton.disabled = false;
-  postInput.placeholder = "Post Content";
-  await populateCommunitySelect(communitySelect.value);
+  const canCreatePost = await populateCommunitySelect(communitySelect.value);
+  postInput.disabled = !canCreatePost;
+  titleInput.disabled = !canCreatePost;
+  createPostButton.disabled = !canCreatePost;
 
   const { data: posts, error: postsError } = await supabase
     .from("Posts")
@@ -153,11 +163,10 @@ async function getJoinedCommunities() {
     return;
   }
 
-  console.log("Feed posts fetched successfully, yay!");
   await renderFeedPosts(posts);
 }
 
-async function post() {
+async function createPost() {
   const title = titleInput.value.trim();
   const body = postInput.value.trim();
   const selectedCommunity = communitySelect.value;
@@ -166,111 +175,54 @@ async function post() {
     alert("Please add a post title before posting.");
     return;
   }
-
   if (!body) {
     alert("Please write something before posting.");
     return;
   }
-
   if (!joinedCommunities.length) {
     alert("Join a community before posting.");
     return;
   }
-
   if (!selectedCommunity) {
     alert("Please choose a community to post to.");
     return;
   }
-
-  const { data, error } = await supabase
-    .from("Posts")
-    .insert([{ title, body, user_id: currentUser.id, community: selectedCommunity }]);
-
-  if (error) {
-    console.error("Error creating post:", error.message);
-    alert("Error creating post. Please try again.");
-  } else {
-    console.log("Post created successfully:", data);
-    titleInput.value = "";
-    postInput.value = "";
-    await getJoinedCommunities();
-  }
-}
-
-createPostButton.addEventListener("click", post);
-
-postInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    post();
-  }
-});
-
-async function initializeHomePage() {
-  currentUser = await getCurrentUserOrRedirect();
-
-  if (!currentUser) {
+  if (!postableCommunityIds.has(selectedCommunity)) {
+    alert("Only administrators can create posts in global communities.");
     return;
   }
 
-  const profile = await getUserProfile(currentUser.id);
-  if (profile?.username) {
-    usernameLabel.textContent = profile.username;
-  }
-
-  await getJoinedCommunities();
-}
-
-function createPopupShell(title, content) {
-  const overlay = document.createElement("div");
-  overlay.className = "popup-overlay";
-  overlay.innerHTML = `
-    <div class="popup-card" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
-      <div class="popup-header">
-        <h2 id="popupTitle">${title}</h2>
-        <button class="popup-close" type="button" aria-label="Close dialog">×</button>
-      </div>
-      <div class="popup-body"></div>
-    </div>
-  `;
-
-  const card = overlay.querySelector(".popup-card");
-  const body = overlay.querySelector(".popup-body");
-  body.appendChild(content);
-
-  const closeButton = overlay.querySelector(".popup-close");
-  const closePopup = () => {
-    overlay.classList.remove("is-visible");
-    PopupOut(card, { duration: 0.2 });
-    window.setTimeout(() => {
-      if (overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
-    }, 200);
-    document.removeEventListener("keydown", handleEscape);
-  };
-
-  function handleEscape(event) {
-    if (event.key === "Escape") {
-      closePopup();
+  await withLoadingOverlay(async () => {
+    const { allowed, error: accessError } = await canUserPostToCommunity(currentUser.id, selectedCommunity);
+    if (accessError) {
+      alert("Unable to verify posting access. Please try again.");
+      return;
     }
-  }
-
-  overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) {
-      closePopup();
+    if (!allowed) {
+      alert("Only administrators can create posts in global communities.");
+      return;
     }
-  });
 
-  closeButton.addEventListener("click", closePopup);
-  document.addEventListener("keydown", handleEscape);
-  document.body.appendChild(overlay);
-  requestAnimationFrame(() => {
-    overlay.classList.add("is-visible");
-    PopupIn(card, { duration: 0.2 });
-  });
+    const { error } = await supabase
+      .from("Posts")
+      .insert([{
+        title,
+        body,
+        user_id: currentUser.id,
+        community: selectedCommunity,
+        post_type: selectedPostType,
+      }]);
 
-  return { overlay, closePopup };
+    if (error) {
+      console.error("Error creating post:", error.message);
+      alert("Error creating post. Please try again.");
+      return;
+    }
+
+    titleInput.value = "";
+    postInput.value = "";
+    await loadJoinedCommunities();
+  }, "Publishing your post...");
 }
 
 async function checkFirstTimeUser() {
@@ -285,58 +237,87 @@ async function checkFirstTimeUser() {
     return;
   }
 
-  if (profile?.FirstTimeOpen) {
-    const content = document.createElement("div");
-    content.innerHTML = `
-      <p>Welcome to Bloom! Here's a quick guide to get you started:</p>
-      <ul>
-        <li>Join communities that interest you.</li>
-        <li>Create posts and share your thoughts.</li>
-        <li>Engage with other members by commenting and liking posts.</li>
-      </ul>
-      <p>Enjoy your time here!</p>
-    `;
+  if (!profile?.FirstTimeOpen) {
+    return;
+  }
 
-    const { closePopup } = createPopupShell("Welcome to Bloom!", content);
+  const content = document.createElement("div");
+  content.innerHTML = `
+    <p>Welcome to Bloom! Here's a quick guide to get you started:</p>
+    <ul>
+      <li>Join communities that interest you.</li>
+      <li>Create posts and share your thoughts.</li>
+      <li>Engage with other members by commenting and liking posts.</li>
+    </ul>
+    <p>Enjoy your time here!</p>
+  `;
+  createPopupShell("Welcome to Bloom!", content);
 
-    // Update the FirstTimeOpen flag in the database
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ FirstTimeOpen: false })
-      .eq("id", currentUser.id);
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ FirstTimeOpen: false })
+    .eq("id", currentUser.id);
 
-    if (updateError) {
-      console.error("Error updating FirstTimeOpen flag:", updateError.message);
-    }
+  if (updateError) {
+    console.error("Error updating FirstTimeOpen flag:", updateError.message);
   }
 }
 
-saveCurrentUser();
+// Events
 
+postTypeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    selectedPostType = button.dataset.postType;
+    postTypeButtons.forEach((option) => {
+      const isSelected = option === button;
+      option.classList.toggle("is-selected", isSelected);
+      option.setAttribute("aria-pressed", String(isSelected));
+    });
+  });
+});
 
-await initializeHomePage();
+createPostButton?.addEventListener("click", createPost);
+postInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    createPost();
+  }
+});
 
-checkFirstTimeUser()
+// Initialization
+
+await withLoadingOverlay(async () => {
+  currentUser = await getCurrentUserOrRedirect();
+  if (!currentUser) {
+    return;
+  }
+
+  await Promise.all([
+    saveCurrentUser(currentUser),
+    showCurrentUser(currentUser, usernameLabel),
+    loadJoinedCommunities(),
+    checkFirstTimeUser(),
+  ]);
+}, "Loading your feed...");
+
+// Console
 
 const logo = [
-"  ____  _     ___   ___  __  __ ",
-" | __ )| |   / _ \\ / _ \\|  \\/  |",
-" |  _ \\| |  | | | | | | | |\\/| |",
-" | |_) | |__| |_| | |_| | |  | |",
-" |____/|_____\\___/ \\___/|_|  |_|"
-].join('\n');
+  "  ____  _     ___   ___  __  __ ",
+  " | __ )| |   / _ \\ / _ \\|  \\/  |",
+  " |  _ \\| |  | | | | | | | |\\/| |",
+  " | |_) | |__| |_| | |_| | |  | |",
+  " |____/|_____\\___/ \\___/|_|  |_|",
+].join("\n");
 
 console.log(logo);
-
-// Styled Text Blocks
 console.log(
   "%c Welcome To The Bloom Console! %c ALPHA ",
   "background: #2563eb; color: #fff; font-weight: bold; padding: 3px 8px; border-radius: 3px 0 0 3px;",
-  "background: #1e293b; color: #94a3b8; padding: 3px 8px; border-radius: 0 3px 3px 0;"
+  "background: #1e293b; color: #94a3b8; padding: 3px 8px; border-radius: 0 3px 3px 0;",
 );
-
 console.log(
   "%c  ATTENTION  %c DO NOT share any sensitive information here.",
   "background: #eab308; color: #000; font-weight: bold; padding: 2px 5px; border-radius: 3px;",
-  "color: #f87171; font-weight: bold;"
+  "color: #f87171; font-weight: bold;",
 );

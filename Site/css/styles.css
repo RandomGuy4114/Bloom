@@ -379,6 +379,66 @@ body[data-theme="dark"] .message-preview {
     text-align: left;
 }
 
+.post-type-selector {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+    margin: 10px 0;
+    padding: 5px;
+    box-sizing: border-box;
+    border: 1px solid #d8dfd9;
+    border-radius: 10px;
+    background: white;
+}
+
+.post-type-option {
+    padding: 9px 8px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #33443a;
+    cursor: pointer;
+}
+
+.post-type-option.is-selected {
+    background: #9CB080;
+    color: #ffffff;
+}
+
+.post-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    margin: 0 0 9px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.post-type-badge--post {
+    background: #e7ece8;
+    color: #9CB080;
+}
+
+.post-type-badge--activity {
+    background: #e0efff;
+    color: #245f91;
+}
+
+.post-type-badge--event {
+    background: #f7e7ff;
+    color: #76428e;
+}
+
+.filter-button.is-active {
+    background-color: #2B5748;
+    color: #ffffff;
+}
+
 .activities-profile {
     background-color: #ffffff;
     padding: 20px;

@@ -41,17 +41,18 @@
         <div class="feed-container">
             <div class="communities-profile">
                 <h1 style="text-align: center;">My Communities</h1>
-                <input type="text" id="searchInput" placeholder="Search My Communities" style="width: 90%; margin-bottom: 10px;">
+                <input type="search" id="myCommunitiesSearchInput" aria-label="Search my communities" style="width: 90%; margin-bottom: 10px;">
                 <button id="createCommunityButton">Create Community</button>
                 <div id="my-communities-container" class="posts-container"></div>
             </div>
             <div class="feed-updates">
                 <h1>Communities</h1>
-                <input type="text" id="searchInput" placeholder="Search Communities" style="width: 90%; margin-bottom: 10px;">
+                <input type="search" id="communitiesSearchInput" aria-label="Search communities" style="width: 90%; margin-bottom: 10px;">
                 <div class="posts-container" id="communities-container"></div>
             </div>
         </div>
     </div>
 </body>
+<script type="module" src="../js/i18n.js"></script>
 <script type="module" src="../js/communities.js"></script>
 </html>

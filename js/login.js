@@ -1,25 +1,34 @@
-import { supabase } from "./supabase.js";
+// Dependencies
 
-document.getElementById("LoginButton").addEventListener("click", async () => {
-  const email = document.querySelector('input[placeholder="Email"]').value;
-  const password = document.querySelector('input[placeholder="Password"]').value;
-  const errorMessageElement = document.getElementById("error-message");
+import { supabase } from "./supabase.js";
+import { withLoadingOverlay } from "./main.js";
+
+// Definitions
+
+const loginButton = document.getElementById("LoginButton");
+const emailInput = document.getElementById("EmailInput");
+const passwordInput = document.getElementById("PasswordInput");
+const errorMessage = document.getElementById("error-message");
+
+// Events
+
+loginButton?.addEventListener("click", async () => {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+
   if (!email || !password) {
-    errorMessageElement.textContent = "Please fill in all fields.";
+    errorMessage.textContent = "Please fill in all fields.";
     return;
   }
-  // Sign in the user with Supabase
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password
-  });
 
-  if (error) {
-    console.log("Error signing in:", error.message);
-    errorMessageElement.textContent = "Error signing in. Please check your credentials and try again.";
-  } else {
-    console.log("User signed in successfully:", data);
-    // Optionally, you can redirect the user to a different page after successful login
-    window.location.href = "home.html"; // Redirect to home page
-  }
+  await withLoadingOverlay(async () => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      console.error("Error signing in:", error.message);
+      errorMessage.textContent = "Error signing in. Please check your credentials and try again.";
+      return;
+    }
+
+    window.location.href = "home.html";
+  }, "Signing in...");
 });

@@ -10,7 +10,7 @@
     <div class="topbar">
         <h1 class="topbar-logo">Bloom <p id="verText">ALPHA</p></h1>
         <nav style="display: flex; align-items: center;">
-            <p id="username-label" style="margin: 10px;">Loading...</p>
+            <p id="username-label" style="margin: 10px;"></p>
             <div class="pfp-frame"></div>
         </nav>
         <div class="topbar-actions" aria-label="Mobile navigation">
@@ -31,7 +31,6 @@
         <button onclick="window.location.href='activity.html'" class="sidebarButton">Activity</button>
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='communities.html'">Communities</button>
-        <!-- Most Used Communities Will Be Listed Here Too -->
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='settings.html'">Settings</button>
     </div>
@@ -46,8 +45,13 @@
                 <div class="CenterLayout">
                     <div class="pfp-frame"></div>
                     <select id="communitySelect" class="composer-select"></select>
-                    <input type="text" id="titleInput" placeholder="Post Title">
-                    <input type="text" class="TypeInput" id="postInput" placeholder="Post Content">
+                    <div class="post-type-selector" role="radiogroup" aria-label="Post type">
+                        <button type="button" class="post-type-option is-selected" data-post-type="post" data-i18n-key="postType.post" data-i18n-ignore aria-pressed="true">Post</button>
+                        <button type="button" class="post-type-option" data-post-type="activity" data-i18n-key="postType.activity" data-i18n-ignore aria-pressed="false">Activity</button>
+                        <button type="button" class="post-type-option" data-post-type="event" data-i18n-key="postType.event" data-i18n-ignore aria-pressed="false">Event</button>
+                    </div>
+                    <input type="text" id="titleInput" aria-label="Post title" placeholder="Title">
+                    <input type="text" class="TypeInput" id="postInput" aria-label="Post content" placeholder="What's on your mind?">
                     <button id="createPostButton">Post</button>
                 </div>
             </div>
@@ -58,5 +62,6 @@
         </div>
     </div>
 </body>
+<script type="module" src="../js/i18n.js"></script>
 <script type="module" src="../js/home.js"></script>
 </html>
