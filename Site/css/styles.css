@@ -192,6 +192,32 @@ label {
     border-radius: 4px;
 }
 
+/* Apply the layout structure only to the parent form element */
+#create-community-form {
+    display: flex;
+    flex-direction: column; /* Stack the elements vertically */
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 15px; /* Adds space between form elements cleanly */
+    box-sizing: border-box;
+}
+
+/* Form controls inherit standard element properties safely */
+#communityName, 
+#communityDescription, 
+#submitCommunityButton {
+    width: 100%;
+    max-width: 400px; /* Optional: Prevents forms from stretching too wide on desktop */
+    text-align: left; /* Keeps typed text natural inside inputs */
+    box-sizing: border-box;
+}
+
+/* Center text explicitly for the button */
+#submitCommunityButton {
+    text-align: center;
+    cursor: pointer;
+}
 .pfp-frame {
     width: 40px;
     height: 40px;
@@ -217,6 +243,8 @@ label {
 
 .topbar {
     position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 60px;
     background-color: #ffffff;
@@ -228,6 +256,7 @@ label {
     box-sizing: border-box;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     border: 0.1px solid #e0e0e0;
+    z-index: 1000; /* Ensures it stays on top of everything */
 }
 
 body[data-theme="dark"] .topbar,
@@ -291,15 +320,21 @@ body[data-theme="dark"] .message-preview {
 
 .home-page .main-layout,
 .app-page .main-layout {
-    /* Calculates space needed assuming a symmetric layout or right bar equivalence */
-    width: calc(100% - (var(--sidebar-width) * 2)); 
-    margin: 0 var(--sidebar-width);
-    margin-top: var(--topbar-height); /* Adjusts for the topbar height */
+    /* Accounts for the dynamic left sidebar and the static 200px rightBar */
+    width: calc(100% - (var(--sidebar-width) + 200px)); 
+    margin-left: var(--sidebar-width);
+    margin-right: 200px;
+    margin-top: var(--topbar-height); 
+    box-sizing: border-box;
 }
 
+
+
 .app-page .main-layout {
-    width: calc(100% - 440px);
-    margin: 0 220px;
+    width: calc(100% - (var(--sidebar-width) + 200px));
+    margin-left: var(--sidebar-width);
+    margin-right: 200px;
+    margin-top: var(--topbar-height);
 }
 
 .profile-page .main-layout {
@@ -333,7 +368,6 @@ body[data-theme="dark"] .message-preview {
 
 .info-container {
     flex: 1;
-    max-width: 300px;
 }
 
 .post {
@@ -344,6 +378,7 @@ body[data-theme="dark"] .message-preview {
     margin: 0 0 15px 0;
     text-align: left;
 }
+
 .activities-profile {
     background-color: #ffffff;
     padding: 20px;
@@ -354,6 +389,7 @@ body[data-theme="dark"] .message-preview {
     width: 100%;
     align-items: center;
     justify-content: center;
+    margin-top: 20px; /* Adjusted to a standard spacing now that layout is fixed */
 }
 
 .activity-dashboard {
@@ -510,7 +546,7 @@ body[data-theme="dark"] .message-preview {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
     flex: 2;
-    max-width: 800px;
+    width: 100%;
 }
 
 
@@ -522,7 +558,6 @@ body[data-theme="dark"] .message-preview {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
     flex: 1;
-    max-width: 300px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -695,7 +730,9 @@ body[data-theme="dark"] .message-preview {
     padding: 13px;
     border-radius: 5px;
     box-sizing: border-box;
-    white-space: nowrap;
+    white-space: normal;      /* was nowrap — this was the clipping culprit */
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .divider {
@@ -965,82 +1002,113 @@ body[data-theme="dark"] .popup-card {
 }
 
 @media (max-width: 768px) {
-    .profile-page .feed-container {
-        grid-template-columns: 1fr;
-    }
-
-    .profile-sidebar, .profile-posts {
-        width: 100%;
-        max-width: 100%;
-    }
-}
-
-@media (max-width: 700px) {
-    
-    /* Main wrapper collapses layout columns into a straight vertical list stack */
-    .app-viewport-layout {
-        grid-template-columns: 1fr;
+    /* 1. Normalize Body & Margins across ALL page variants */
+    body.app-page, 
+    body.profile-page, 
+    body.home-page,
+    body {
         height: auto;
+        min-height: 100vh;
     }
 
-    .main-layout {
-        flex-direction: column;
-        align-items: center;
-    }
-
+    /* 2. Strip complex margin calculations, force full width layout */
     .home-page .main-layout,
-    .app-page .main-layout {
-        width: 100%;
-        margin: 0;
+    .app-page .main-layout,
+    .profile-page .main-layout,
+    .main-layout {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
         padding: 16px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column; /* Stack everything vertically */
+        gap: 16px;
     }
 
-    /* Completely vanish Sidebars and Info containers to focus purely on feed content */
+    /* 3. Drop sidebars out of flow since topbar actions handle links */
     .sidebar,
     .rightBar,
     .info-container {
-        display: none;
-    }
-    
-    .sidebar-profile, .feed-updates, .communities-profile {
-        width: 100%;
-        max-width: 100%;
+        display: none !important;
     }
 
+    /* 4. Make all main feature boxes stretch comfortably */
+    .sidebar-profile, 
+    .feed-updates, 
+    .communities-profile,
+    .profile-sidebar,
+    .profile-posts,
+    .eventsFeedContainer {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: none !important;
+        box-sizing: border-box;
+    }
+
+    /* 5. Force split profile grids into a clean single vertical strip */
     .profile-page .feed-container {
-        grid-template-columns: 1fr;
-    }
-
-    .profile-sidebar, .profile-posts {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: none !important;
+        gap: 16px;
         width: 100%;
-        max-width: 100%;
     }
 
-    /* Topbar adjustments */
+    /* 6. Expand UI inputs to avoid edge clipping or microscopic taps */
+    .CenterLayout {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .composer-select,
+    .TypeInput,
+    input,
+    textarea,
+    select {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+        box-sizing: border-box;
+    }
+
+    /* 7. Stack activity metric items vertically */
+    .activity-hero {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .activity-stats {
+        width: 100%;
+        min-width: 0;
+        grid-template-columns: 1fr; /* Stack dashboard scores sequentially */
+    }
+
+    /* 8. Make room for the expanded double-row mobile topbar */
+    .home-page .main-layout,
+    .app-page .main-layout,
+    .profile-page .main-layout {
+        margin-top: 130px !important; /* Large enough to clear mobile menu buttons */
+    }
+
+    /* 9. Adjust the top nav layout so links wrap tightly into button slots */
     .topbar {
+        position: fixed;
         flex-direction: column;
         height: auto;
-        padding: 12px 10px;
+        padding: 10px;
         gap: 8px;
-    }
-    
-    .topbar-logo {
-        margin-bottom: 0;
     }
 
     .topbar nav {
-        display: flex;
-        width: 100%;
-        gap: 6px;
-        justify-content: space-between;
-        align-items: center;
+        display: none !important; /* Hide profile photo/name metadata container on narrow viewports */
     }
 
     .topbar-actions {
         display: flex;
+        flex-direction: column;
         width: 100%;
         gap: 6px;
-        flex-wrap: wrap;
     }
 
     .topbar-action-row {
@@ -1050,48 +1118,13 @@ body[data-theme="dark"] .popup-card {
     }
 
     .topbar-action-row button {
-        flex: 1 1 0;
-        padding: 8px 6px;
-        font-size: 0.78rem;
-        margin-bottom: 0;
-    }
-    
-    .topbar button {
         flex: 1;
         padding: 8px 4px;
-        font-size: 0.85rem;
-        margin-bottom: 0;
-    }
-
-    /* Content components structural changes */
-    .CenterLayout {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .activity-hero,
-    .activity-grid {
-        grid-template-columns: 1fr;
-        flex-direction: column;
-    }
-
-    .activity-stats {
-        width: 100%;
-        min-width: 0;
-        grid-template-columns: 1fr;
-    }
-
-    .composer-select,
-    .TypeInput {
-        width: 100%;
-        min-width: 0;
-        flex: 1 1 auto;
-    }
-    .home-page .main-layout,
-    .app-page .main-layout {
-        margin-top: 200px
+        font-size: 0.8rem;
+        white-space: nowrap;
     }
 }
+
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }

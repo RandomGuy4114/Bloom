@@ -4,7 +4,6 @@ Bloom is an open-source, location-based social platform designed to bring commun
 ## Key Features
 * **Local Communities:** Discover and join spaces entirely dedicated to your surroundings. You can only interact with what is near you.
 * **Geofenced Events:** Host meetups, block parties, or garage sales that are only visible to locals.
-* **Secure Direct Messaging:** Connect safely. Direct messaging is limited to the people near you, keeping your inbox relevant and secure.
 * **Community Tools:** Keep your neighborhood informed and engaged with polls, events, and more!
 
 ## Getting Started
@@ -23,7 +22,6 @@ Self-hosting is highly encouraged for advanced users, and it's as easy as replac
 
 2. Create a js file called ```supabase.js``` inside the "js" folder, and populate it with this.
 ```
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js";
 
 // Do not change this for now.

@@ -5,7 +5,10 @@ import {
   getCommunityNameFromID,
   getCurrentUserOrRedirect,
   getUserProfile,
+  PopupIn,
   renderEmptyState,
+  PopupOut,
+  saveCurrentUser
 } from "./main.js";
 
 // DOM Elements
@@ -19,10 +22,13 @@ const createPostButton = document.getElementById("createPostButton");
 let currentUser = null;
 let joinedCommunities = [];
 
-function createFeedCard({ title, body, communityName, authorName, createdAt }) {
-  const card = createPostCard({
+async function createFeedCard({ id, title, body, communityName, authorName, createdAt }) {
+  // Pass id down to ensure internal card logic can use it if needed
+  const card = await createPostCard({
+    id, 
     title,
     body,
+    authorName, 
     footer: `Posted on: ${formatDateTime(createdAt)}`,
   });
 
@@ -37,6 +43,17 @@ function createFeedCard({ title, body, communityName, authorName, createdAt }) {
     <strong style="color: #618764;">${authorName}</strong>
     <span style="color: #888; font-size: 0.85rem;">in ${communityName}</span>
   `;
+  
+  if (authorName === "You") {
+    const manageButton = document.createElement("button");
+    manageButton.textContent = "Manage Post";
+    manageButton.style.marginLeft = "auto";
+    manageButton.addEventListener("click", () => {
+      // FIXED: id will now correctly point to post.id
+      window.location.href = `post.html?postId=${id}`; 
+    });
+    header.appendChild(manageButton);
+  }
 
   card.insertBefore(header, card.firstChild);
   return card;
@@ -80,11 +97,14 @@ async function renderFeedPosts(posts) {
 
   for (const post of posts) {
     const communityName = await getCommunityNameFromID(post.community) || "Unknown Community";
-    const card = createFeedCard({
+    
+    // FIXED: Added id: post.id here so createFeedCard actually receives it
+    const card = await createFeedCard({
+      id: post.id, 
       title: post.title,
       body: post.body,
       communityName,
-      authorName: post.author === currentUser.id ? "You" : "Community Member",
+      authorName: post.user_id === currentUser.id ? "You" : "Community Member",
       createdAt: post.created_at,
     });
     feed.appendChild(card);
@@ -147,43 +167,43 @@ async function post() {
     return;
   }
 
-    if (!body) {
-        alert("Please write something before posting.");
-        return;
-    }
+  if (!body) {
+    alert("Please write something before posting.");
+    return;
+  }
 
-    if (!joinedCommunities.length) {
-        alert("Join a community before posting.");
-        return;
-    }
+  if (!joinedCommunities.length) {
+    alert("Join a community before posting.");
+    return;
+  }
 
-    if (!selectedCommunity) {
-      alert("Please choose a community to post to.");
-      return;
-    }
+  if (!selectedCommunity) {
+    alert("Please choose a community to post to.");
+    return;
+  }
 
-    const { data, error } = await supabase
-        .from("Posts")
-      .insert([{ title, body, author: currentUser.id, community: selectedCommunity }]);
+  const { data, error } = await supabase
+    .from("Posts")
+    .insert([{ title, body, user_id: currentUser.id, community: selectedCommunity }]);
 
-    if (error) {
-        console.error("Error creating post:", error.message);
-        alert("Error creating post. Please try again.");
-    } else {
-        console.log("Post created successfully:", data);
-      titleInput.value = "";
-        postInput.value = "";
-        await getJoinedCommunities();
-    }
+  if (error) {
+    console.error("Error creating post:", error.message);
+    alert("Error creating post. Please try again.");
+  } else {
+    console.log("Post created successfully:", data);
+    titleInput.value = "";
+    postInput.value = "";
+    await getJoinedCommunities();
+  }
 }
 
 createPostButton.addEventListener("click", post);
 
 postInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-        event.preventDefault();
-        post();
-    }
+  if (event.key === "Enter") {
+    event.preventDefault();
+    post();
+  }
 });
 
 async function initializeHomePage() {
@@ -201,4 +221,122 @@ async function initializeHomePage() {
   await getJoinedCommunities();
 }
 
-initializeHomePage();
+function createPopupShell(title, content) {
+  const overlay = document.createElement("div");
+  overlay.className = "popup-overlay";
+  overlay.innerHTML = `
+    <div class="popup-card" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
+      <div class="popup-header">
+        <h2 id="popupTitle">${title}</h2>
+        <button class="popup-close" type="button" aria-label="Close dialog">×</button>
+      </div>
+      <div class="popup-body"></div>
+    </div>
+  `;
+
+  const card = overlay.querySelector(".popup-card");
+  const body = overlay.querySelector(".popup-body");
+  body.appendChild(content);
+
+  const closeButton = overlay.querySelector(".popup-close");
+  const closePopup = () => {
+    overlay.classList.remove("is-visible");
+    PopupOut(card, { duration: 0.2 });
+    window.setTimeout(() => {
+      if (overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    }, 200);
+    document.removeEventListener("keydown", handleEscape);
+  };
+
+  function handleEscape(event) {
+    if (event.key === "Escape") {
+      closePopup();
+    }
+  }
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) {
+      closePopup();
+    }
+  });
+
+  closeButton.addEventListener("click", closePopup);
+  document.addEventListener("keydown", handleEscape);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => {
+    overlay.classList.add("is-visible");
+    PopupIn(card, { duration: 0.2 });
+  });
+
+  return { overlay, closePopup };
+}
+
+async function checkFirstTimeUser() {
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("FirstTimeOpen")
+    .eq("id", currentUser.id)
+    .single();
+
+  if (error) {
+    console.error("Error checking user profile:", error.message);
+    return;
+  }
+
+  if (profile?.FirstTimeOpen) {
+    const content = document.createElement("div");
+    content.innerHTML = `
+      <p>Welcome to Bloom! Here's a quick guide to get you started:</p>
+      <ul>
+        <li>Join communities that interest you.</li>
+        <li>Create posts and share your thoughts.</li>
+        <li>Engage with other members by commenting and liking posts.</li>
+      </ul>
+      <p>Enjoy your time here!</p>
+    `;
+
+    const { closePopup } = createPopupShell("Welcome to Bloom!", content);
+
+    // Update the FirstTimeOpen flag in the database
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ FirstTimeOpen: false })
+      .eq("id", currentUser.id);
+
+    if (updateError) {
+      console.error("Error updating FirstTimeOpen flag:", updateError.message);
+    }
+  }
+}
+
+saveCurrentUser();
+
+
+await initializeHomePage();
+
+checkFirstTimeUser()
+
+const logo = [
+"  ____  _     ___   ___  __  __ ",
+" | __ )| |   / _ \\ / _ \\|  \\/  |",
+" |  _ \\| |  | | | | | | | |\\/| |",
+" | |_) | |__| |_| | |_| | |  | |",
+" |____/|_____\\___/ \\___/|_|  |_|"
+].join('\n');
+
+console.log(logo);
+
+// Styled Text Blocks
+console.log(
+  "%c Welcome To The Bloom Console! %c ALPHA ",
+  "background: #2563eb; color: #fff; font-weight: bold; padding: 3px 8px; border-radius: 3px 0 0 3px;",
+  "background: #1e293b; color: #94a3b8; padding: 3px 8px; border-radius: 0 3px 3px 0;"
+);
+
+console.log(
+  "%c  ATTENTION  %c DO NOT share any sensitive information here.",
+  "background: #eab308; color: #000; font-weight: bold; padding: 2px 5px; border-radius: 3px;",
+  "color: #f87171; font-weight: bold;"
+);

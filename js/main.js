@@ -15,6 +15,26 @@ export async function getCurrentUserOrRedirect(redirectUrl = "login.html") {
   return user;
 }
 
+export async function getCurrentUsername() {
+  const user = await getCurrentUserOrRedirect();
+  if (!user) {
+    return null; // Redirect logic is handled inside getCurrentUserOrRedirect
+  }
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching username:", error.message);
+    return null;
+  }
+
+  return profile.username;
+}
+
 export async function getUserProfile(userId) {
   const { data: profile, error } = await supabase
     .from("profiles")
@@ -94,5 +114,56 @@ export function PopupOut(element, options = {}) {
     if (element.parentNode) {
       element.parentNode.removeChild(element);
     }
+  });
+}
+
+export function getUserLocation() {
+    return new Promise((resolve, reject) => {
+        // 1. Check if geolocation is supported
+        if (!navigator.geolocation) {
+            console.error("Geolocation is not supported by this browser.");
+            reject(new Error("Geolocation not supported"));
+            return;
+        }
+
+        // 2. Request the current position
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                console.log(`User's location: Latitude ${latitude}, Longitude ${longitude}`);
+                
+                // Resolve the promise with the coordinates
+                resolve({ latitude, longitude });
+            },
+            (error) => {
+                console.error("Error getting location:", error.message);
+                
+                // Reject the promise with the error
+                reject(error);
+            }
+        );
+    });
+}
+
+export function saveCurrentUser() {
+  return new Promise(async (resolve, reject) => {
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      console.error("Error fetching user:", error?.message ?? "No user session found.");
+      reject(new Error("No user session found"));
+      return;
+    }
+
+    if (localStorage.getItem("currentUser")) {
+      console.log("Current user already exists in localStorage.");
+      resolve(user);
+      return;
+    }
+
+    // Save the user object to localStorage
+    localStorage.setItem("currentUser", JSON.stringify(user));
+    resolve(user);
+    console.log("Current user saved to localStorage, yay!");
   });
 }

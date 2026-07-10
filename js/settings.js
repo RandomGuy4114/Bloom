@@ -1,4 +1,5 @@
 import { PopupIn, PopupOut } from "./main.js";
+import { supabase } from "./supabase.js";
 
 const themeSelect = document.getElementById("themeSelect");
 const changePasswordButton = document.getElementById("changePasswordButton");
@@ -145,12 +146,43 @@ function openDeleteAccountPopup() {
 	deleteConfirm.focus();
 }
 
+async function changeLanguage(params) {
+    const { error, data } = await supabase
+        .from("profiles")
+        .update({ Language: params.Language })
+        .eq("id", params.userId);
+
+    if (error) {
+        console.error("Error updating language:", error.message);
+        alert("Failed to update language. Please try again.");
+        return;
+    }
+
+    alert(`Language updated to ${params.Language}.`);
+}
+
+document.getElementById("changeLangButton")?.addEventListener("click", async () => {
+    const selectedLanguage = document.getElementById("LangDropdown").value;
+    
+    // 1. Fixed: Added await and destructured the user object correctly
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // 2. Check if the user object actually exists
+    if (!user) {
+        alert("No user is currently logged in.");
+        return;
+    }
+
+    // 3. Pass user.id instead of currentUser.id
+    await changeLanguage({ userId: user.id, Language: selectedLanguage });
+});
+
+
+
 themeSelect?.addEventListener("change", (event) => {
 	applyTheme(event.target.value);
 });
 
 changePasswordButton?.addEventListener("click", openChangePasswordPopup);
 deleteAccountButton?.addEventListener("click", openDeleteAccountPopup);
-
-loadTheme();
 

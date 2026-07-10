@@ -1,17 +1,16 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloom - Profile</title>
+    <title>Bloom - Community</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="profile-page">
+<body class="app-page">
     <div class="topbar">
         <h1 class="topbar-logo">Bloom <p id="verText">ALPHA</p></h1>
         <nav style="display: flex; align-items: center;">
-            <p id="username-label" style="margin: 10px;">Loading...</p>
+            <p id="username-label" style="margin: 10px;">Communities</p>
             <div class="pfp-frame"></div>
         </nav>
         <div class="topbar-actions" aria-label="Mobile navigation">
@@ -26,7 +25,6 @@
             </div>
         </div>
     </div>
-
     <div class="sidebar">
         <button onclick="window.location.href='home.html'" class="sidebarButton">Home</button>
         <button onclick="window.location.href='profile.html'" class="sidebarButton">Profile</button>
@@ -36,31 +34,23 @@
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='settings.html'">Settings</button>
     </div>
+    <div class="rightBar">
+        <p style="margin: 10px;">Community Hub</p>
+    </div>
+    <div class="main-layout">
+        <div class="feed-container">
+            <div class="communities-profile" style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+                <h1 id="comName" style="text-align: center;">Placeholder</h1>
+                <p id="comDesc" style="text-align: center; color: grey;">Placeholder</p>
+                <button id="joinCommunityButton">Join Community</button>
 
-    <div class="main-layout" style="margin-top: var(--topbar-height);">
-        <div class="feed-container" style="gap: 20px; width: 100%;">
-            
-            <div class="profile-sidebar">
-                <div class="profile-pfp"></div>
-                <h2 class="profile-name">User Name</h2>
-                <div class="profile-details">
-                    <p><strong>Bio:</strong> Hello world! Welcome to my profile.</p>
-                    <p><strong>Joined:</strong> 2026</p>
-                </div>
             </div>
-
-            <div class="profile-posts">
-                <h2>My Posts</h2>
-                <div class="posts-container">
-                    <div class="post">
-                        <h3>Your First Post</h3>
-                        <p>This is a placeholder post. When your JavaScript runs, it will inject your data right here.</p>
-                    </div>
-                </div>
+            <div class="feed-updates">
+                <input type="text" id="searchPostInput" placeholder="Search Posts" style="width: 90%; margin-bottom: 10px;">
+                <div class="posts-container" id="com-posts"></div>
             </div>
-
         </div>
     </div>
-    <script type="module" src="../js/profile.js"></script>
 </body>
+<script type="module" src="../js/community-single.js"></script>
 </html>
