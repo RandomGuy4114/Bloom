@@ -22,6 +22,133 @@ ALTER SCHEMA "public" OWNER TO "pg_database_owner";
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
+
+CREATE OR REPLACE FUNCTION "public"."event_trigger_fn"() RETURNS "event_trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  -- Add logic here
+END;
+$$;
+
+
+ALTER FUNCTION "public"."event_trigger_fn"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."handle_auth_user_ban_or_delete"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  -- If the user is being marked as deleted, clean up their profile.
+  if new.deleted_at is not null and (old.deleted_at is distinct from new.deleted_at) then
+    delete from public.profiles where id = new.id;
+    return new;
+  end if;
+
+  -- If the user becomes banned/suspended, clean up their profile.
+  if old.banned_until is null and new.banned_until is not null then
+    delete from public.profiles where id = new.id;
+    return new;
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."handle_auth_user_ban_or_delete"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."handle_auth_user_cleanup"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_uid uuid := new.id;
+begin
+  -- 1) Remove from community members arrays
+  update public."Communities"
+  set members = array_remove(members, v_uid)
+  where members is not null
+    and members @> array[v_uid];
+
+  -- 2) Delete posts authored by the user
+  delete from public."Posts"
+  where user_id = v_uid;
+
+  -- 3) Delete communities owned by the user
+  delete from public."Communities"
+  where user_id = v_uid;
+
+  -- 4) Delete profile row (FK cascade handles deletes too, but keep it consistent)
+  delete from public.profiles where id = v_uid;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."handle_auth_user_cleanup"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  insert into public.profiles (id, username, birthday)
+  values (
+    new.id,
+    nullif(new.raw_user_meta_data->>'username', '')::text,
+    case
+      when nullif(new.raw_user_meta_data->>'birthday', '') is null then null
+      else (new.raw_user_meta_data->>'birthday')::date
+    end
+  )
+  on conflict (id) do update set
+    username = excluded.username,
+    birthday = excluded.birthday;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."handle_new_user_fn"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_username text;
+begin
+  v_username := nullif(new.raw_user_meta_data->>'username', '')::text;
+
+  insert into public.profiles (id, username, display_name, birthday)
+  values (
+    new.id,
+    v_username,
+    v_username,
+    case
+      when nullif(new.raw_user_meta_data->>'birthday', '') is null then null
+      else (new.raw_user_meta_data->>'birthday')::date
+    end
+  )
+  on conflict (id) do update set
+    username = excluded.username,
+    display_name = excluded.display_name,
+    birthday = excluded.birthday;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."handle_new_user_fn"() OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -75,7 +202,8 @@ CREATE TABLE IF NOT EXISTS "public"."Posts" (
     "title" "text",
     "body" "text",
     "communityName" "text",
-    "post_type" "text"
+    "post_type" "text",
+    "img_link" "text"
 );
 
 
@@ -92,7 +220,9 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "joined_communities" "uuid"[],
     "admin" boolean DEFAULT false,
     "FirstTimeOpen" boolean DEFAULT true,
-    "Language" "text" DEFAULT 'en'::"text"
+    "Language" "text" DEFAULT 'en'::"text",
+    "birthday" "date",
+    "requestedDelete" boolean DEFAULT false NOT NULL
 );
 
 
@@ -129,9 +259,9 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
-CREATE POLICY "Allow users to update everything except admin status" ON "public"."profiles" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "id")) WITH CHECK ((NOT ("admin" IS DISTINCT FROM ( SELECT "p"."admin"
+CREATE POLICY "Allow users to update everything except admin status" ON "public"."profiles" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "id")) WITH CHECK ((("auth"."uid"() = "id") AND (NOT ("admin" IS DISTINCT FROM ( SELECT "p"."admin"
    FROM "public"."profiles" "p"
-  WHERE ("p"."id" = "p"."id")))));
+  WHERE ("p"."id" = "auth"."uid"()))))));
 
 
 
@@ -191,6 +321,36 @@ GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."event_trigger_fn"() TO "anon";
+GRANT ALL ON FUNCTION "public"."event_trigger_fn"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."event_trigger_fn"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."handle_auth_user_ban_or_delete"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_auth_user_ban_or_delete"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_auth_user_ban_or_delete"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."handle_auth_user_cleanup"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_auth_user_cleanup"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_auth_user_cleanup"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."handle_new_user_fn"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_new_user_fn"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_new_user_fn"() TO "service_role";
 
 
 

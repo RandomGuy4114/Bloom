@@ -6,6 +6,7 @@
     <title>Bloom - Dashboard</title>
     <link rel="icon" href="Assets/BloomLogo.png" type="image/png">
     <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
 </head>
 <body class="home-page">
     <div class="topbar">
@@ -35,10 +36,6 @@
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='settings.html'">Settings</button>
     </div>
-    <div class="rightBar">
-        <p style="margin: 10px;">Upcoming Events</p>
-    </div>
-
     <div class="main-layout">
         <div class="feed-container">
             
@@ -51,9 +48,14 @@
                         <button type="button" class="post-type-option" data-post-type="activity" data-i18n-key="postType.activity" data-i18n-ignore aria-pressed="false">Activity</button>
                         <button type="button" class="post-type-option" data-post-type="event" data-i18n-key="postType.event" data-i18n-ignore aria-pressed="false">Event</button>
                     </div>
-                    <input type="text" id="titleInput" aria-label="Post title" placeholder="Title">
-                    <input type="text" class="TypeInput" id="postInput" aria-label="Post content" placeholder="What's on your mind?">
-                    <button id="createPostButton">Post</button>
+                    <input type="text" id="titleInput" aria-label="Post title">
+                    <input type="text" class="TypeInput" id="postInput" aria-label="Post content">
+                    <input type="file" id="postImageInput" class="post-image-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Add image">
+                    <div id="postImagePreview" class="post-image-preview" hidden></div>
+                    <div class="post-composer-actions">
+                        <button type="button" id="postImageButton" class="post-image-picker" aria-label="Add image" title="Add image"><i class="ri-file-image-line"></i></button>
+                        <button type="button" id="createPostButton">Post</button>
+                    </div>
                 </div>
             </div>
             <div class="feed-updates">

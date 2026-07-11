@@ -9,6 +9,7 @@ import {
   getUserLocation,
   isWithinCommunityRadius,
   joinCommunity,
+  leaveCommunity,
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
@@ -31,7 +32,7 @@ let joinedCommunityIds = new Set();
 
 // Components
 
-function createCommunityCard(community, includeJoinButton = true) {
+function createCommunityCard(community, includeMembershipButton = true) {
   const communityElement = document.createElement("div");
   communityElement.className = "community";
 
@@ -62,14 +63,31 @@ function createCommunityCard(community, includeJoinButton = true) {
   });
   actions.appendChild(viewButton);
 
-  if (includeJoinButton) {
+  if (includeMembershipButton) {
     const joinButton = document.createElement("button");
     joinButton.type = "button";
     joinButton.style.cssText = "padding: 10px; margin: 5px;";
     const isMember = joinedCommunityIds.has(community.id) || (community.members?.includes(user.id) ?? false);
-    joinButton.textContent = isMember ? "Joined" : "Join Community";
-    joinButton.disabled = isMember;
+    joinButton.textContent = isMember ? "Leave Community" : "Join Community";
+    joinButton.classList.toggle("danger-action", isMember);
     joinButton.addEventListener("click", async () => {
+      if (joinedCommunityIds.has(community.id) || community.members?.includes(user.id)) {
+        if (!window.confirm("Are you sure you want to leave this community?")) {
+          return;
+        }
+
+        await withLoadingOverlay(async () => {
+          const { error } = await leaveCommunity(user.id, community.id);
+          if (error) {
+            alert("Unable to leave the community at this time.");
+            return;
+          }
+          alert("You left the community.");
+          await loadCommunities();
+        }, "Leaving community...");
+        return;
+      }
+
       await withLoadingOverlay(async () => {
         const { error, status } = await joinCommunity(user.id, community.id, userLocation);
         if (error) {
@@ -83,8 +101,7 @@ function createCommunityCard(community, includeJoinButton = true) {
           return;
         }
         if (status === "already_joined") {
-          joinButton.textContent = "Joined";
-          joinButton.disabled = true;
+          await loadCommunities();
           return;
         }
 
@@ -137,7 +154,7 @@ function renderMyCommunities() {
     (community) => `${community.name ?? ""} ${community.description ?? ""}`,
   );
   myCommunitiesContainer.replaceChildren(
-    ...visibleCommunities.map((community) => createCommunityCard(community, false)),
+    ...visibleCommunities.map((community) => createCommunityCard(community)),
   );
 
   if (!visibleCommunities.length) {

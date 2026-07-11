@@ -24,7 +24,13 @@ const communitySelect = document.getElementById("communitySelect");
 const titleInput = document.getElementById("titleInput");
 const postInput = document.getElementById("postInput");
 const createPostButton = document.getElementById("createPostButton");
+const postImageInput = document.getElementById("postImageInput");
+const postImageButton = document.getElementById("postImageButton");
+const postImagePreview = document.getElementById("postImagePreview");
 const postTypeButtons = [...document.querySelectorAll("[data-post-type]")];
+const postImagesBucket = "Post Images";
+const maximumPostImageSize = 10 * 1024 * 1024;
+const allowedPostImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 let currentUser;
 let joinedCommunities = [];
@@ -95,13 +101,15 @@ async function renderFeedPosts(posts) {
   }
 
   const postDetails = await Promise.all(posts.map(async (post) => {
-    const [communityName, profile] = await Promise.all([
+    const [communityName, authorProfile] = await Promise.all([
       getCommunityNameFromID(post.community),
-      isPostOwner(post, currentUser.id) ? null : getUserProfile(post.user_id ?? post.author),
+      getUserProfile(post.user_id ?? post.author),
     ]);
     return {
+      authorUserId: post.user_id ?? post.author,
       communityName: communityName || "Unknown Community",
-      authorName: isPostOwner(post, currentUser.id) ? "You" : profile?.username || "Unknown",
+      authorName: isPostOwner(post, currentUser.id) ? "You" : authorProfile?.username || "Unknown",
+      authorAvatarUrl: authorProfile?.avatar_url || "",
     };
   }));
 
@@ -110,8 +118,11 @@ async function renderFeedPosts(posts) {
     postType: post.post_type,
     title: post.title,
     body: post.body,
+    imgLink: post.img_link,
     footer: `Posted on: ${formatDateTime(post.created_at)}`,
+    authorUserId: postDetails[index].authorUserId,
     authorName: postDetails[index].authorName,
+    authorAvatarUrl: postDetails[index].authorAvatarUrl,
     communityName: postDetails[index].communityName,
     manageHref: isPostOwner(post, currentUser.id) ? `post.html?postId=${post.id}` : null,
   }));
@@ -139,6 +150,7 @@ async function loadJoinedCommunities() {
   if (!joinedCommunities.length) {
     postInput.disabled = true;
     titleInput.disabled = true;
+    postImageInput.disabled = true;
     createPostButton.disabled = true;
     communitySelect.disabled = true;
     await populateCommunitySelect();
@@ -149,6 +161,7 @@ async function loadJoinedCommunities() {
   const canCreatePost = await populateCommunitySelect(communitySelect.value);
   postInput.disabled = !canCreatePost;
   titleInput.disabled = !canCreatePost;
+  postImageInput.disabled = !canCreatePost;
   createPostButton.disabled = !canCreatePost;
 
   const { data: posts, error: postsError } = await supabase
@@ -170,6 +183,7 @@ async function createPost() {
   const title = titleInput.value.trim();
   const body = postInput.value.trim();
   const selectedCommunity = communitySelect.value;
+  const imageFile = postImageInput.files?.[0];
 
   if (!title) {
     alert("Please add a post title before posting.");
@@ -191,6 +205,14 @@ async function createPost() {
     alert("Only administrators can create posts in global communities.");
     return;
   }
+  if (imageFile && !allowedPostImageTypes.has(imageFile.type)) {
+    alert("Choose a JPEG, PNG, WebP, or GIF image.");
+    return;
+  }
+  if (imageFile && imageFile.size > maximumPostImageSize) {
+    alert("Post images must be 10 MB or smaller.");
+    return;
+  }
 
   await withLoadingOverlay(async () => {
     const { allowed, error: accessError } = await canUserPostToCommunity(currentUser.id, selectedCommunity);
@@ -203,6 +225,25 @@ async function createPost() {
       return;
     }
 
+    let imagePath;
+    let imageUrl = "";
+    if (imageFile) {
+      const extension = imageFile.name.split(".").pop()?.toLowerCase() || "image";
+      imagePath = `${currentUser.id}/${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from(postImagesBucket)
+        .upload(imagePath, imageFile, {
+          cacheControl: "3600",
+          contentType: imageFile.type,
+        });
+      if (uploadError) {
+        console.error("Error uploading post image:", uploadError.message);
+        alert("Unable to upload the image. Please try again.");
+        return;
+      }
+      imageUrl = supabase.storage.from(postImagesBucket).getPublicUrl(imagePath).data.publicUrl;
+    }
+
     const { error } = await supabase
       .from("Posts")
       .insert([{
@@ -211,9 +252,13 @@ async function createPost() {
         user_id: currentUser.id,
         community: selectedCommunity,
         post_type: selectedPostType,
+        img_link: imageUrl || null,
       }]);
 
     if (error) {
+      if (imagePath) {
+        await supabase.storage.from(postImagesBucket).remove([imagePath]);
+      }
       console.error("Error creating post:", error.message);
       alert("Error creating post. Please try again.");
       return;
@@ -221,6 +266,9 @@ async function createPost() {
 
     titleInput.value = "";
     postInput.value = "";
+    postImageInput.value = "";
+    postImagePreview.hidden = true;
+    postImagePreview.replaceChildren();
     await loadJoinedCommunities();
   }, "Publishing your post...");
 }
@@ -277,6 +325,22 @@ postTypeButtons.forEach((button) => {
 });
 
 createPostButton?.addEventListener("click", createPost);
+postImageButton?.addEventListener("click", () => postImageInput.click());
+postImageInput?.addEventListener("change", () => {
+  const file = postImageInput.files?.[0];
+  postImagePreview.replaceChildren();
+  postImagePreview.hidden = !file;
+  if (!file) {
+    return;
+  }
+
+  const image = document.createElement("img");
+  const previewUrl = URL.createObjectURL(file);
+  image.src = previewUrl;
+  image.alt = "Post image preview";
+  image.addEventListener("load", () => URL.revokeObjectURL(previewUrl), { once: true });
+  postImagePreview.appendChild(image);
+});
 postInput?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();

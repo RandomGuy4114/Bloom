@@ -83,6 +83,10 @@ export async function getUserProfile(userId) {
   return userProfileCache.get(userId);
 }
 
+export function clearUserProfileCache(userId) {
+  userProfileCache.delete(userId);
+}
+
 export async function getCommunityNameFromID(communityID) {
   if (!communityID) {
     return null;
@@ -113,6 +117,10 @@ export async function getCommunityNameFromID(communityID) {
 export function addUniqueItem(items = [], item) {
   const list = Array.isArray(items) ? items : [];
   return list.includes(item) ? list : [...list, item];
+}
+
+export function removeItem(items = [], item) {
+  return Array.isArray(items) ? items.filter((value) => value !== item) : [];
 }
 
 export function isPostOwner(post, userId) {
@@ -183,6 +191,37 @@ export async function joinCommunity(userId, communityID, userLocation) {
   }
 
   return { error, status: error ? "error" : "joined" };
+}
+
+export async function leaveCommunity(userId, communityID) {
+  const [{ data: community, error: communityError }, { data: profile, error: profileError }] = await Promise.all([
+    supabase.from("Communities").select("members").eq("id", communityID).single(),
+    supabase.from("profiles").select("joined_communities").eq("id", userId).single(),
+  ]);
+
+  if (communityError || profileError) {
+    const error = communityError ?? profileError;
+    console.error("Error loading community membership:", error.message);
+    return { error };
+  }
+
+  const [{ error: communityUpdateError }, { error: profileUpdateError }] = await Promise.all([
+    supabase
+      .from("Communities")
+      .update({ members: removeItem(community.members, userId) })
+      .eq("id", communityID),
+    supabase
+      .from("profiles")
+      .update({ joined_communities: removeItem(profile.joined_communities, communityID) })
+      .eq("id", userId),
+  ]);
+
+  const error = communityUpdateError ?? profileUpdateError;
+  if (error) {
+    console.error("Error leaving community:", error.message);
+  }
+
+  return { error };
 }
 
 // Formatting
@@ -368,6 +407,27 @@ export function renderEmptyState(container, message) {
   `;
 }
 
+export function applyAvatar(element, avatarUrl, altText = "") {
+  if (!element) {
+    return;
+  }
+
+  element.replaceChildren();
+  if (!avatarUrl) {
+    return;
+  }
+
+  element.style.position = "relative";
+  element.style.overflow = "hidden";
+  const image = document.createElement("img");
+  image.src = avatarUrl;
+  image.alt = altText;
+  image.loading = "lazy";
+  image.decoding = "async";
+  image.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit";
+  element.appendChild(image);
+}
+
 function closePostMenu() {
   if (!openPostMenu) {
     return;
@@ -491,9 +551,9 @@ export function attachPostTypeBadge(card, postType = "post") {
   }
 
   const types = {
-    post: { icon: "●", label: "Post" },
-    activity: { icon: "◎", label: "Activity" },
-    event: { icon: "◆", label: "Event" },
+    post: { icon: "<i class=\"ri-mail-fill\"></i>", label: "Post" },
+    activity: { icon: "<i class=\"ri-user-3-line\"></i>", label: "Activity" },
+    event: { icon: "<i class=\"ri-calendar-event-line\"></i>", label: "Event" },
   };
   const normalizedType = types[postType] ? postType : "post";
   const badge = document.createElement("div");
@@ -502,7 +562,7 @@ export function attachPostTypeBadge(card, postType = "post") {
 
   const icon = document.createElement("span");
   icon.setAttribute("aria-hidden", "true");
-  icon.textContent = types[normalizedType].icon;
+  icon.innerHTML = types[normalizedType].icon;
   const label = document.createElement("span");
   label.dataset.i18nKey = `postType.${normalizedType}`;
   label.dataset.i18nIgnore = "true";
@@ -517,8 +577,11 @@ export function createPostCard({
   postType = "post",
   title,
   body,
+  imgLink,
   footer,
+  authorUserId,
   authorName,
+  authorAvatarUrl,
   communityName,
   manageHref,
 }) {
@@ -530,6 +593,18 @@ export function createPostCard({
     ${footer ? `<p style="margin: 10px 0 0 0; font-size: 12px; color: grey;">${footer}</p>` : ""}
   `;
 
+  if (imgLink) {
+    const image = document.createElement("img");
+    image.className = "post-image";
+    image.src = imgLink;
+    image.alt = title ? `Image for ${title}` : "Post image";
+    image.loading = "lazy";
+    image.decoding = "async";
+    image.addEventListener("error", () => image.remove(), { once: true });
+    const footerElement = footer ? card.lastElementChild : null;
+    card.insertBefore(image, footerElement);
+  }
+
   if (authorName || communityName) {
     const header = document.createElement("div");
     const shouldPreserveAuthor = authorName && !["Unknown", "You"].includes(authorName);
@@ -537,9 +612,20 @@ export function createPostCard({
     header.style.cssText = "display:flex;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;padding-right:40px";
     header.innerHTML = `
       <div class="pfp-frame" style="width: 30px; height: 30px;"></div>
-      <strong ${shouldPreserveAuthor ? "data-i18n-ignore" : ""} style="color: #618764;">${authorName || "Unknown"}</strong>
+      <strong class="post-author-name" ${shouldPreserveAuthor ? "data-i18n-ignore" : ""} style="color: #618764;">${authorName || "Unknown"}</strong>
       ${communityName ? `<span style="color: #888; font-size: 0.85rem;"><span>in</span> <span ${shouldPreserveCommunity ? "data-i18n-ignore" : ""}>${communityName}</span></span>` : ""}
     `;
+
+    applyAvatar(header.querySelector(".pfp-frame"), authorAvatarUrl, "Post author profile picture");
+    if (authorUserId) {
+      const authorNameElement = header.querySelector(".post-author-name");
+      const authorLink = document.createElement("a");
+      authorLink.className = "post-author-link";
+      authorLink.href = `profile.html?uid=${encodeURIComponent(authorUserId)}`;
+      authorLink.setAttribute("aria-label", "Open author profile");
+      authorNameElement.replaceWith(authorLink);
+      authorLink.appendChild(authorNameElement);
+    }
 
     card.insertBefore(header, card.firstChild);
   }
@@ -556,6 +642,83 @@ export async function showCurrentUser(user, element) {
   const profile = await getUserProfile(user.id);
   element.dataset.i18nIgnore = "true";
   element.textContent = profile?.username || user.email || "Logged in user";
+  const avatar = element.closest(".topbar")?.querySelector(".pfp-frame");
+  applyAvatar(avatar, profile?.avatar_url, "Profile picture");
+  attachAccountMenu(avatar);
+}
+
+function attachAccountMenu(avatar) {
+  if (!avatar || avatar.dataset.accountMenuReady === "true") {
+    return;
+  }
+
+  avatar.dataset.accountMenuReady = "true";
+  avatar.classList.add("account-menu-trigger");
+  avatar.tabIndex = 0;
+  avatar.setAttribute("role", "button");
+  avatar.setAttribute("aria-label", "Open account menu");
+  avatar.setAttribute("aria-haspopup", "menu");
+  avatar.setAttribute("aria-expanded", "false");
+
+  const menu = document.createElement("div");
+  menu.className = "account-menu";
+  menu.setAttribute("role", "menu");
+  menu.hidden = true;
+
+  const profileLink = document.createElement("a");
+  profileLink.href = "profile.html";
+  profileLink.className = "account-menu-item";
+  profileLink.setAttribute("role", "menuitem");
+  profileLink.textContent = "Profile";
+
+  const logoutButton = document.createElement("button");
+  logoutButton.type = "button";
+  logoutButton.className = "account-menu-item account-menu-logout";
+  logoutButton.setAttribute("role", "menuitem");
+  logoutButton.textContent = "Log Out";
+  menu.append(profileLink, logoutButton);
+  avatar.closest("nav")?.appendChild(menu);
+
+  const closeMenu = () => {
+    menu.hidden = true;
+    avatar.setAttribute("aria-expanded", "false");
+  };
+  const toggleMenu = () => {
+    const shouldOpen = menu.hidden;
+    menu.hidden = !shouldOpen;
+    avatar.setAttribute("aria-expanded", String(shouldOpen));
+    if (shouldOpen) {
+      profileLink.focus();
+    }
+  };
+
+  avatar.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleMenu();
+  });
+  avatar.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggleMenu();
+    }
+  });
+  menu.addEventListener("click", (event) => event.stopPropagation());
+  logoutButton.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Error signing out:", error.message);
+      alert("Failed to sign out. Please try again.");
+      return;
+    }
+    window.location.href = "index.html";
+  });
+  document.addEventListener("click", closeMenu);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !menu.hidden) {
+      closeMenu();
+      avatar.focus();
+    }
+  });
 }
 
 document.addEventListener("click", closePostMenu);

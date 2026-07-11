@@ -64,8 +64,8 @@ function getEmptyMessage(type, selectedFilter, hasSearch) {
       : "No nearby events are available.";
   }
   return type === "activity"
-    ? "No activities are available."
-    : "No events are available.";
+    ? "No activities are available in your communities."
+    : "No events are available in your communities.";
 }
 
 function renderTypedPosts(type) {
@@ -92,8 +92,11 @@ function renderTypedPosts(type) {
     postType: post.post_type,
     title: post.title,
     body: post.body,
+    imgLink: post.img_link,
     footer: `Posted on: ${formatDateTime(post.created_at)}`,
+    authorUserId: post.authorUserId,
     authorName: post.authorName,
+    authorAvatarUrl: post.authorAvatarUrl,
     communityName: post.communityName,
     manageHref: isPostOwner(post, user.id) ? `post.html?postId=${post.id}` : null,
   }));
@@ -111,9 +114,20 @@ function selectFilter(buttons, selectedButton) {
 // Data
 
 async function loadTypedPosts() {
+  const profile = await getUserProfile(user.id);
+  const joinedCommunityIds = profile?.joined_communities ?? [];
+
+  if (!joinedCommunityIds.length) {
+    typedPosts = [];
+    renderTypedPosts("activity");
+    renderTypedPosts("event");
+    return;
+  }
+
   const { data: posts, error: postsError } = await supabase
     .from("Posts")
     .select("*")
+    .in("community", joinedCommunityIds)
     .in("post_type", ["activity", "event"])
     .order("created_at", { ascending: false });
 
@@ -124,14 +138,14 @@ async function loadTypedPosts() {
     return;
   }
 
-  const communityIds = [...new Set((posts ?? []).map((post) => post.community).filter(Boolean))];
+  const postCommunityIds = [...new Set((posts ?? []).map((post) => post.community).filter(Boolean))];
   const authorIds = [...new Set((posts ?? []).map((post) => post.user_id ?? post.author).filter(Boolean))];
   const [{ data: communities, error: communitiesError }, profiles] = await Promise.all([
-    communityIds.length
+    postCommunityIds.length
       ? supabase
         .from("Communities")
         .select("id, name, global, latitude, longitude, radius_meters")
-        .in("id", communityIds)
+        .in("id", postCommunityIds)
       : Promise.resolve({ data: [], error: null }),
     Promise.all(authorIds.map(async (authorId) => [authorId, await getUserProfile(authorId)])),
   ]);
@@ -147,9 +161,11 @@ async function loadTypedPosts() {
     const community = communitiesById.get(post.community);
     return {
       ...post,
+      authorUserId: authorId,
       authorName: isPostOwner(post, user.id)
         ? "You"
         : profilesById.get(authorId)?.username || "Unknown",
+      authorAvatarUrl: profilesById.get(authorId)?.avatar_url || "",
       communityName: community?.name || "Unknown Community",
       communityDetails: community,
     };

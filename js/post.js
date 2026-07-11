@@ -57,6 +57,15 @@ async function loadPost() {
   }
   postTitle.textContent = post.title || "Untitled Post";
   postContent.textContent = post.body || "No content available.";
+  postContainer.querySelector(".post-image")?.remove();
+  if (post.img_link) {
+    const image = document.createElement("img");
+    image.className = "post-image";
+    image.src = post.img_link;
+    image.alt = post.title ? `Image for ${post.title}` : "Post image";
+    image.addEventListener("error", () => image.remove(), { once: true });
+    postContent.insertAdjacentElement("afterend", image);
+  }
   postTitle.style.paddingRight = "40px";
   attachPostTypeBadge(postContainer, post.post_type);
   attachPostOptions(postContainer, {

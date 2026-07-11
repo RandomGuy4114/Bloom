@@ -1,6 +1,6 @@
 // Dependencies
 
-import { createPopupShell, getCurrentUserOrRedirect, withLoadingOverlay } from "./main.js";
+import { createPopupShell, getCurrentUserOrRedirect, withLoadingOverlay, showCurrentUser } from "./main.js";
 import { getLanguage, setLanguage } from "./i18n.js";
 import { supabase } from "./supabase.js";
 
@@ -166,8 +166,18 @@ deleteAccountButton?.addEventListener("click", openDeleteAccountPopup);
 
 // Initialization
 
-getCurrentUserOrRedirect()
-await withLoadingOverlay(getCurrentUserOrRedirect, "Loading settings...");
+
+await withLoadingOverlay(async () => {
+  await getCurrentUserOrRedirect();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return;
+  }
+  const usernameLabel = document.getElementById("username-label");
+  await showCurrentUser(user, usernameLabel);
+}, "Loading settings...");
 languageDropdown.value = getLanguage();
 window.addEventListener("bloom:languagechange", (event) => {
   languageDropdown.value = event.detail.language;
