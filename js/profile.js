@@ -10,6 +10,7 @@ import {
   getCurrentUserOrRedirect,
   getQueryParameter,
   getUserProfile,
+  PAGE_URLS,
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
@@ -253,7 +254,7 @@ async function loadProfile() {
     authorUserId: activeUserId,
     authorName: ownsProfile ? "You" : currentProfile?.username || "Unknown",
     authorAvatarUrl: currentProfile?.avatar_url || "",
-    manageHref: ownsProfile ? `post.html?postId=${post.id}` : null,
+    manageHref: ownsProfile ? `${PAGE_URLS.post}?postId=${post.id}` : null,
   }));
   postsContainer.replaceChildren(...cards);
 }

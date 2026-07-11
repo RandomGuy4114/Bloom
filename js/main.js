@@ -13,9 +13,21 @@ let loadingRequestCount = 0;
 let previousBodyOverflow = "";
 let openPostMenu;
 
+export const PAGE_URLS = Object.freeze({
+  index: new URL("../index.html", import.meta.url).href,
+  login: new URL("../pages/auth/login.html", import.meta.url).href,
+  home: new URL("../pages/app/home.html", import.meta.url).href,
+  profile: new URL("../pages/app/profile.html", import.meta.url).href,
+  activity: new URL("../pages/app/activity.html", import.meta.url).href,
+  settings: new URL("../pages/app/settings.html", import.meta.url).href,
+  post: new URL("../pages/app/post.html", import.meta.url).href,
+  communities: new URL("../pages/communities/communities.html", import.meta.url).href,
+  community: new URL("../pages/communities/community.html", import.meta.url).href,
+});
+
 // Authentication
 
-export async function getCurrentUserOrRedirect(redirectUrl = "login.html") {
+export async function getCurrentUserOrRedirect(redirectUrl = PAGE_URLS.login) {
   const {
     data: { user },
     error,
@@ -621,7 +633,7 @@ export function createPostCard({
       const authorNameElement = header.querySelector(".post-author-name");
       const authorLink = document.createElement("a");
       authorLink.className = "post-author-link";
-      authorLink.href = `profile.html?uid=${encodeURIComponent(authorUserId)}`;
+      authorLink.href = `${PAGE_URLS.profile}?uid=${encodeURIComponent(authorUserId)}`;
       authorLink.setAttribute("aria-label", "Open author profile");
       authorNameElement.replaceWith(authorLink);
       authorLink.appendChild(authorNameElement);
@@ -666,7 +678,7 @@ function attachAccountMenu(avatar) {
   menu.hidden = true;
 
   const profileLink = document.createElement("a");
-  profileLink.href = "profile.html";
+  profileLink.href = PAGE_URLS.profile;
   profileLink.className = "account-menu-item";
   profileLink.setAttribute("role", "menuitem");
   profileLink.textContent = "Profile";
@@ -710,7 +722,7 @@ function attachAccountMenu(avatar) {
       alert("Failed to sign out. Please try again.");
       return;
     }
-    window.location.href = "index.html";
+    window.location.href = PAGE_URLS.index;
   });
   document.addEventListener("click", closeMenu);
   document.addEventListener("keydown", (event) => {

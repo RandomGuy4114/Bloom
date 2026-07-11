@@ -10,6 +10,7 @@ import {
   isWithinCommunityRadius,
   joinCommunity,
   leaveCommunity,
+  PAGE_URLS,
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
@@ -59,7 +60,7 @@ function createCommunityCard(community, includeMembershipButton = true) {
   viewButton.style.cssText = "padding: 10px; margin: 5px;";
   viewButton.textContent = "View Community";
   viewButton.addEventListener("click", () => {
-    window.location.href = `community.html?communityID=${community.id}`;
+    window.location.href = `${PAGE_URLS.community}?communityID=${community.id}`;
   });
   actions.appendChild(viewButton);
 

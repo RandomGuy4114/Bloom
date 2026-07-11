@@ -1,7 +1,7 @@
 // Dependencies
 
 import { supabase } from "./supabase.js";
-import { withLoadingOverlay } from "./main.js";
+import { PAGE_URLS, withLoadingOverlay } from "./main.js";
 
 // Definitions
 
@@ -73,7 +73,7 @@ registerButton?.addEventListener("click", async () => {
       email,
       password,
       options: { 
-        emailRedirectTo: "http://localhost:3000/Site/confirm.html",
+        emailRedirectTo: new URL("../pages/auth/confirm.html", import.meta.url).href,
         data: { 
           username,
           birthday 
@@ -88,6 +88,6 @@ registerButton?.addEventListener("click", async () => {
     }
 
     alert("Account created successfully! Please check your email to confirm your account.");
-    window.location.href = "index.html";
+    window.location.href = PAGE_URLS.index;
   }, "Creating your account...");
 });

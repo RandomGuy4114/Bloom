@@ -14,6 +14,7 @@ import {
   isPostOwner,
   joinCommunity,
   leaveCommunity,
+  PAGE_URLS,
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
@@ -64,7 +65,7 @@ function renderCommunityPosts() {
     authorName: post.authorName,
     authorAvatarUrl: post.authorAvatarUrl,
     communityName: post.communityName,
-    manageHref: isPostOwner(post, user.id) ? `post.html?postId=${post.id}` : null,
+    manageHref: isPostOwner(post, user.id) ? `${PAGE_URLS.post}?postId=${post.id}` : null,
   }));
   postsContainer.replaceChildren(...cards);
 }
@@ -82,7 +83,7 @@ async function renderCommunityMembers(memberIds = []) {
 
     const link = document.createElement("a");
     link.className = "community-member";
-    link.href = `profile.html?uid=${encodeURIComponent(memberId)}`;
+    link.href = `${PAGE_URLS.profile}?uid=${encodeURIComponent(memberId)}`;
     link.setAttribute("aria-label", "Open member profile");
     const avatar = document.createElement("div");
     avatar.className = "pfp-frame community-member-avatar";

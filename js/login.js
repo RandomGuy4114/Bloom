@@ -1,7 +1,7 @@
 // Dependencies
 
 import { supabase } from "./supabase.js";
-import { withLoadingOverlay } from "./main.js";
+import { PAGE_URLS, withLoadingOverlay } from "./main.js";
 
 // Definitions
 
@@ -29,6 +29,6 @@ loginButton?.addEventListener("click", async () => {
       return;
     }
 
-    window.location.href = "home.html";
+    window.location.href = PAGE_URLS.home;
   }, "Signing in...");
 });

@@ -10,6 +10,7 @@ import {
   getCurrentUserOrRedirect,
   getUserProfile,
   isPostOwner,
+  PAGE_URLS,
   renderEmptyState,
   saveCurrentUser,
   showCurrentUser,
@@ -124,7 +125,7 @@ async function renderFeedPosts(posts) {
     authorName: postDetails[index].authorName,
     authorAvatarUrl: postDetails[index].authorAvatarUrl,
     communityName: postDetails[index].communityName,
-    manageHref: isPostOwner(post, currentUser.id) ? `post.html?postId=${post.id}` : null,
+    manageHref: isPostOwner(post, currentUser.id) ? `${PAGE_URLS.post}?postId=${post.id}` : null,
   }));
   feed.replaceChildren(...cards);
 }

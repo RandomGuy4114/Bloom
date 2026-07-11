@@ -1,6 +1,6 @@
 // Dependencies
 
-import { createPopupShell, getCurrentUserOrRedirect, withLoadingOverlay, showCurrentUser } from "./main.js";
+import { createPopupShell, getCurrentUserOrRedirect, PAGE_URLS, withLoadingOverlay, showCurrentUser } from "./main.js";
 import { getLanguage, setLanguage } from "./i18n.js";
 import { supabase } from "./supabase.js";
 
@@ -111,7 +111,7 @@ async function openDeleteAccountPopup() {
     }
 
     alert("Account deletion requested.");
-    window.location.href = "index.html";
+    window.location.href = PAGE_URLS.index;
     closePopup();
   });
   deleteConfirm.focus();
@@ -144,7 +144,7 @@ logoutButton?.addEventListener("click", async () => {
     alert("Failed to sign out. Please try again.");
     return;
   }
-  window.location.href = "index.html";
+  window.location.href = PAGE_URLS.index;
 });
 
 changeLanguageButton?.addEventListener("click", async () => {

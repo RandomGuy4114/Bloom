@@ -10,6 +10,7 @@ import {
   getUserProfile,
   isPostOwner,
   isWithinCommunityRadius,
+  PAGE_URLS,
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
@@ -98,7 +99,7 @@ function renderTypedPosts(type) {
     authorName: post.authorName,
     authorAvatarUrl: post.authorAvatarUrl,
     communityName: post.communityName,
-    manageHref: isPostOwner(post, user.id) ? `post.html?postId=${post.id}` : null,
+    manageHref: isPostOwner(post, user.id) ? `${PAGE_URLS.post}?postId=${post.id}` : null,
   }));
   container.replaceChildren(...cards);
 }

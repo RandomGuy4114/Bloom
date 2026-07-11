@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloom - Community</title>
+    <link rel="icon" href="../../Assets/BloomLogo.png" type="image/png">
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body class="app-page community-page">
+    <div class="topbar">
+        <h1 class="topbar-logo">Bloom <p id="verText">ALPHA</p></h1>
+        <nav style="display: flex; align-items: center;">
+            <p id="username-label" style="margin: 10px;">Communities</p>
+            <div class="pfp-frame"></div>
+        </nav>
+        <div class="topbar-actions" aria-label="Mobile navigation">
+            <div class="topbar-action-row">
+                <button onclick="window.location.href='../app/home.html'">Home</button>
+                <button onclick="window.location.href='../app/profile.html'">Profile</button>
+                <button onclick="window.location.href='../app/activity.html'">Activity</button>
+            </div>
+            <div class="topbar-action-row">
+                <button onclick="window.location.href='communities.html'">Communities</button>
+                <button onclick="window.location.href='../app/settings.html'">Settings</button>
+            </div>
+        </div>
+    </div>
+    <div class="sidebar">
+        <button onclick="window.location.href='../app/home.html'" class="sidebarButton">Home</button>
+        <button onclick="window.location.href='../app/profile.html'" class="sidebarButton">Profile</button>
+        <button onclick="window.location.href='../app/activity.html'" class="sidebarButton">Activity</button>
+        <div class="divider"></div>
+        <button class="sidebarButton" onclick="window.location.href='communities.html'">Communities</button>
+        <div class="divider"></div>
+        <button class="sidebarButton" onclick="window.location.href='../app/settings.html'">Settings</button>
+    </div>
+    <div class="rightBar">
+        <h2 class="community-members-title">Community Members</h2>
+        <div id="communityMembersContainer" class="community-members-list"></div>
+    </div>
+    <div class="main-layout">
+        <div class="feed-container">
+            <div class="communities-profile" style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+                <h1 id="comName" style="text-align: center;"></h1>
+                <p id="comDesc" style="text-align: center; color: grey;"></p>
+                <button id="joinCommunityButton">Join Community</button>
+
+            </div>
+            <div class="feed-updates">
+                <input type="search" id="searchPostInput" aria-label="Search posts" style="width: 90%; margin-bottom: 10px;">
+                <div class="posts-container" id="com-posts"></div>
+            </div>
+        </div>
+    </div>
+</body>
+<script type="module" src="../../js/i18n.js"></script>
+<script type="module" src="../../js/community-single.js"></script>
+</html>

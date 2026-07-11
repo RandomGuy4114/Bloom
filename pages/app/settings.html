@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloom - Community</title>
-    <link rel="icon" href="Assets/BloomLogo.png" type="image/png">
-    <link rel="stylesheet" href="css/styles.css">
+    <title>Bloom - Settings</title>
+    <link rel="icon" href="../../Assets/BloomLogo.png" type="image/png">
+    <link rel="stylesheet" href="../../css/styles.css">
 </head>
-<body class="app-page community-page">
+<body class="app-page">
     <div class="topbar">
         <h1 class="topbar-logo">Bloom <p id="verText">ALPHA</p></h1>
         <nav style="display: flex; align-items: center;">
@@ -21,7 +21,7 @@
                 <button onclick="window.location.href='activity.html'">Activity</button>
             </div>
             <div class="topbar-action-row">
-                <button onclick="window.location.href='communities.html'">Communities</button>
+                <button onclick="window.location.href='../communities/communities.html'">Communities</button>
                 <button onclick="window.location.href='settings.html'">Settings</button>
             </div>
         </div>
@@ -31,29 +31,27 @@
         <button onclick="window.location.href='profile.html'" class="sidebarButton">Profile</button>
         <button onclick="window.location.href='activity.html'" class="sidebarButton">Activity</button>
         <div class="divider"></div>
-        <button class="sidebarButton" onclick="window.location.href='communities.html'">Communities</button>
+        <button class="sidebarButton" onclick="window.location.href='../communities/communities.html'">Communities</button>
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='settings.html'">Settings</button>
     </div>
-    <div class="rightBar">
-        <h2 class="community-members-title">Community Members</h2>
-        <div id="communityMembersContainer" class="community-members-list"></div>
-    </div>
     <div class="main-layout">
-        <div class="feed-container">
-            <div class="communities-profile" style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
-                <h1 id="comName" style="text-align: center;"></h1>
-                <p id="comDesc" style="text-align: center; color: grey;"></p>
-                <button id="joinCommunityButton">Join Community</button>
-
-            </div>
-            <div class="feed-updates">
-                <input type="search" id="searchPostInput" aria-label="Search posts" style="width: 90%; margin-bottom: 10px;">
-                <div class="posts-container" id="com-posts"></div>
+        <div class="settings-container">
+            <h1 style="text-align: center;">Settings</h1>
+            <div class="settings-section" style="display: flex; flex-direction: column; align-items: center;">
+                <h2>Account Settings</h2>
+                <button id="changePasswordButton" style="margin: 10px;">Change Password</button>
+                <button id="deleteAccountButton" style="margin: 10px;">Delete Account</button>
+                <select id="LangDropdown" label="Language" aria-label="Select Language">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>                    
+                </select>
+                <button id="changeLangButton" style="margin: 10px;">Change Language</button>
+                <button id="logoutButton" style="margin: 10px;">Logout</button>
             </div>
         </div>
     </div>
 </body>
-<script type="module" src="../js/i18n.js"></script>
-<script type="module" src="../js/community-single.js"></script>
+<script type="module" src="../../js/i18n.js"></script>
+<script type="module" src="../../js/settings.js"></script>
 </html>

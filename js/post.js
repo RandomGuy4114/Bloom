@@ -7,6 +7,7 @@ import {
   getCurrentUserOrRedirect,
   getQueryParameter,
   isPostOwner as isPostOwnerRecord,
+  PAGE_URLS,
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
@@ -88,7 +89,7 @@ editPostButton?.addEventListener("click", () => {
     return;
   }
 
-  window.location.href = `edit-post.html?postId=${postId}`;
+  window.location.href = new URL(`edit-post.html?postId=${postId}`, PAGE_URLS.post).href;
 });
 
 deletePostButton?.addEventListener("click", async () => {
@@ -113,7 +114,7 @@ deletePostButton?.addEventListener("click", async () => {
     }
 
     alert("Post deleted successfully.");
-    window.location.href = "home.html";
+    window.location.href = PAGE_URLS.home;
   }, "Deleting post...");
 });
 
