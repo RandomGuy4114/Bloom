@@ -7,22 +7,21 @@ import { getLanguage, setLanguage } from "./i18n.js";
 
 const communityNameCache = new Map();
 const userProfileCache = new Map();
-let motionModulePromise;
 let loadingOverlay;
 let loadingRequestCount = 0;
 let previousBodyOverflow = "";
 let openPostMenu;
 
 export const PAGE_URLS = Object.freeze({
-  index: new URL("../index.html", import.meta.url).href,
-  login: new URL("../pages/auth/login.html", import.meta.url).href,
-  home: new URL("../pages/app/home.html", import.meta.url).href,
-  profile: new URL("../pages/app/profile.html", import.meta.url).href,
-  activity: new URL("../pages/app/activity.html", import.meta.url).href,
-  settings: new URL("../pages/app/settings.html", import.meta.url).href,
-  post: new URL("../pages/app/post.html", import.meta.url).href,
-  communities: new URL("../pages/communities/communities.html", import.meta.url).href,
-  community: new URL("../pages/communities/community.html", import.meta.url).href,
+  index: new URL("../", import.meta.url).href,
+  login: new URL("../pages/auth/login/", import.meta.url).href,
+  home: new URL("../pages/app/home/", import.meta.url).href,
+  profile: new URL("../pages/app/profile/", import.meta.url).href,
+  activity: new URL("../pages/app/activity/", import.meta.url).href,
+  settings: new URL("../pages/app/settings/", import.meta.url).href,
+  post: new URL("../pages/app/post/", import.meta.url).href,
+  communities: new URL("../pages/communities/communities/", import.meta.url).href,
+  community: new URL("../pages/communities/community/", import.meta.url).href,
 });
 
 // Authentication
@@ -39,7 +38,11 @@ export async function getCurrentUserOrRedirect(redirectUrl = PAGE_URLS.login) {
     return null;
   }
 
-  const profile = await getUserProfile(user.id);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("Language")
+    .eq("id", user.id)
+    .single();
   if (profile?.Language) {
     setLanguage(profile.Language);
   }
@@ -56,16 +59,6 @@ export async function getCurrentUsername() {
   return (await getUserProfile(user.id))?.username ?? null;
 }
 
-export async function saveCurrentUser(user = null) {
-  const activeUser = user ?? await getCurrentUserOrRedirect();
-  if (!activeUser) {
-    throw new Error("No user session found");
-  }
-
-  localStorage.setItem("currentUser", JSON.stringify(activeUser));
-  return activeUser;
-}
-
 // Data
 
 export async function getUserProfile(userId) {
@@ -75,10 +68,8 @@ export async function getUserProfile(userId) {
 
   if (!userProfileCache.has(userId)) {
     const request = supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single()
+      .rpc("get_public_profile", { target_user: userId })
+      .maybeSingle()
       .then(({ data: profile, error }) => {
         if (error) {
           userProfileCache.delete(userId);
@@ -158,77 +149,25 @@ export async function canUserPostToCommunity(userId, communityID) {
 }
 
 export async function joinCommunity(userId, communityID, userLocation) {
-  const [{ data: community, error: communityError }, { data: profile, error: profileError }] = await Promise.all([
-    supabase
-      .from("Communities")
-      .select("members, global, latitude, longitude, radius_meters")
-      .eq("id", communityID)
-      .single(),
-    supabase.from("profiles").select("joined_communities").eq("id", userId).single(),
-  ]);
-
-  if (communityError || profileError) {
-    console.error(
-      "Error loading community membership:",
-      communityError?.message ?? profileError?.message,
-    );
-    return { error: communityError ?? profileError, status: "error" };
+  if (!userId || !communityID) {
+    return { error: new Error("Missing membership details."), status: "error" };
   }
-
-  const isCommunityMember = Array.isArray(community.members) && community.members.includes(userId);
-  const isProfileMember = Array.isArray(profile.joined_communities)
-    && profile.joined_communities.includes(communityID);
-  if (isCommunityMember || isProfileMember) {
-    return { error: null, status: "already_joined" };
-  }
-
-  if (!isWithinCommunityRadius(community, userLocation)) {
-    return { error: null, status: "out_of_range" };
-  }
-
-  const [{ error: communityUpdateError }, { error: profileUpdateError }] = await Promise.all([
-    supabase
-      .from("Communities")
-      .update({ members: addUniqueItem(community.members, userId) })
-      .eq("id", communityID),
-    supabase
-      .from("profiles")
-      .update({ joined_communities: addUniqueItem(profile.joined_communities, communityID) })
-      .eq("id", userId),
-  ]);
-
-  const error = communityUpdateError ?? profileUpdateError;
+  const { data: status, error } = await supabase.rpc("join_community", {
+    target_community: communityID,
+    user_latitude: userLocation?.latitude ?? null,
+    user_longitude: userLocation?.longitude ?? null,
+  });
   if (error) {
     console.error("Error updating community membership:", error.message);
   }
-
-  return { error, status: error ? "error" : "joined" };
+  return { error, status: error ? "error" : status };
 }
 
 export async function leaveCommunity(userId, communityID) {
-  const [{ data: community, error: communityError }, { data: profile, error: profileError }] = await Promise.all([
-    supabase.from("Communities").select("members").eq("id", communityID).single(),
-    supabase.from("profiles").select("joined_communities").eq("id", userId).single(),
-  ]);
-
-  if (communityError || profileError) {
-    const error = communityError ?? profileError;
-    console.error("Error loading community membership:", error.message);
-    return { error };
+  if (!userId || !communityID) {
+    return { error: new Error("Missing membership details.") };
   }
-
-  const [{ error: communityUpdateError }, { error: profileUpdateError }] = await Promise.all([
-    supabase
-      .from("Communities")
-      .update({ members: removeItem(community.members, userId) })
-      .eq("id", communityID),
-    supabase
-      .from("profiles")
-      .update({ joined_communities: removeItem(profile.joined_communities, communityID) })
-      .eq("id", userId),
-  ]);
-
-  const error = communityUpdateError ?? profileUpdateError;
+  const { error } = await supabase.rpc("leave_community", { target_community: communityID });
   if (error) {
     console.error("Error leaving community:", error.message);
   }
@@ -412,11 +351,31 @@ export function renderEmptyState(container, message) {
     return;
   }
 
-  container.innerHTML = `
-    <div class="post">
-      <p style="margin: 0; color: #666;">${message}</p>
-    </div>
-  `;
+  const card = document.createElement("div");
+  card.className = "post";
+  const text = document.createElement("p");
+  text.style.cssText = "margin:0;color:#666";
+  text.textContent = message;
+  card.appendChild(text);
+  container.replaceChildren(card);
+}
+
+export function isTrustedImageUrl(value, bucketName, allowBlob = false) {
+  if (!value || !bucketName) {
+    return false;
+  }
+  try {
+    const url = new URL(value, window.location.href);
+    if (allowBlob && url.protocol === "blob:") {
+      return true;
+    }
+    const bucketPath = `/storage/v1/object/public/${encodeURIComponent(bucketName)}/`;
+    return url.protocol === "https:"
+      && url.origin === "https://auilmosognuitlpoqchn.supabase.co"
+      && url.pathname.startsWith(bucketPath);
+  } catch {
+    return false;
+  }
 }
 
 export function applyAvatar(element, avatarUrl, altText = "") {
@@ -425,7 +384,7 @@ export function applyAvatar(element, avatarUrl, altText = "") {
   }
 
   element.replaceChildren();
-  if (!avatarUrl) {
+  if (!isTrustedImageUrl(avatarUrl, "Profile Pictures", true)) {
     return;
   }
 
@@ -563,9 +522,9 @@ export function attachPostTypeBadge(card, postType = "post") {
   }
 
   const types = {
-    post: { icon: "<i class=\"ri-mail-fill\"></i>", label: "Post" },
-    activity: { icon: "<i class=\"ri-user-3-line\"></i>", label: "Activity" },
-    event: { icon: "<i class=\"ri-calendar-event-line\"></i>", label: "Event" },
+    post: { iconClass: "ri-mail-fill", label: "Post" },
+    activity: { iconClass: "ri-user-3-line", label: "Activity" },
+    event: { iconClass: "ri-calendar-event-line", label: "Event" },
   };
   const normalizedType = types[postType] ? postType : "post";
   const badge = document.createElement("div");
@@ -574,7 +533,9 @@ export function attachPostTypeBadge(card, postType = "post") {
 
   const icon = document.createElement("span");
   icon.setAttribute("aria-hidden", "true");
-  icon.innerHTML = types[normalizedType].icon;
+  const iconGlyph = document.createElement("i");
+  iconGlyph.className = types[normalizedType].iconClass;
+  icon.appendChild(iconGlyph);
   const label = document.createElement("span");
   label.dataset.i18nKey = `postType.${normalizedType}`;
   label.dataset.i18nIgnore = "true";
@@ -599,13 +560,32 @@ export function createPostCard({
 }) {
   const card = document.createElement("div");
   card.classList.add("post");
-  card.innerHTML = `
-    <h3 ${title ? "data-i18n-ignore" : ""} style="margin: 0 0 8px 0; padding-right: 40px;">${title || "Untitled Post"}</h3>
-    <p data-i18n-ignore style="margin: 0; color: #333; line-height: 1.4;">${body || ""}</p>
-    ${footer ? `<p style="margin: 10px 0 0 0; font-size: 12px; color: grey;">${footer}</p>` : ""}
-  `;
+  let footerElement = null;
 
-  if (imgLink) {
+  if (title) {
+    const heading = document.createElement("h3");
+    heading.dataset.i18nIgnore = "true";
+    heading.style.cssText = "margin:0 0 8px 0;padding-right:40px";
+    heading.textContent = title;
+    card.appendChild(heading);
+  }
+
+  if (body) {
+    const content = document.createElement("p");
+    content.dataset.i18nIgnore = "true";
+    content.style.cssText = "margin:0;color:#333;line-height:1.4";
+    content.textContent = body;
+    card.appendChild(content);
+  }
+
+  if (footer) {
+    footerElement = document.createElement("p");
+    footerElement.style.cssText = "margin:10px 0 0 0;font-size:12px;color:grey";
+    footerElement.textContent = footer;
+    card.appendChild(footerElement);
+  }
+
+  if (isTrustedImageUrl(imgLink, "Post Images")) {
     const image = document.createElement("img");
     image.className = "post-image";
     image.src = imgLink;
@@ -613,30 +593,44 @@ export function createPostCard({
     image.loading = "lazy";
     image.decoding = "async";
     image.addEventListener("error", () => image.remove(), { once: true });
-    const footerElement = footer ? card.lastElementChild : null;
     card.insertBefore(image, footerElement);
   }
 
   if (authorName || communityName) {
     const header = document.createElement("div");
-    const shouldPreserveAuthor = authorName && !["Unknown", "You"].includes(authorName);
-    const shouldPreserveCommunity = communityName && communityName !== "Unknown Community";
     header.style.cssText = "display:flex;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;padding-right:40px";
-    header.innerHTML = `
-      <div class="pfp-frame" style="width: 30px; height: 30px;"></div>
-      <strong class="post-author-name" ${shouldPreserveAuthor ? "data-i18n-ignore" : ""} style="color: #618764;">${authorName || "Unknown"}</strong>
-      ${communityName ? `<span style="color: #888; font-size: 0.85rem;"><span>in</span> <span ${shouldPreserveCommunity ? "data-i18n-ignore" : ""}>${communityName}</span></span>` : ""}
-    `;
+    if (authorName) {
+      const avatar = document.createElement("div");
+      avatar.className = "pfp-frame";
+      avatar.style.cssText = "width:30px;height:30px";
+      applyAvatar(avatar, authorAvatarUrl, "Post author profile picture");
+      const authorNameElement = document.createElement("strong");
+      authorNameElement.className = "post-author-name";
+      authorNameElement.style.color = "#618764";
+      authorNameElement.dataset.i18nIgnore = "true";
+      authorNameElement.textContent = authorName;
+      header.append(avatar, authorNameElement);
 
-    applyAvatar(header.querySelector(".pfp-frame"), authorAvatarUrl, "Post author profile picture");
-    if (authorUserId) {
-      const authorNameElement = header.querySelector(".post-author-name");
-      const authorLink = document.createElement("a");
-      authorLink.className = "post-author-link";
-      authorLink.href = `${PAGE_URLS.profile}?uid=${encodeURIComponent(authorUserId)}`;
-      authorLink.setAttribute("aria-label", "Open author profile");
-      authorNameElement.replaceWith(authorLink);
-      authorLink.appendChild(authorNameElement);
+      if (authorUserId) {
+        const authorLink = document.createElement("a");
+        authorLink.className = "post-author-link";
+        authorLink.href = `${PAGE_URLS.profile}?uid=${encodeURIComponent(authorUserId)}`;
+        authorLink.setAttribute("aria-label", "Open author profile");
+        authorNameElement.replaceWith(authorLink);
+        authorLink.appendChild(authorNameElement);
+      }
+    }
+
+    if (communityName) {
+      const context = document.createElement("span");
+      context.style.cssText = "color:#888;font-size:0.85rem";
+      const prefix = document.createElement("span");
+      prefix.textContent = "in ";
+      const name = document.createElement("span");
+      name.dataset.i18nIgnore = "true";
+      name.textContent = communityName;
+      context.append(prefix, name);
+      header.appendChild(context);
     }
 
     card.insertBefore(header, card.firstChild);
@@ -653,7 +647,7 @@ export async function showCurrentUser(user, element) {
 
   const profile = await getUserProfile(user.id);
   element.dataset.i18nIgnore = "true";
-  element.textContent = profile?.username || user.email || "Logged in user";
+  element.textContent = profile?.username || user.email || "";
   const avatar = element.closest(".topbar")?.querySelector(".pfp-frame");
   applyAvatar(avatar, profile?.avatar_url, "Profile picture");
   attachAccountMenu(avatar);
@@ -744,21 +738,26 @@ document.addEventListener("keydown", (event) => {
 
 // Animation
 
-function getMotionModule() {
-  motionModulePromise ??= import("https://cdn.jsdelivr.net/npm/motion@latest/+esm");
-  return motionModulePromise;
-}
-
 export async function PopupIn(element, options = {}) {
   const { duration = 0.5, easing = "ease-in-out" } = options;
-  const { animate } = await getMotionModule();
-  return animate(element, { opacity: [0, 1], scale: [0.8, 1] }, { duration, easing }).finished;
+  return element.animate(
+    [
+      { opacity: 0, transform: "scale(0.8)" },
+      { opacity: 1, transform: "scale(1)" },
+    ],
+    { duration: duration * 1000, easing, fill: "forwards" },
+  ).finished;
 }
 
 export async function PopupOut(element, options = {}) {
   const { duration = 0.5, easing = "ease-in-out" } = options;
-  const { animate } = await getMotionModule();
-  return animate(element, { opacity: [1, 0], scale: [1, 0.8] }, { duration, easing }).finished;
+  return element.animate(
+    [
+      { opacity: 1, transform: "scale(1)" },
+      { opacity: 0, transform: "scale(0.8)" },
+    ],
+    { duration: duration * 1000, easing, fill: "forwards" },
+  ).finished;
 }
 
 // Dialogs
@@ -769,7 +768,7 @@ export function createPopupShell(title, content) {
   overlay.innerHTML = `
     <div class="popup-card" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
       <div class="popup-header">
-        <h2 id="popupTitle">${title}</h2>
+        <h2 id="popupTitle"></h2>
         <button class="popup-close" type="button" aria-label="Close dialog">×</button>
       </div>
       <div class="popup-body"></div>
@@ -777,6 +776,7 @@ export function createPopupShell(title, content) {
   `;
 
   const card = overlay.querySelector(".popup-card");
+  overlay.querySelector("#popupTitle").textContent = title;
   overlay.querySelector(".popup-body").appendChild(content);
 
   let isClosing = false;

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bloom - Activity</title>
-    <link rel="icon" href="../../Assets/BloomLogo.png" type="image/png">
-    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="icon" href="../../../Assets/BloomLogo.png" type="image/png">
+    <link rel="stylesheet" href="../../../css/styles.css">
 </head>
 <body class="app-page">
     <div class="topbar">
@@ -16,24 +16,24 @@
         </nav>
         <div class="topbar-actions" aria-label="Mobile navigation">
             <div class="topbar-action-row">
-                <button onclick="window.location.href='home.html'">Home</button>
-                <button onclick="window.location.href='profile.html'">Profile</button>
-                <button onclick="window.location.href='activity.html'">Activity</button>
+                <button onclick="window.location.href='../home/'">Home</button>
+                <button onclick="window.location.href='../profile/'">Profile</button>
+                <button onclick="window.location.href='../activity/'">Activity</button>
             </div>
             <div class="topbar-action-row">
-                <button onclick="window.location.href='../communities/communities.html'">Communities</button>
-                <button onclick="window.location.href='settings.html'">Settings</button>
+                <button onclick="window.location.href='../../communities/communities/'">Communities</button>
+                <button onclick="window.location.href='../settings/'">Settings</button>
             </div>
         </div>
     </div>
     <div class="sidebar">
-        <button onclick="window.location.href='home.html'" class="sidebarButton">Home</button>
-        <button onclick="window.location.href='profile.html'" class="sidebarButton">Profile</button>
-        <button onclick="window.location.href='activity.html'" class="sidebarButton">Activity</button>
+        <button onclick="window.location.href='../home/'" class="sidebarButton">Home</button>
+        <button onclick="window.location.href='../profile/'" class="sidebarButton">Profile</button>
+        <button onclick="window.location.href='../activity/'" class="sidebarButton">Activity</button>
         <div class="divider"></div>
-        <button class="sidebarButton" onclick="window.location.href='../communities/communities.html'">Communities</button>
+        <button class="sidebarButton" onclick="window.location.href='../../communities/communities/'">Communities</button>
         <div class="divider"></div>
-        <button class="sidebarButton" onclick="window.location.href='settings.html'">Settings</button>
+        <button class="sidebarButton" onclick="window.location.href='../settings/'">Settings</button>
     </div>
     <div class="main-layout">
         <div class="feed-container">
@@ -42,7 +42,7 @@
                 <p style="text-align: center; color: grey;">Here you can view your recent activity and nearby activity.</p>
                 <div class="divider"></div>
                 <div class="activity-search">
-                    <input type="search" id="activitySearchInput" aria-label="Search activity" style="padding: 10px; width: 90%; border-radius: 5px; border: 1px solid #ccc; height: 40px;">
+                    <input type="search" id="activitySearchInput" aria-label="Search activity" placeholder="Search activities" style="padding: 10px; width: 90%; border-radius: 5px; border: 1px solid #ccc; height: 40px;">
                 </div>
                 <div class="divider"></div>
                 <div class="activity-filters">
@@ -58,7 +58,7 @@
                     <p style="text-align: center; color: grey;">Here you can view upcoming events in your area.</p>
                     <div class="divider"></div>
                     <div class="event-search">
-                        <input type="search" id="eventSearchInput" aria-label="Search events" style="padding: 10px; width: 90%; border-radius: 5px; border: 1px solid #ccc; height: 40px;">
+                        <input type="search" id="eventSearchInput" aria-label="Search events" placeholder="Search events" style="padding: 10px; width: 90%; border-radius: 5px; border: 1px solid #ccc; height: 40px;">
                     </div>
                     <div class="event-filters" style="margin-top: 10px; text-align: center;">
                         <button type="button" class="filter-button is-active" data-event-filter="all" aria-pressed="true">All</button>
@@ -72,6 +72,6 @@
                 </div>
         </div>
 </body>
-<script type="module" src="../../js/i18n.js"></script>
-<script type="module" src="../../js/activity.js"></script>
+<script type="module" src="../../../js/i18n.js"></script>
+<script type="module" src="../../../js/activity.js"></script>
 </html>

@@ -52,19 +52,15 @@ registerButton?.addEventListener("click", async () => {
   }
 
   await withLoadingOverlay(async () => {
-    // 1. Keep the username availability check
-    const { data: existingUser, error: existingUserError } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("username", username)
-      .maybeSingle();
+    const { data: usernameAvailable, error: existingUserError } = await supabase
+      .rpc("is_username_available", { requested_username: username });
 
     if (existingUserError) {
       console.error("Error checking existing user:", existingUserError.message);
       errorMessage.textContent = "Unable to check that username. Please try again.";
       return;
     }
-    if (existingUser) {
+    if (!usernameAvailable) {
       errorMessage.textContent = "Username already exists. Please choose a different username.";
       return;
     }
@@ -73,7 +69,7 @@ registerButton?.addEventListener("click", async () => {
       email,
       password,
       options: { 
-        emailRedirectTo: new URL("../pages/auth/confirm.html", import.meta.url).href,
+        emailRedirectTo: new URL("../pages/auth/confirm/", import.meta.url).href,
         data: { 
           username,
           birthday 

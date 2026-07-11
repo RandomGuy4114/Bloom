@@ -7,6 +7,7 @@ import {
   getCurrentUserOrRedirect,
   getQueryParameter,
   isPostOwner as isPostOwnerRecord,
+  isTrustedImageUrl,
   PAGE_URLS,
   renderEmptyState,
   showCurrentUser,
@@ -56,10 +57,10 @@ async function loadPost() {
   if (post.body) {
     postContent.dataset.i18nIgnore = "true";
   }
-  postTitle.textContent = post.title || "Untitled Post";
-  postContent.textContent = post.body || "No content available.";
+  postTitle.textContent = post.title || "";
+  postContent.textContent = post.body || "";
   postContainer.querySelector(".post-image")?.remove();
-  if (post.img_link) {
+  if (isTrustedImageUrl(post.img_link, "Post Images")) {
     const image = document.createElement("img");
     image.className = "post-image";
     image.src = post.img_link;
@@ -89,7 +90,7 @@ editPostButton?.addEventListener("click", () => {
     return;
   }
 
-  window.location.href = new URL(`edit-post.html?postId=${postId}`, PAGE_URLS.post).href;
+  window.location.href = new URL(`../edit-post/?postId=${postId}`, PAGE_URLS.post).href;
 });
 
 deletePostButton?.addEventListener("click", async () => {

@@ -4,7 +4,7 @@ const languageStorageKey = "bloom-language";
 const supportedLanguages = new Set(["en", "es"]);
 const originalText = new WeakMap();
 const originalAttributes = new WeakMap();
-const translatableAttributes = ["aria-label", "title", "alt", "label"];
+const translatableAttributes = ["aria-label", "title", "alt", "label", "placeholder"];
 const keyedTranslations = {
   en: {
     "postType.post": "Post",
@@ -70,6 +70,12 @@ const spanish = {
   "Post": "Publicar",
   "Post title": "Título de la publicación",
   "Post content": "Contenido de la publicación",
+  "Write your post": "Escribe tu publicación",
+  "Search activities": "Buscar actividades",
+  "Tell your community about yourself": "Cuéntale a tu comunidad sobre ti",
+  "Type DELETE": "Escribe DELETE",
+  "Community name": "Nombre de la comunidad",
+  "Describe your community": "Describe tu comunidad",
   "Add image": "Agregar imagen",
   "Post image preview": "Vista previa de la imagen de la publicación",
   "Choose a JPEG, PNG, WebP, or GIF image.": "Elige una imagen JPEG, PNG, WebP o GIF.",
@@ -191,8 +197,6 @@ const spanish = {
   "Enjoy your time here!": "¡Disfruta de Bloom!",
   "No community selected.": "No se seleccionó ninguna comunidad.",
   "Unable to load community details.": "No se pudieron cargar los detalles de la comunidad.",
-  "Community Name": "Nombre de la comunidad",
-  "No description available.": "No hay descripción disponible.",
   "Unable to load posts for this community.": "No se pudieron cargar las publicaciones de esta comunidad.",
   "No posts yet in this community.": "Aún no hay publicaciones en esta comunidad.",
   "No posts match your search.": "Ninguna publicación coincide con tu búsqueda.",
@@ -223,21 +227,13 @@ const spanish = {
   "Note: The community made will only be accessible to people near your selected radius": "Nota: la comunidad creada solo será accesible para personas dentro del radio seleccionado",
   "No post selected.": "No se seleccionó ninguna publicación.",
   "Unable to load post details.": "No se pudieron cargar los detalles de la publicación.",
-  "Untitled Post": "Publicación sin título",
-  "No content available.": "No hay contenido disponible.",
   "Post ID not found.": "No se encontró el identificador de la publicación.",
   "Are you sure you want to delete this post?": "¿Seguro que quieres eliminar esta publicación?",
   "Failed to delete the post. Please try again.": "No se pudo eliminar la publicación. Inténtalo de nuevo.",
   "Post deleted successfully.": "Publicación eliminada correctamente.",
   "Bio:": "Biografía:",
-  "Unable to load bio.": "No se pudo cargar la biografía.",
-  "No bio yet.": "Aún no hay biografía.",
   "Unable to load posts right now.": "No se pueden cargar las publicaciones en este momento.",
   "No posts yet.": "Aún no hay publicaciones.",
-  "Unknown": "Desconocido",
-  "Unknown User": "Usuario desconocido",
-  "Unknown Community": "Comunidad desconocida",
-  "Logged in user": "Usuario conectado",
   "You": "Tú",
   "in": "en",
   "Current password": "Contraseña actual",

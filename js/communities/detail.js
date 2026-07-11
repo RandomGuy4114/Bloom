@@ -90,7 +90,7 @@ async function renderCommunityMembers(memberIds = []) {
     applyAvatar(avatar, profile.avatar_url, "Profile picture");
     const name = document.createElement("span");
     name.dataset.i18nIgnore = "true";
-    name.textContent = profile.username || "Unknown User";
+    name.textContent = profile.username || "";
     link.append(avatar, name);
     return [link];
   });
@@ -157,21 +157,25 @@ async function loadCommunity() {
 
   communityDetails = community;
   await renderCommunityMembers(community.members ?? []);
-  const currentUserProfile = await getUserProfile(user.id);
+  const { data: currentUserProfile } = await supabase
+    .from("profiles")
+    .select("joined_communities")
+    .eq("id", user.id)
+    .single();
   isCurrentUserMember = currentUserProfile?.joined_communities?.includes(communityID) ?? false;
   if (community.name) {
     communityNameElement.dataset.i18nIgnore = "true";
     communityNameElement.textContent = community.name;
   } else {
     delete communityNameElement.dataset.i18nIgnore;
-    communityNameElement.textContent = "Community Name";
+    communityNameElement.textContent = "";
   }
   if (community.description) {
     communityDescriptionElement.dataset.i18nIgnore = "true";
     communityDescriptionElement.textContent = community.description;
   } else {
     delete communityDescriptionElement.dataset.i18nIgnore;
-    communityDescriptionElement.textContent = "No description available.";
+    communityDescriptionElement.textContent = "";
   }
 
   if (postsError) {
@@ -190,7 +194,7 @@ async function loadCommunity() {
   communityPosts = posts.map((post, index) => ({
     ...post,
     authorUserId: post.user_id ?? post.author,
-    authorName: authors[index]?.username || "Unknown",
+    authorName: authors[index]?.username || "",
     authorAvatarUrl: authors[index]?.avatar_url || "",
     communityName: community.name,
   }));
@@ -243,6 +247,10 @@ joinCommunityButton?.addEventListener("click", async () => {
       communityDetails.members = [...new Set([...(communityDetails.members ?? []), user.id])];
       updateJoinButton();
       await renderCommunityMembers(communityDetails.members);
+      return;
+    }
+    if (status !== "joined") {
+      alert("Unable to join the community at this time.");
       return;
     }
 

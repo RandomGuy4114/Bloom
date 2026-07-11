@@ -19,11 +19,11 @@ function openChangePasswordPopup() {
   form.className = "popup-form";
   form.innerHTML = `
     <label for="currentPassword">Current password</label>
-    <input id="currentPassword" type="password" autocomplete="current-password">
+    <input id="currentPassword" type="password" autocomplete="current-password" placeholder="Current password">
     <label for="newPassword">New password</label>
-    <input id="newPassword" type="password" autocomplete="new-password">
+    <input id="newPassword" type="password" autocomplete="new-password" placeholder="New password">
     <label for="confirmPassword">Confirm new password</label>
-    <input id="confirmPassword" type="password" autocomplete="new-password">
+    <input id="confirmPassword" type="password" autocomplete="new-password" placeholder="Confirm new password">
     <div class="popup-actions">
       <button type="button" class="secondary-action">Cancel</button>
       <button type="submit">Update password</button>
@@ -78,7 +78,7 @@ async function openDeleteAccountPopup() {
   content.innerHTML = `
     <p class="popup-warning">This will permanently delete your account and remove your profile data.</p>
     <label for="deleteConfirm">Type DELETE to continue</label>
-    <input id="deleteConfirm" type="text">
+    <input id="deleteConfirm" type="text" placeholder="Type DELETE">
     <div class="popup-actions">
       <button type="button" class="secondary-action">Cancel</button>
       <button type="button" class="danger-action">Delete account</button>

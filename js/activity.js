@@ -165,9 +165,9 @@ async function loadTypedPosts() {
       authorUserId: authorId,
       authorName: isPostOwner(post, user.id)
         ? "You"
-        : profilesById.get(authorId)?.username || "Unknown",
+        : profilesById.get(authorId)?.username || "",
       authorAvatarUrl: profilesById.get(authorId)?.avatar_url || "",
-      communityName: community?.name || "Unknown Community",
+      communityName: community?.name || "",
       communityDetails: community,
     };
   });

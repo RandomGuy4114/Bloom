@@ -37,28 +37,29 @@ let currentProfile;
 
 function renderProfile(profile) {
   if (!profile) {
-    profileName.textContent = "Profile";
-    profileDetails.innerHTML = "<p><strong>Bio:</strong> Unable to load bio.</p>";
+    profileName.textContent = "";
+    profileDetails.replaceChildren();
     applyAvatar(profilePicture, null);
     editProfileButton.hidden = true;
     return;
   }
 
-  const username = profile.username || "Unknown User";
+  const username = profile.username || "";
   profileName.dataset.i18nIgnore = "true";
   profileName.textContent = username;
   applyAvatar(profilePicture, profile.avatar_url, "Profile picture");
 
-  const bio = document.createElement("p");
-  const bioLabel = document.createElement("strong");
-  bioLabel.textContent = "Bio:";
-  const bioContent = document.createElement("span");
+  profileDetails.replaceChildren();
   if (profile.bio) {
+    const bio = document.createElement("p");
+    const bioLabel = document.createElement("strong");
+    bioLabel.textContent = "Bio:";
+    const bioContent = document.createElement("span");
     bioContent.dataset.i18nIgnore = "true";
+    bioContent.textContent = ` ${profile.bio}`;
+    bio.append(bioLabel, bioContent);
+    profileDetails.appendChild(bio);
   }
-  bioContent.textContent = ` ${profile.bio || "No bio yet."}`;
-  bio.append(bioLabel, bioContent);
-  profileDetails.replaceChildren(bio);
   editProfileButton.hidden = activeUserId !== currentUser.id;
 }
 
@@ -68,9 +69,9 @@ function createEditProfileForm() {
   form.innerHTML = `
     <div class="edit-profile-preview" aria-label="Profile picture preview"></div>
     <label for="editProfileUsername">Username</label>
-    <input id="editProfileUsername" type="text" minlength="3" maxlength="30" autocomplete="username" required>
+    <input id="editProfileUsername" type="text" minlength="3" maxlength="30" autocomplete="username" placeholder="Username" required>
     <label for="editProfileBio">Bio</label>
-    <textarea id="editProfileBio" maxlength="500"></textarea>
+    <textarea id="editProfileBio" maxlength="500" placeholder="Tell your community about yourself"></textarea>
     <label for="editProfileAvatar">Profile picture</label>
     <input id="editProfileAvatar" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
     <p class="profile-upload-help">JPEG, PNG, WebP, or GIF. Maximum 5 MB.</p>
@@ -252,7 +253,7 @@ async function loadProfile() {
     imgLink: post.img_link,
     footer: `Posted on: ${formatDateTime(post.created_at)}`,
     authorUserId: activeUserId,
-    authorName: ownsProfile ? "You" : currentProfile?.username || "Unknown",
+    authorName: ownsProfile ? "You" : currentProfile?.username || "",
     authorAvatarUrl: currentProfile?.avatar_url || "",
     manageHref: ownsProfile ? `${PAGE_URLS.post}?postId=${post.id}` : null,
   }));

@@ -12,7 +12,6 @@ import {
   isPostOwner,
   PAGE_URLS,
   renderEmptyState,
-  saveCurrentUser,
   showCurrentUser,
   withLoadingOverlay,
 } from "./main.js";
@@ -108,8 +107,8 @@ async function renderFeedPosts(posts) {
     ]);
     return {
       authorUserId: post.user_id ?? post.author,
-      communityName: communityName || "Unknown Community",
-      authorName: isPostOwner(post, currentUser.id) ? "You" : authorProfile?.username || "Unknown",
+      communityName: communityName || "",
+      authorName: isPostOwner(post, currentUser.id) ? "You" : authorProfile?.username || "",
       authorAvatarUrl: authorProfile?.avatar_url || "",
     };
   }));
@@ -358,7 +357,6 @@ await withLoadingOverlay(async () => {
   }
 
   await Promise.all([
-    saveCurrentUser(currentUser),
     showCurrentUser(currentUser, usernameLabel),
     loadJoinedCommunities(),
     checkFirstTimeUser(),

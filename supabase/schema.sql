@@ -23,6 +23,68 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
+CREATE OR REPLACE FUNCTION "public"."add_community_owner_membership"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+BEGIN
+    NEW."members" := ARRAY[NEW."user_id"]::uuid[];
+    UPDATE "public"."profiles"
+    SET "joined_communities" = array_append(
+        COALESCE("joined_communities", ARRAY[]::uuid[]),
+        NEW."id"
+    )
+    WHERE "id" = NEW."user_id"
+      AND NOT (NEW."id" = ANY(COALESCE("joined_communities", ARRAY[]::uuid[])));
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."add_community_owner_membership"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."can_post_to_community"("target_community" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM "public"."Communities" AS "community"
+        WHERE "community"."id" = "target_community"
+          AND "auth"."uid"() = ANY(COALESCE("community"."members", ARRAY[]::uuid[]))
+          AND (
+              NOT COALESCE("community"."global", false)
+              OR EXISTS (
+                  SELECT 1
+                  FROM "public"."profiles" AS "profile"
+                  WHERE "profile"."id" = "auth"."uid"()
+                    AND "profile"."admin" = true
+              )
+          )
+    );
+$$;
+
+
+ALTER FUNCTION "public"."can_post_to_community"("target_community" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) RETURNS double precision
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+    SELECT 6371000 * 2 * asin(sqrt(
+        power(sin(radians("second_latitude" - "first_latitude") / 2), 2)
+        + cos(radians("first_latitude"))
+        * cos(radians("second_latitude"))
+        * power(sin(radians("second_longitude" - "first_longitude") / 2), 2)
+    ));
+$$;
+
+
+ALTER FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."event_trigger_fn"() RETURNS "event_trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -33,6 +95,19 @@ $$;
 
 
 ALTER FUNCTION "public"."event_trigger_fn"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_public_profile"("target_user" "uuid") RETURNS TABLE("id" "uuid", "username" "text", "bio" "text", "avatar_url" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+    SELECT "profile"."id", "profile"."username", "profile"."bio", "profile"."avatar_url"
+    FROM "public"."profiles" AS "profile"
+    WHERE "profile"."id" = "target_user";
+$$;
+
+
+ALTER FUNCTION "public"."get_public_profile"("target_user" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."handle_auth_user_ban_or_delete"() RETURNS "trigger"
@@ -149,6 +224,124 @@ $$;
 
 ALTER FUNCTION "public"."handle_new_user_fn"() OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."is_username_available"("requested_username" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+    SELECT NOT EXISTS (
+        SELECT 1
+        FROM "public"."profiles"
+        WHERE lower("username") = lower(trim("requested_username"))
+    );
+$$;
+
+
+ALTER FUNCTION "public"."is_username_available"("requested_username" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."join_community"("target_community" "uuid", "user_latitude" double precision, "user_longitude" double precision) RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+    "active_user" uuid := "auth"."uid"();
+    "community_record" "public"."Communities"%ROWTYPE;
+BEGIN
+    IF "active_user" IS NULL THEN
+        RAISE EXCEPTION 'Authentication required';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM "public"."profiles" WHERE "id" = "active_user"
+    ) THEN
+        RAISE EXCEPTION 'Profile required';
+    END IF;
+
+    IF "user_latitude" IS NOT NULL AND ("user_latitude" < -90 OR "user_latitude" > 90) THEN
+        RETURN 'out_of_range';
+    END IF;
+    IF "user_longitude" IS NOT NULL AND ("user_longitude" < -180 OR "user_longitude" > 180) THEN
+        RETURN 'out_of_range';
+    END IF;
+
+    SELECT * INTO "community_record"
+    FROM "public"."Communities"
+    WHERE "id" = "target_community"
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN 'not_found';
+    END IF;
+
+    IF "active_user" = ANY(COALESCE("community_record"."members", ARRAY[]::uuid[])) THEN
+        RETURN 'already_joined';
+    END IF;
+
+    IF NOT COALESCE("community_record"."global", false) AND (
+        "user_latitude" IS NULL
+        OR "user_longitude" IS NULL
+        OR "community_record"."latitude" IS NULL
+        OR "community_record"."longitude" IS NULL
+        OR "community_record"."radius_meters" IS NULL
+        OR "public"."community_distance_meters"(
+            "user_latitude",
+            "user_longitude",
+            "community_record"."latitude",
+            "community_record"."longitude"
+        ) > "community_record"."radius_meters"
+    ) THEN
+        RETURN 'out_of_range';
+    END IF;
+
+    UPDATE "public"."Communities"
+    SET "members" = array_append(COALESCE("members", ARRAY[]::uuid[]), "active_user")
+    WHERE "id" = "target_community";
+
+    UPDATE "public"."profiles"
+    SET "joined_communities" = array_append(
+        COALESCE("joined_communities", ARRAY[]::uuid[]),
+        "target_community"
+    )
+    WHERE "id" = "active_user";
+
+    RETURN 'joined';
+END;
+$$;
+
+
+ALTER FUNCTION "public"."join_community"("target_community" "uuid", "user_latitude" double precision, "user_longitude" double precision) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."leave_community"("target_community" "uuid") RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+    "active_user" uuid := "auth"."uid"();
+BEGIN
+    IF "active_user" IS NULL THEN
+        RAISE EXCEPTION 'Authentication required';
+    END IF;
+
+    UPDATE "public"."Communities"
+    SET "members" = array_remove(COALESCE("members", ARRAY[]::uuid[]), "active_user")
+    WHERE "id" = "target_community";
+
+    UPDATE "public"."profiles"
+    SET "joined_communities" = array_remove(
+        COALESCE("joined_communities", ARRAY[]::uuid[]),
+        "target_community"
+    )
+    WHERE "id" = "active_user";
+
+    RETURN 'left';
+END;
+$$;
+
+
+ALTER FUNCTION "public"."leave_community"("target_community" "uuid") OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -175,8 +368,8 @@ ALTER TABLE "public"."Communities" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."PostReports" (
     "id" bigint NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "post_id" "uuid",
-    "reporter_id" "uuid"
+    "post_id" "uuid" NOT NULL,
+    "reporter_id" "uuid" NOT NULL
 );
 
 
@@ -234,13 +427,33 @@ ALTER TABLE ONLY "public"."Communities"
 
 
 
+ALTER TABLE "public"."Communities"
+    ADD CONSTRAINT "Communities_valid_details_check" CHECK (((("char_length"(COALESCE("name", ''::"text")) >= 1) AND ("char_length"(COALESCE("name", ''::"text")) <= 100)) AND (("char_length"(COALESCE("description", ''::"text")) >= 1) AND ("char_length"(COALESCE("description", ''::"text")) <= 1000)) AND (("global" IS TRUE) OR (("latitude" IS NOT NULL) AND ("longitude" IS NOT NULL) AND ("radius_meters" IS NOT NULL) AND (("latitude" >= ('-90'::integer)::double precision) AND ("latitude" <= (90)::double precision)) AND (("longitude" >= ('-180'::integer)::double precision) AND ("longitude" <= (180)::double precision)) AND (("radius_meters" >= 1) AND ("radius_meters" <= 20000)))))) NOT VALID;
+
+
+
 ALTER TABLE ONLY "public"."PostReports"
     ADD CONSTRAINT "PostReports_pkey" PRIMARY KEY ("id");
 
 
 
+ALTER TABLE "public"."Posts"
+    ADD CONSTRAINT "Posts_content_length_check" CHECK (((("char_length"(COALESCE("title", ''::"text")) >= 1) AND ("char_length"(COALESCE("title", ''::"text")) <= 200)) AND (("char_length"(COALESCE("body", ''::"text")) >= 1) AND ("char_length"(COALESCE("body", ''::"text")) <= 10000)))) NOT VALID;
+
+
+
+ALTER TABLE "public"."Posts"
+    ADD CONSTRAINT "Posts_image_origin_check" CHECK ((("img_link" IS NULL) OR ("img_link" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Post%20Images/%'::"text") OR ("img_link" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Post Images/%'::"text"))) NOT VALID;
+
+
+
 ALTER TABLE ONLY "public"."Posts"
     ADD CONSTRAINT "Posts_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE "public"."profiles"
+    ADD CONSTRAINT "profiles_avatar_origin_check" CHECK ((("avatar_url" IS NULL) OR ("avatar_url" = ''::"text") OR ("avatar_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Profile%20Pictures/%'::"text") OR ("avatar_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Profile Pictures/%'::"text"))) NOT VALID;
 
 
 
@@ -251,6 +464,24 @@ ALTER TABLE ONLY "public"."profiles"
 
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_username_key" UNIQUE ("username");
+
+
+
+CREATE UNIQUE INDEX "PostReports_post_reporter_key" ON "public"."PostReports" USING "btree" ("post_id", "reporter_id");
+
+
+
+CREATE OR REPLACE TRIGGER "add_community_owner_membership_trigger" BEFORE INSERT ON "public"."Communities" FOR EACH ROW EXECUTE FUNCTION "public"."add_community_owner_membership"();
+
+
+
+ALTER TABLE ONLY "public"."PostReports"
+    ADD CONSTRAINT "PostReports_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."Posts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."PostReports"
+    ADD CONSTRAINT "PostReports_reporter_id_fkey" FOREIGN KEY ("reporter_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -265,6 +496,24 @@ CREATE POLICY "Allow users to update everything except admin status" ON "public"
 
 
 
+CREATE POLICY "Authenticated users can create permitted posts" ON "public"."Posts" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_post_to_community"("community")));
+
+
+
+CREATE POLICY "Authenticated users can read communities" ON "public"."Communities" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "Authenticated users can read posts" ON "public"."Posts" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "Authenticated users can report posts" ON "public"."PostReports" FOR INSERT TO "authenticated" WITH CHECK ((("reporter_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
+   FROM "public"."Posts"
+  WHERE (("Posts"."id" = "PostReports"."post_id") AND ("Posts"."user_id" <> ( SELECT "auth"."uid"() AS "uid")))))));
+
+
+
 ALTER TABLE "public"."Communities" ENABLE ROW LEVEL SECURITY;
 
 
@@ -276,35 +525,7 @@ CREATE POLICY "Enable delete for users based on user_id" ON "public"."Posts" FOR
 
 
 
-CREATE POLICY "Enable insert for authenticated users only" ON "public"."PostReports" FOR INSERT TO "authenticated" WITH CHECK (true);
-
-
-
-CREATE POLICY "Enable insert for users based on user_id" ON "public"."Communities" FOR INSERT WITH CHECK (((( SELECT "auth"."uid"() AS "uid") = "user_id") AND ("global" IS NOT TRUE)));
-
-
-
-CREATE POLICY "Enable insert for users based on user_id" ON "public"."Posts" FOR INSERT WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
-
-
-
 CREATE POLICY "Enable insert for users based on user_id" ON "public"."profiles" FOR INSERT WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "id"));
-
-
-
-CREATE POLICY "Enable read access for all users" ON "public"."Communities" FOR SELECT USING (true);
-
-
-
-CREATE POLICY "Enable read access for all users" ON "public"."Posts" FOR SELECT USING (true);
-
-
-
-CREATE POLICY "Enable read access for all users" ON "public"."profiles" FOR SELECT USING (true);
-
-
-
-CREATE POLICY "Enable update for authenticated users only" ON "public"."Communities" FOR UPDATE TO "authenticated" USING ((true AND ("global" IS NOT TRUE)));
 
 
 
@@ -312,6 +533,14 @@ ALTER TABLE "public"."PostReports" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Posts" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "Users can create their own local community" ON "public"."Communities" FOR INSERT TO "authenticated" WITH CHECK (((( SELECT "auth"."uid"() AS "uid") = "user_id") AND ("global" IS NOT TRUE) AND (("members" IS NULL) OR ("members" <@ ARRAY[( SELECT "auth"."uid"() AS "uid")]))));
+
+
+
+CREATE POLICY "Users can read their own profile" ON "public"."profiles" FOR SELECT TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "id"));
+
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
@@ -324,9 +553,35 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."add_community_owner_membership"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."add_community_owner_membership"() TO "anon";
+GRANT ALL ON FUNCTION "public"."add_community_owner_membership"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."add_community_owner_membership"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."can_post_to_community"("target_community" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."can_post_to_community"("target_community" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_post_to_community"("target_community" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."event_trigger_fn"() TO "anon";
 GRANT ALL ON FUNCTION "public"."event_trigger_fn"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."event_trigger_fn"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."get_public_profile"("target_user" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."get_public_profile"("target_user" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_public_profile"("target_user" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_public_profile"("target_user" "uuid") TO "service_role";
 
 
 
@@ -351,6 +606,27 @@ GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."handle_new_user_fn"() TO "anon";
 GRANT ALL ON FUNCTION "public"."handle_new_user_fn"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_new_user_fn"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."is_username_available"("requested_username" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."is_username_available"("requested_username" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."is_username_available"("requested_username" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_username_available"("requested_username" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."join_community"("target_community" "uuid", "user_latitude" double precision, "user_longitude" double precision) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."join_community"("target_community" "uuid", "user_latitude" double precision, "user_longitude" double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."join_community"("target_community" "uuid", "user_latitude" double precision, "user_longitude" double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."join_community"("target_community" "uuid", "user_latitude" double precision, "user_longitude" double precision) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."leave_community"("target_community" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."leave_community"("target_community" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."leave_community"("target_community" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."leave_community"("target_community" "uuid") TO "service_role";
 
 
 
@@ -379,8 +655,36 @@ GRANT ALL ON TABLE "public"."Posts" TO "service_role";
 
 
 GRANT ALL ON TABLE "public"."profiles" TO "anon";
-GRANT ALL ON TABLE "public"."profiles" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."profiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."profiles" TO "service_role";
+
+
+
+GRANT UPDATE("username") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT UPDATE("display_name") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT UPDATE("bio") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT UPDATE("avatar_url") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT UPDATE("FirstTimeOpen") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT UPDATE("Language") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT UPDATE("requestedDelete") ON TABLE "public"."profiles" TO "authenticated";
 
 
 
@@ -408,3 +712,10 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
+
+
+
+
+
+

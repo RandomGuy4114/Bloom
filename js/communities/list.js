@@ -2,7 +2,6 @@
 
 import { supabase } from "../supabase.js";
 import {
-  addUniqueItem,
   createPopupShell,
   filterBySearch,
   getCurrentUserOrRedirect,
@@ -105,6 +104,10 @@ function createCommunityCard(community, includeMembershipButton = true) {
           await loadCommunities();
           return;
         }
+        if (status !== "joined") {
+          alert("Unable to join the community at this time.");
+          return;
+        }
 
         alert("Successfully joined the community!");
         await loadCommunities();
@@ -171,9 +174,9 @@ function createCommunityForm() {
   form.id = "create-community-form";
   form.innerHTML = `
     <label for="communityName">Community Name:</label>
-    <input type="text" id="communityName" />
+    <input type="text" id="communityName" placeholder="Community name" maxlength="100" />
     <label for="communityDescription">Community Description:</label>
-    <textarea id="communityDescription"></textarea>
+    <textarea id="communityDescription" placeholder="Describe your community" maxlength="1000"></textarea>
     <button type="submit" id="submitCommunityButton">Create Community</button>
     <label for="communityLocation">Community Radius:</label>
     <select id="communityLocation">
@@ -218,7 +221,7 @@ async function loadCommunities() {
 }
 
 async function createCommunity({ name, description, radiusMeters }) {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("Communities")
     .insert([{
       name,
@@ -229,29 +232,10 @@ async function createCommunity({ name, description, radiusMeters }) {
       radius_meters: radiusMeters,
       members: [user.id],
     }])
-    .select()
+    .select("id")
     .single();
 
-  if (error) {
-    return { error };
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("joined_communities")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError) {
-    return { error: profileError };
-  }
-
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ joined_communities: addUniqueItem(profile.joined_communities, data.id) })
-    .eq("id", user.id);
-
-  return { error: updateError };
+  return { error };
 }
 
 // Events
