@@ -10,6 +10,7 @@ const changePasswordButton = document.getElementById("changePasswordButton");
 const deleteAccountButton = document.getElementById("deleteAccountButton");
 const changeLanguageButton = document.getElementById("changeLangButton");
 const languageDropdown = document.getElementById("LangDropdown");
+const logoutButton = document.getElementById("logoutButton");
 
 // Dialogs
 
@@ -47,12 +48,31 @@ function openChangePasswordPopup() {
       return;
     }
 
-    alert("Password change flow is ready for backend wiring.");
+    withLoadingOverlay(async () => {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error("Error fetching user:", userError?.message);
+        alert("Failed to fetch user. Please try again.");
+        return;
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword.value,
+      });
+
+      if (updateError) {
+        console.error("Error updating password:", updateError.message);
+        alert("Failed to update password. Please try again.");
+        return;
+      }
+
+      alert("Password updated successfully.");
+    }, "Updating password...");
     closePopup();
   });
 }
 
-function openDeleteAccountPopup() {
+async function openDeleteAccountPopup() {
   const content = document.createElement("div");
   content.className = "popup-stack";
   content.innerHTML = `
@@ -69,13 +89,29 @@ function openDeleteAccountPopup() {
   const deleteConfirm = content.querySelector("#deleteConfirm");
 
   content.querySelector(".secondary-action").addEventListener("click", closePopup);
-  content.querySelector(".danger-action").addEventListener("click", () => {
+  content.querySelector(".danger-action").addEventListener("click", async () => {
     if (deleteConfirm.value.trim().toUpperCase() !== "DELETE") {
       alert("Type DELETE exactly to confirm.");
       return;
     }
 
-    alert("Delete account flow is ready for backend wiring.");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert("No user is currently logged in.");
+      return;
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ requestedDelete: true })
+      .eq("id", user.id);
+    if (error) {
+      console.error("Error deleting account:", error.message);
+      alert("Failed to delete account. Please try again.");
+      return;
+    }
+
+    alert("Account deletion requested.");
+    window.location.href = "index.html";
     closePopup();
   });
   deleteConfirm.focus();
@@ -101,6 +137,16 @@ async function changeLanguage(userId, language) {
 
 // Events
 
+logoutButton?.addEventListener("click", async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    console.error("Error signing out:", error.message);
+    alert("Failed to sign out. Please try again.");
+    return;
+  }
+  window.location.href = "index.html";
+});
+
 changeLanguageButton?.addEventListener("click", async () => {
   await withLoadingOverlay(async () => {
     const {
@@ -120,6 +166,7 @@ deleteAccountButton?.addEventListener("click", openDeleteAccountPopup);
 
 // Initialization
 
+getCurrentUserOrRedirect()
 await withLoadingOverlay(getCurrentUserOrRedirect, "Loading settings...");
 languageDropdown.value = getLanguage();
 window.addEventListener("bloom:languagechange", (event) => {

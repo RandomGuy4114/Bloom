@@ -9,7 +9,24 @@ const registerButton = document.getElementById("LoginButton");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
 const emailInput = document.getElementById("email");
+const birthdayInput = document.getElementById("birthday");
 const errorMessage = document.getElementById("error-message");
+
+// Functions
+
+function checkAge(birthday) {
+  const today = new Date();
+  const birthDate = new Date(birthday);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDifference = today.getMonth() - birthDate.getMonth();
+
+  if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  return age >= 13;
+}
+
 
 // Events
 
@@ -17,13 +34,25 @@ registerButton?.addEventListener("click", async () => {
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
   const email = emailInput.value.trim();
+  const birthday = birthdayInput.value;
 
-  if (!username || !password || !email) {
+  if (!username || !password || !email || !birthday) {
     errorMessage.textContent = "Please fill in all fields.";
     return;
   }
 
+  if (!checkAge(birthday)) {
+    errorMessage.textContent = "You must be at least 13 years old to create an account.";
+    return;
+  }
+
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    errorMessage.textContent = "Username can only contain letters, numbers, and underscores.";
+    return;
+  }
+
   await withLoadingOverlay(async () => {
+    // 1. Keep the username availability check
     const { data: existingUser, error: existingUserError } = await supabase
       .from("profiles")
       .select("username")
@@ -43,8 +72,13 @@ registerButton?.addEventListener("click", async () => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: "http://localhost:3000/Site/confirm.html" },
-      data: { username },
+      options: { 
+        emailRedirectTo: "http://localhost:3000/Site/confirm.html",
+        data: { 
+          username,
+          birthday 
+        } 
+      },
     });
 
     if (error) {
@@ -53,16 +87,7 @@ registerButton?.addEventListener("click", async () => {
       return;
     }
 
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .insert([{ id: data.user.id, username, display_name: username, bio: "", avatar_url: "" }]);
-
-    if (profileError) {
-      console.error("Error creating profile:", profileError.message);
-      errorMessage.textContent = "Error creating profile. Please try again.";
-      return;
-    }
-
-    window.location.href = "home.html";
+    alert("Account created successfully! Please check your email to confirm your account.");
+    window.location.href = "index.html";
   }, "Creating your account...");
 });

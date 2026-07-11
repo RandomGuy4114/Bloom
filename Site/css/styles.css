@@ -1,3 +1,7 @@
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     --sidebar-width: clamp(220px, 18vw, 280px); /* Move the clamp here */
     --topbar-height: 60px;
@@ -25,6 +29,11 @@ button {
     cursor: pointer;
     padding: 10px 20px;
 }
+
+a {
+    color: #9CB080;
+}
+
 
 button:hover {
     background-color: #618764;
@@ -82,15 +91,17 @@ label {
 
 
 
+
 #Divider {
     display: flex;
     width: 100%;
     height: 100vh;
     align-items: stretch;
     justify-content: space-between;
+    margin-bottom: 0;
 }
 
-#LeftSide {
+.LeftSide {
     flex: 1;
     padding: 40px;
     display: flex;
@@ -102,11 +113,56 @@ label {
     box-sizing: border-box;
 }
 
-#RightSide {
+.RightSide {
     flex: 1;
     display: flex;
     position: relative;
 }
+
+.TOC-Container {
+    width: calc(100% - 40px);
+    max-width: 800px;
+    box-sizing: border-box;
+    border: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+    padding: 20px;
+
+    margin: 20px auto; 
+    border-radius: 10px;
+    background-color: white;
+}
+
+.TOC-Container h2 {
+    margin-top: 0;
+    font-size: 1.5rem;
+}
+
+.TOC-Container p {
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 10px 0;
+}
+
+.TOC-Container ul {
+    list-style-type: disc;
+    padding-left: 20px;
+    text-align: left;
+}
+
+.TOC-Container li {
+    margin: 5px 0;
+}
+
+.TOC-Container ol {
+    list-style-type: decimal;
+    padding-left: 20px;
+    text-align: left;
+}
+
+
 
 #MainImage {
     width: 100%;
@@ -218,6 +274,51 @@ label {
     text-align: center;
     cursor: pointer;
 }
+
+#InfoSectionDivider {
+    width: 100%;
+    height: 1.5px;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+
+}
+
+#ViewInGithubButton {
+    background-color: #9CB080;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+    padding: 10px 20px;
+    margin-top: 20px;
+    width: fit-content;
+}
+
+#ViewInGithubButton:hover {
+    background-color: #618764;
+}
+
+#BottomBar {
+    width: 100%;
+    height: 60px;
+    background-color: #f1f1f1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    border-top: 1px solid #e0e0e0;
+    position: relative;
+    margin-top: 20px;
+}
+
+#BottomBar a {
+    color: #9CB080;
+    margin: 2px;
+}
+
 .pfp-frame {
     width: 40px;
     height: 40px;
@@ -1053,6 +1154,12 @@ body[data-theme="dark"] .message-preview {
     
 }
 
+.InfoSectionTitle {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    text-align: center;
+}
+
+
 
 
 body[data-theme="dark"] .popup-card {
@@ -1188,4 +1295,258 @@ body[data-theme="dark"] .popup-card {
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+/* Landing Page */
+
+.landing-page {
+    --landing-ink: #20352a;
+    --landing-muted: #65736b;
+    --landing-accent: #618764;
+    --landing-accent-dark: #40654f;
+    --landing-soft: #f3f6f2;
+    background: #ffffff;
+    color: var(--landing-ink);
+    overflow-x: hidden;
+}
+
+.landing-page main {
+    width: 100%;
+}
+
+.landing-page #Divider {
+    min-height: min(900px, 100svh);
+    height: auto;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.landing-page .LeftSide {
+    position: relative;
+    isolation: isolate;
+    padding: clamp(48px, 7vw, 112px);
+    background:
+        radial-gradient(circle at 20% 18%, rgba(156, 176, 128, 0.22), transparent 32%),
+        linear-gradient(145deg, #ffffff 15%, #f5f8f4 100%);
+}
+
+.landing-page .LeftSide::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: clamp(180px, 24vw, 340px);
+    aspect-ratio: 1;
+    right: -16%;
+    bottom: -18%;
+    border: 1px solid rgba(97, 135, 100, 0.18);
+    border-radius: 50%;
+}
+
+.landing-page #Logo {
+    color: var(--landing-ink);
+    font-size: clamp(3.4rem, 7vw, 6.6rem);
+    line-height: 0.95;
+    letter-spacing: -0.06em;
+    text-wrap: balance;
+}
+
+.landing-page #Subtitle {
+    max-width: 520px;
+    color: #4f6257;
+    line-height: 1.5;
+    text-wrap: balance;
+}
+
+.landing-page .landing-attribution {
+    margin: 20px 0 0;
+    color: var(--landing-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.landing-page #GetStartedButton,
+.landing-page #ViewInGithubButton {
+    min-height: 48px;
+    padding: 13px 28px;
+    border-radius: 999px;
+    background: var(--landing-accent);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.landing-page #GetStartedButton:hover,
+.landing-page #ViewInGithubButton:hover {
+    background: var(--landing-accent-dark);
+    transform: translateY(-2px);
+}
+
+.landing-page #GetStartedButton:focus-visible,
+.landing-page #ViewInGithubButton:focus-visible,
+.landing-page #BottomBar a:focus-visible {
+    outline: 3px solid rgba(97, 135, 100, 0.35);
+    outline-offset: 4px;
+}
+
+.landing-page .RightSide {
+    min-width: 0;
+    overflow: hidden;
+    background: #dce5d9;
+}
+
+.landing-page .RightSide::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(32, 53, 42, 0.08), transparent 28%);
+}
+
+.landing-page #MainImage {
+    display: block;
+    filter: saturate(0.92) contrast(1.03);
+    transform: scale(1.015);
+}
+
+.landing-page .landing-info {
+    flex-direction: column;
+    align-items: center;
+    width: min(calc(100% - 40px), 900px);
+    margin: clamp(48px, 8vw, 96px) auto;
+    padding: clamp(36px, 6vw, 64px);
+    box-sizing: border-box;
+    gap: 0;
+    border: 1px solid #e4e9e3;
+    border-radius: 24px;
+    background: #ffffff;
+}
+
+.landing-page .landing-info .InfoSectionTitle {
+    margin: 0;
+    color: var(--landing-ink);
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    text-wrap: balance;
+}
+
+.landing-page .landing-info .InfoSectionTitle:not(:first-child) {
+    margin-top: clamp(38px, 6vw, 58px);
+}
+
+.landing-page .landing-copy {
+    max-width: 690px;
+    margin: 14px auto 0;
+    color: var(--landing-muted);
+    font-size: clamp(1rem, 1.6vw, 1.12rem);
+    line-height: 1.75;
+    text-align: center;
+    text-wrap: pretty;
+}
+
+.landing-page #ViewInGithubButton {
+    margin-top: 30px;
+}
+
+.landing-page #BottomBar {
+    min-height: 76px;
+    height: auto;
+    margin-top: 0;
+    padding: 14px clamp(20px, 5vw, 72px);
+    box-sizing: border-box;
+    gap: 18px;
+    background: var(--landing-soft);
+    border-color: #e0e7df;
+}
+
+.landing-page .landing-footer-brand {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    width: auto;
+    gap: 2px;
+}
+
+.landing-page .landing-footer-brand h2 {
+    margin: 0;
+    color: var(--landing-ink);
+    font-size: 1.35rem;
+    letter-spacing: -0.035em;
+}
+
+.landing-page .landing-footer-brand p {
+    margin: 0;
+    color: var(--landing-muted);
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+
+.landing-page #BottomBar a {
+    margin: 0;
+    padding: 8px 4px;
+    color: var(--landing-accent-dark);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+}
+
+.landing-page #BottomBar a:hover {
+    color: var(--landing-ink);
+}
+
+@media (max-width: 760px) {
+    .landing-page #Divider {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .landing-page .LeftSide {
+        min-height: 58svh;
+        padding: 64px 24px 52px;
+    }
+
+    .landing-page .RightSide {
+        min-height: 42svh;
+    }
+
+    .landing-page #MainImage {
+        min-height: 42svh;
+        object-position: center;
+    }
+
+    .landing-page .landing-info {
+        width: min(calc(100% - 28px), 900px);
+        margin: 32px auto;
+        padding: 34px 22px;
+        border-radius: 18px;
+    }
+
+    .landing-page #BottomBar {
+        justify-content: center;
+        flex-wrap: wrap;
+        padding: 20px;
+        gap: 8px 18px;
+    }
+
+    .landing-page .landing-footer-brand {
+        flex-basis: 100%;
+        align-items: center;
+        margin-bottom: 4px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 420px) {
+    .landing-page #GetStartedButton,
+    .landing-page #ViewInGithubButton {
+        width: 100%;
+        max-width: 320px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .landing-page #GetStartedButton,
+    .landing-page #ViewInGithubButton {
+        transition: none;
+    }
 }
