@@ -24,6 +24,7 @@ const allowedAvatarTypes = new Set(["image/jpeg", "image/png", "image/webp", "im
 const usernameLabel = document.getElementById("username-label");
 const profilePicture = document.querySelector(".profile-pfp");
 const profileName = document.querySelector(".profile-name");
+const profileUsername = document.querySelector(".profile-username");
 const profileDetails = document.querySelector(".profile-details");
 const postsContainer = document.querySelector(".posts-container");
 const editProfileButton = document.getElementById("editProfileButton");
@@ -38,6 +39,7 @@ let currentProfile;
 function renderProfile(profile) {
   if (!profile) {
     profileName.textContent = "";
+    profileUsername.textContent = "";
     profileDetails.replaceChildren();
     applyAvatar(profilePicture, null);
     editProfileButton.hidden = true;
@@ -45,8 +47,11 @@ function renderProfile(profile) {
   }
 
   const username = profile.username || "";
+  const displayName = profile.display_name || username;
   profileName.dataset.i18nIgnore = "true";
-  profileName.textContent = username;
+  profileUsername.dataset.i18nIgnore = "true";
+  profileName.textContent = displayName;
+  profileUsername.textContent = username ? `@${username}` : "";
   applyAvatar(profilePicture, profile.avatar_url, "Profile picture");
 
   profileDetails.replaceChildren();
@@ -68,6 +73,8 @@ function createEditProfileForm() {
   form.className = "popup-form edit-profile-form";
   form.innerHTML = `
     <div class="edit-profile-preview" aria-label="Profile picture preview"></div>
+    <label for="editProfileDisplayName">Display name</label>
+    <input id="editProfileDisplayName" type="text" minlength="1" maxlength="50" autocomplete="name" placeholder="Display name" required>
     <label for="editProfileUsername">Username</label>
     <input id="editProfileUsername" type="text" minlength="3" maxlength="30" autocomplete="username" placeholder="Username" required>
     <label for="editProfileBio">Bio</label>
@@ -91,11 +98,13 @@ function openEditProfilePopup() {
   const form = createEditProfileForm();
   const { closePopup } = createPopupShell("Edit Profile", form);
   const preview = form.querySelector(".edit-profile-preview");
+  const displayNameInput = form.querySelector("#editProfileDisplayName");
   const usernameInput = form.querySelector("#editProfileUsername");
   const bioInput = form.querySelector("#editProfileBio");
   const avatarInput = form.querySelector("#editProfileAvatar");
   let previewUrl;
 
+  displayNameInput.value = currentProfile.display_name || currentProfile.username || "";
   usernameInput.value = currentProfile.username || "";
   bioInput.value = currentProfile.bio || "";
   applyAvatar(preview, currentProfile.avatar_url, "Profile picture preview");
@@ -137,12 +146,21 @@ function openEditProfilePopup() {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const displayName = displayNameInput.value.trim();
     const username = usernameInput.value.trim();
     const bio = bioInput.value.trim();
     const avatarFile = avatarInput.files?.[0];
 
+    if (!displayName || displayName.length > 50) {
+      alert("Display name must be between 1 and 50 characters.");
+      return;
+    }
     if (username.length < 3 || username.length > 30) {
       alert("Username must be between 3 and 30 characters.");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      alert("Username can only contain letters, numbers, and underscores.");
       return;
     }
     if (bio.length > 500) {
@@ -176,7 +194,7 @@ function openEditProfilePopup() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .update({ username, bio, avatar_url: avatarUrl })
+        .update({ display_name: displayName, username, bio, avatar_url: avatarUrl })
         .eq("id", currentUser.id)
         .select("*")
         .single();
@@ -209,7 +227,7 @@ function openEditProfilePopup() {
     alert("Profile updated successfully.");
   });
 
-  usernameInput.focus();
+  displayNameInput.focus();
 }
 
 // Data
@@ -225,7 +243,7 @@ async function loadProfile() {
     getUserProfile(activeUserId),
     supabase
       .from("Posts")
-      .select("id, title, body, created_at, post_type, img_link")
+      .select("id, title, body, created_at, post_type, img_link, location")
       .eq("user_id", activeUserId)
       .order("created_at", { ascending: false }),
     showCurrentUser(currentUser, usernameLabel),
@@ -250,10 +268,11 @@ async function loadProfile() {
     postType: post.post_type,
     title: post.title,
     body: post.body,
+    location: post.location,
     imgLink: post.img_link,
     footer: `Posted on: ${formatDateTime(post.created_at)}`,
     authorUserId: activeUserId,
-    authorName: ownsProfile ? "You" : currentProfile?.username || "",
+    authorName: currentProfile?.display_name || currentProfile?.username || "",
     authorAvatarUrl: currentProfile?.avatar_url || "",
     manageHref: ownsProfile ? `${PAGE_URLS.post}?postId=${post.id}` : null,
   }));

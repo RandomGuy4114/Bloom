@@ -249,6 +249,15 @@ label {
     line-height: 1;
 }
 
+.activity-filters, .event-filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+    justify-content: center;
+}
+
+
 .post-image-picker:hover {
     background: transparent;
     color: #618764;
@@ -281,6 +290,42 @@ label {
     margin: -1px;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
+}
+
+.event-location-fields {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 0 100%;
+    width: 100%;
+}
+
+.event-location-fields[hidden] {
+    display: none;
+}
+
+.event-location-fields input {
+    flex: 1 1 260px;
+    width: auto;
+    margin: 0;
+}
+
+.post-location {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 10px 0 0;
+    padding: 9px 11px;
+    border-radius: 7px;
+    background: #f1f4f0;
+    color: #66736b;
+    font-size: 0.9rem;
+}
+
+body[data-theme="dark"] .post-location {
+    background: #223029;
+    color: #b5c2b9;
 }
 
 .post-image-preview {
@@ -321,6 +366,7 @@ body[data-theme="dark"] .post-image-picker:hover {
     background: transparent;
     color: #ffffff;
 }
+
 
 #verText {
     display: inline-block;
@@ -402,6 +448,133 @@ body[data-theme="dark"] .post-image-picker:hover {
 #BottomBar a {
     color: #9CB080;
     margin: 2px;
+}
+
+#map {
+    width: 100%;
+    height: calc(100dvh - var(--topbar-height) - 40px);
+    min-height: 520px;
+    flex: 1 1 auto;
+    min-width: 0;
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+
+.event-list {
+    width: 100%;
+    max-width: 420px;
+    height: calc(100dvh - var(--topbar-height) - 40px);
+    min-height: 520px;
+    padding: 20px;
+    overflow-y: auto;
+    box-sizing: border-box;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.map-page .main-layout {
+    align-items: stretch;
+}
+
+.event-composer,
+.event-composer-heading {
+    display: flex;
+    flex-direction: column;
+}
+
+.event-composer {
+    gap: 10px;
+}
+
+.event-composer-heading {
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.event-composer-heading h2,
+.event-composer-heading p {
+    margin: 0;
+}
+
+.event-composer input,
+.event-composer textarea,
+.event-composer select {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.event-composer textarea {
+    min-height: 110px;
+}
+
+.event-map-instruction {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 12px;
+    border: 1px solid #d8dfd9;
+    border-radius: 8px;
+    background: #f1f4f0;
+    color: #4d5f54;
+}
+
+.selected-event-location {
+    display: block;
+    min-height: 20px;
+    padding: 10px 12px;
+    border: 1px solid #d8dfd9;
+    border-radius: 8px;
+    color: #33443a;
+    overflow-wrap: anywhere;
+}
+
+.event-composer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.event-image-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 4px;
+    border: 0;
+    background: transparent;
+    color: #618764;
+}
+
+.event-image-button:hover {
+    background: transparent;
+    color: #2B5748;
+}
+
+.event-map-popup p {
+    max-width: 260px;
+    margin: 6px 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+body[data-theme="dark"] .event-list {
+    background-color: #17211d;
+}
+
+body[data-theme="dark"] .event-map-instruction,
+body[data-theme="dark"] .selected-event-location {
+    background-color: #1a231f;
+    color: #e8f0ea;
+    border-color: #314036;
+}
+
+.home-page .post-type-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .pfp-frame {
@@ -946,8 +1119,18 @@ body[data-theme="dark"] .message-preview {
 }
 
 .profile-name {
-    margin: 0 0 15px 0;
+    margin: 0;
     font-size: 1.5rem;
+}
+
+.profile-username {
+    margin: 4px 0 15px;
+    color: #6b756e;
+    font-size: 0.95rem;
+}
+
+body[data-theme="dark"] .profile-username {
+    color: #aab8af;
 }
 
 .profile-details {
@@ -1094,6 +1277,17 @@ body[data-theme="dark"] .message-preview {
 
 .sidebarButton:hover {
     background-color: #e0e0e0;
+}
+
+.sidebar .supporter-button {
+    margin-top: auto;
+    background-color: #9CB080;
+    color: #ffffff;
+    text-align: center;
+}
+
+.sidebar .supporter-button:hover {
+    background-color: #618764;
 }
 
 .rightBar {
@@ -1808,9 +2002,122 @@ body[data-theme="dark"] .popup-card {
     }
 }
 
+@media (max-width: 768px) {
+    .map-page .main-layout {
+        align-items: stretch;
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .map-page .event-list {
+        order: 1;
+        width: 100%;
+        max-width: none;
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+        padding: 16px;
+    }
+
+    .map-page #map {
+        order: 2;
+        width: 100%;
+        height: 58svh;
+        min-height: 380px;
+        flex: none;
+    }
+
+    .event-composer-actions button {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 420px) {
+    .event-composer-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .event-composer-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .landing-page #GetStartedButton,
     .landing-page #ViewInGithubButton {
         transition: none;
     }
+}
+
+/* Credits Stuff */
+
+/* Rainbow color cycling animation for title */
+@keyframes RainbowAnim {
+    0% { color: #ff0000; }
+    16% { color: #ff7f00; }
+    33% { color: #ffff00; }
+    50% { color: #00ff00; }
+    66% { color: #0000ff; }
+    83% { color: #4b0082; }
+    100% { color: #8f00ff; }
+}
+
+
+/* Floating up and down animation for title */
+@keyframes TitleAnim {
+    0% {transform: translateY(0);}
+    50% {transform: translateY(-5px);}
+}
+
+
+.CreditMessage {
+    display: inline-block;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    padding: 20px;
+}
+
+.creditElement {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px 20px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    margin-bottom: 10px;
+}
+
+.creditElementInner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.RainbowText {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-family: "Comic Neue";
+    font-weight: bold;
+    padding: 5px;
+}
+
+.RainbowText span {
+    animation-name: RainbowAnim, TitleAnim;
+    animation-duration: 3s, 1.6s;
+    animation-iteration-count: infinite, infinite;
+    animation-timing-function: ease-in-out, ease-in-out;
+    animation-direction: normal, normal;
+    animation-delay: calc(0.08s * var(--i));
+    transition: color 0.3s ease-in-out;
+    text-shadow: 0 0 5px color-mix(in srgb, currentColor 90%, #000 10%);
 }

@@ -4,6 +4,7 @@ import { supabase } from "./supabase.js";
 import {
   attachPostOptions,
   attachPostTypeBadge,
+  formatEventLocation,
   getCurrentUserOrRedirect,
   getQueryParameter,
   isPostOwner as isPostOwnerRecord,
@@ -59,6 +60,22 @@ async function loadPost() {
   }
   postTitle.textContent = post.title || "";
   postContent.textContent = post.body || "";
+  postContainer.querySelector(".post-location")?.remove();
+  const eventLocation = formatEventLocation(post.location);
+  if (String(post.post_type).toLowerCase() === "event" && eventLocation) {
+    const locationRow = document.createElement("p");
+    locationRow.className = "post-location";
+    const icon = document.createElement("span");
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "📍";
+    const label = document.createElement("strong");
+    label.textContent = "Location:";
+    const value = document.createElement("span");
+    value.dataset.i18nIgnore = "true";
+    value.textContent = eventLocation;
+    locationRow.append(icon, label, value);
+    postContent.insertAdjacentElement("afterend", locationRow);
+  }
   postContainer.querySelector(".post-image")?.remove();
   if (isTrustedImageUrl(post.img_link, "Post Images")) {
     const image = document.createElement("img");

@@ -34,9 +34,9 @@ const allowedPostImageTypes = new Set(["image/jpeg", "image/png", "image/webp", 
 
 let currentUser;
 let joinedCommunities = [];
-let currentUserIsAdmin = false;
 let postableCommunityIds = new Set();
 let selectedPostType = "post";
+let currentUserIsAdmin = false;
 
 // Components
 
@@ -108,7 +108,7 @@ async function renderFeedPosts(posts) {
     return {
       authorUserId: post.user_id ?? post.author,
       communityName: communityName || "",
-      authorName: isPostOwner(post, currentUser.id) ? "You" : authorProfile?.username || "",
+      authorName: authorProfile?.display_name || authorProfile?.username || "",
       authorAvatarUrl: authorProfile?.avatar_url || "",
     };
   }));
@@ -118,6 +118,7 @@ async function renderFeedPosts(posts) {
     postType: post.post_type,
     title: post.title,
     body: post.body,
+    location: post.location,
     imgLink: post.img_link,
     footer: `Posted on: ${formatDateTime(post.created_at)}`,
     authorUserId: postDetails[index].authorUserId,
@@ -134,7 +135,7 @@ async function renderFeedPosts(posts) {
 async function loadJoinedCommunities() {
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("joined_communities, admin")
+    .select("joined_communities")
     .eq("id", currentUser.id)
     .single();
 
@@ -145,7 +146,7 @@ async function loadJoinedCommunities() {
   }
 
   joinedCommunities = profile?.joined_communities ?? [];
-  currentUserIsAdmin = profile?.admin === true;
+  currentUserIsAdmin = currentUser?.app_metadata?.role === "admin";
 
   if (!joinedCommunities.length) {
     postInput.disabled = true;
@@ -252,6 +253,7 @@ async function createPost() {
         user_id: currentUser.id,
         community: selectedCommunity,
         post_type: selectedPostType,
+        location: null,
         img_link: imageUrl || null,
       }]);
 

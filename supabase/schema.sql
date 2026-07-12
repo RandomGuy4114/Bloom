@@ -55,12 +55,7 @@ CREATE OR REPLACE FUNCTION "public"."can_post_to_community"("target_community" "
           AND "auth"."uid"() = ANY(COALESCE("community"."members", ARRAY[]::uuid[]))
           AND (
               NOT COALESCE("community"."global", false)
-              OR EXISTS (
-                  SELECT 1
-                  FROM "public"."profiles" AS "profile"
-                  WHERE "profile"."id" = "auth"."uid"()
-                    AND "profile"."admin" = true
-              )
+              OR COALESCE("auth"."jwt"()->'app_metadata'->>'role', '') = 'admin'
           )
     );
 $$;
@@ -97,17 +92,42 @@ $$;
 ALTER FUNCTION "public"."event_trigger_fn"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_public_profile"("target_user" "uuid") RETURNS TABLE("id" "uuid", "username" "text", "bio" "text", "avatar_url" "text")
+CREATE OR REPLACE FUNCTION "public"."get_public_profile"("target_user" "uuid") RETURNS TABLE("id" "uuid", "username" "text", "display_name" "text", "bio" "text", "avatar_url" "text")
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
     AS $$
-    SELECT "profile"."id", "profile"."username", "profile"."bio", "profile"."avatar_url"
+    SELECT "profile"."id", "profile"."username", "profile"."display_name", "profile"."bio", "profile"."avatar_url"
     FROM "public"."profiles" AS "profile"
     WHERE "profile"."id" = "target_user";
 $$;
 
 
 ALTER FUNCTION "public"."get_public_profile"("target_user" "uuid") OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "public"."is_valid_event_location"("event_location" "text") RETURNS boolean
+    LANGUAGE "plpgsql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+    latitude_value double precision;
+    longitude_value double precision;
+BEGIN
+    IF event_location IS NULL OR event_location !~ '^[+-]?[0-9]+(\.[0-9]+)?\s*,\s*[+-]?[0-9]+(\.[0-9]+)?$' THEN
+        RETURN false;
+    END IF;
+    latitude_value := trim(split_part(event_location, ',', 1))::double precision;
+    longitude_value := trim(split_part(event_location, ',', 2))::double precision;
+    RETURN latitude_value BETWEEN -90 AND 90
+       AND longitude_value BETWEEN -180 AND 180;
+EXCEPTION WHEN OTHERS THEN
+    RETURN false;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."is_valid_event_location"("event_location" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."handle_auth_user_ban_or_delete"() RETURNS "trigger"
@@ -172,10 +192,14 @@ CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     SET "search_path" TO ''
     AS $$
 begin
-  insert into public.profiles (id, username, birthday)
+  insert into public.profiles (id, username, display_name, birthday)
   values (
     new.id,
     nullif(new.raw_user_meta_data->>'username', '')::text,
+    coalesce(
+      nullif(new.raw_user_meta_data->>'display_name', '')::text,
+      nullif(new.raw_user_meta_data->>'username', '')::text
+    ),
     case
       when nullif(new.raw_user_meta_data->>'birthday', '') is null then null
       else (new.raw_user_meta_data->>'birthday')::date
@@ -183,6 +207,7 @@ begin
   )
   on conflict (id) do update set
     username = excluded.username,
+    display_name = excluded.display_name,
     birthday = excluded.birthday;
 
   return new;
@@ -206,7 +231,7 @@ begin
   values (
     new.id,
     v_username,
-    v_username,
+    coalesce(nullif(new.raw_user_meta_data->>'display_name', '')::text, v_username),
     case
       when nullif(new.raw_user_meta_data->>'birthday', '') is null then null
       else (new.raw_user_meta_data->>'birthday')::date
@@ -396,7 +421,8 @@ CREATE TABLE IF NOT EXISTS "public"."Posts" (
     "body" "text",
     "communityName" "text",
     "post_type" "text",
-    "img_link" "text"
+    "img_link" "text",
+    "location" "text"
 );
 
 
@@ -406,12 +432,11 @@ ALTER TABLE "public"."Posts" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "id" "uuid" NOT NULL,
     "username" "text" NOT NULL,
-    "display_name" "text",
+    "display_name" "text" NOT NULL,
     "bio" "text",
     "avatar_url" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "joined_communities" "uuid"[],
-    "admin" boolean DEFAULT false,
     "FirstTimeOpen" boolean DEFAULT true,
     "Language" "text" DEFAULT 'en'::"text",
     "birthday" "date",
@@ -447,6 +472,11 @@ ALTER TABLE "public"."Posts"
 
 
 
+ALTER TABLE "public"."Posts"
+    ADD CONSTRAINT "Posts_event_location_check" CHECK ((("post_type" = 'event'::"text") AND "public"."is_valid_event_location"("location")) OR (("post_type" <> 'event'::"text") AND ("location" IS NULL))) NOT VALID;
+
+
+
 ALTER TABLE ONLY "public"."Posts"
     ADD CONSTRAINT "Posts_pkey" PRIMARY KEY ("id");
 
@@ -467,7 +497,21 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."profiles"
+    ADD CONSTRAINT "profiles_display_name_length_check" CHECK ((char_length(TRIM(BOTH FROM "display_name")) >= 1) AND (char_length(TRIM(BOTH FROM "display_name")) <= 50));
+
+
+
+ALTER TABLE ONLY "public"."profiles"
+    ADD CONSTRAINT "profiles_username_format_check" CHECK (("username" ~ '^[A-Za-z0-9_]{3,30}$'::"text")) NOT VALID;
+
+
+
 CREATE UNIQUE INDEX "PostReports_post_reporter_key" ON "public"."PostReports" USING "btree" ("post_id", "reporter_id");
+
+
+
+CREATE UNIQUE INDEX "profiles_username_lower_key" ON "public"."profiles" USING "btree" (lower("username"));
 
 
 
@@ -490,13 +534,13 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
-CREATE POLICY "Allow users to update everything except admin status" ON "public"."profiles" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "id")) WITH CHECK ((("auth"."uid"() = "id") AND (NOT ("admin" IS DISTINCT FROM ( SELECT "p"."admin"
-   FROM "public"."profiles" "p"
-  WHERE ("p"."id" = "auth"."uid"()))))));
+CREATE POLICY "Users can update their own profile" ON "public"."profiles" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "id")) WITH CHECK (("auth"."uid"() = "id"));
 
 
 
-CREATE POLICY "Authenticated users can create permitted posts" ON "public"."Posts" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_post_to_community"("community")));
+CREATE POLICY "Authenticated users can create permitted posts" ON "public"."Posts" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
+   FROM "public"."Communities" "community_record"
+  WHERE (("community_record"."id" = "Posts"."community") AND (( SELECT "auth"."uid"() AS "uid") = ANY (COALESCE("community_record"."members", ARRAY[]::"uuid"[]))) AND ((NOT COALESCE("community_record"."global", false)) OR (COALESCE(((( SELECT "auth"."jwt"() AS "jwt") -> 'app_metadata'::"text") ->> 'role'::"text"), ''::"text") = 'admin'::"text"))))))));
 
 
 
@@ -712,10 +756,3 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
-
-
-
-

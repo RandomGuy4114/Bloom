@@ -43,7 +43,7 @@ function renderCommunityPosts() {
   const visiblePosts = filterBySearch(
     communityPosts,
     searchPostInput?.value ?? "",
-    (post) => `${post.title ?? ""} ${post.body ?? ""} ${post.authorName} ${post.communityName}`,
+    (post) => `${post.title ?? ""} ${post.body ?? ""} ${post.location ?? ""} ${post.authorName} ${post.communityName}`,
   );
 
   if (!visiblePosts.length) {
@@ -59,6 +59,7 @@ function renderCommunityPosts() {
     postType: post.post_type,
     title: post.title,
     body: post.body,
+    location: post.location,
     imgLink: post.img_link,
     footer: `Posted on ${formatDateTime(post.created_at)}`,
     authorUserId: post.authorUserId,
@@ -90,7 +91,7 @@ async function renderCommunityMembers(memberIds = []) {
     applyAvatar(avatar, profile.avatar_url, "Profile picture");
     const name = document.createElement("span");
     name.dataset.i18nIgnore = "true";
-    name.textContent = profile.username || "";
+    name.textContent = profile.display_name || profile.username || "";
     link.append(avatar, name);
     return [link];
   });
@@ -194,7 +195,7 @@ async function loadCommunity() {
   communityPosts = posts.map((post, index) => ({
     ...post,
     authorUserId: post.user_id ?? post.author,
-    authorName: authors[index]?.username || "",
+    authorName: authors[index]?.display_name || authors[index]?.username || "",
     authorAvatarUrl: authors[index]?.avatar_url || "",
     communityName: community.name,
   }));

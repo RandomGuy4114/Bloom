@@ -69,9 +69,10 @@ registerButton?.addEventListener("click", async () => {
       email,
       password,
       options: { 
-        emailRedirectTo: new URL("../pages/auth/confirm/", import.meta.url).href,
+        emailRedirectTo: "https://trybloom.org/pages/auth/confirm",
         data: { 
           username,
+          display_name: username,
           birthday 
         } 
       },

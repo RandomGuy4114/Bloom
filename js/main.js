@@ -18,6 +18,7 @@ export const PAGE_URLS = Object.freeze({
   home: new URL("../pages/app/home/", import.meta.url).href,
   profile: new URL("../pages/app/profile/", import.meta.url).href,
   activity: new URL("../pages/app/activity/", import.meta.url).href,
+  map: new URL("../pages/app/map/", import.meta.url).href,
   settings: new URL("../pages/app/settings/", import.meta.url).href,
   post: new URL("../pages/app/post/", import.meta.url).href,
   communities: new URL("../pages/communities/communities/", import.meta.url).href,
@@ -131,19 +132,28 @@ export function isPostOwner(post, userId) {
 }
 
 export async function canUserPostToCommunity(userId, communityID) {
-  const [{ data: community, error: communityError }, { data: profile, error: profileError }] = await Promise.all([
-    supabase.from("Communities").select("global").eq("id", communityID).single(),
-    supabase.from("profiles").select("admin").eq("id", userId).single(),
+  const [
+    { data: community, error: communityError },
+    { data: { user: currentUser }, error: userError },
+  ] = await Promise.all([
+    supabase
+      .from("Communities")
+      .select("global")
+      .eq("id", communityID)
+      .single(),
+    supabase.auth.getUser(),
   ]);
 
-  const error = communityError ?? profileError;
+  const error = communityError ?? userError;
   if (error) {
     console.error("Error checking global community posting access:", error.message);
     return { allowed: false, error };
   }
 
   return {
-    allowed: !community.global || profile.admin === true,
+    allowed: Boolean(currentUser)
+      && currentUser.id === userId
+      && (!community.global || currentUser?.app_metadata?.role === "admin"),
     error: null,
   };
 }
@@ -360,6 +370,26 @@ export function renderEmptyState(container, message) {
   container.replaceChildren(card);
 }
 
+export function formatEventLocation(location) {
+  if (typeof location === "string") {
+    return location.trim();
+  }
+  if (Array.isArray(location) && location.length >= 2) {
+    return `${location[0]}, ${location[1]}`;
+  }
+  if (location && typeof location === "object") {
+    if (location.name || location.address) {
+      return String(location.name || location.address).trim();
+    }
+    const latitude = location.latitude ?? location.lat;
+    const longitude = location.longitude ?? location.lng ?? location.lon;
+    if (latitude !== undefined && longitude !== undefined) {
+      return `${latitude}, ${longitude}`;
+    }
+  }
+  return "";
+}
+
 export function isTrustedImageUrl(value, bucketName, allowBlob = false) {
   if (!value || !bucketName) {
     return false;
@@ -550,6 +580,7 @@ export function createPostCard({
   postType = "post",
   title,
   body,
+  location,
   imgLink,
   footer,
   authorUserId,
@@ -576,6 +607,22 @@ export function createPostCard({
     content.style.cssText = "margin:0;color:#333;line-height:1.4";
     content.textContent = body;
     card.appendChild(content);
+  }
+
+  const eventLocation = formatEventLocation(location);
+  if (String(postType).toLowerCase() === "event" && eventLocation) {
+    const locationRow = document.createElement("p");
+    locationRow.className = "post-location";
+    const icon = document.createElement("span");
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "📍";
+    const label = document.createElement("strong");
+    label.textContent = "Location:";
+    const value = document.createElement("span");
+    value.dataset.i18nIgnore = "true";
+    value.textContent = eventLocation;
+    locationRow.append(icon, label, value);
+    card.appendChild(locationRow);
   }
 
   if (footer) {
@@ -647,7 +694,7 @@ export async function showCurrentUser(user, element) {
 
   const profile = await getUserProfile(user.id);
   element.dataset.i18nIgnore = "true";
-  element.textContent = profile?.username || user.email || "";
+  element.textContent = profile?.display_name || profile?.username || user.email || "";
   const avatar = element.closest(".topbar")?.querySelector(".pfp-frame");
   applyAvatar(avatar, profile?.avatar_url, "Profile picture");
   attachAccountMenu(avatar);

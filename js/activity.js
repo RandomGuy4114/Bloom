@@ -22,7 +22,6 @@ const usernameLabel = document.getElementById("username-label");
 const activitySearchInput = document.getElementById("activitySearchInput");
 const activityFeedContainer = document.getElementById("activityFeedContainer");
 const eventSearchInput = document.getElementById("eventSearchInput");
-const eventSearchButton = document.getElementById("eventSearchButton");
 const eventFeedContainer = document.getElementById("eventFeedContainer");
 const activityFilterButtons = [...document.querySelectorAll("[data-activity-filter]")];
 const eventFilterButtons = [...document.querySelectorAll("[data-event-filter]")];
@@ -80,7 +79,7 @@ function renderTypedPosts(type) {
   const visiblePosts = filterBySearch(
     postsForType,
     input.value,
-    (post) => `${post.title ?? ""} ${post.body ?? ""} ${post.authorName} ${post.communityName}`,
+    (post) => `${post.title ?? ""} ${post.body ?? ""} ${post.location ?? ""} ${post.authorName} ${post.communityName}`,
   );
 
   if (!visiblePosts.length) {
@@ -93,6 +92,7 @@ function renderTypedPosts(type) {
     postType: post.post_type,
     title: post.title,
     body: post.body,
+    location: post.location,
     imgLink: post.img_link,
     footer: `Posted on: ${formatDateTime(post.created_at)}`,
     authorUserId: post.authorUserId,
@@ -163,9 +163,9 @@ async function loadTypedPosts() {
     return {
       ...post,
       authorUserId: authorId,
-      authorName: isPostOwner(post, user.id)
-        ? "You"
-        : profilesById.get(authorId)?.username || "",
+      authorName: profilesById.get(authorId)?.display_name
+        || profilesById.get(authorId)?.username
+        || "",
       authorAvatarUrl: profilesById.get(authorId)?.avatar_url || "",
       communityName: community?.name || "",
       communityDetails: community,
@@ -180,7 +180,7 @@ async function loadTypedPosts() {
 
 activitySearchInput.addEventListener("input", () => renderTypedPosts("activity"));
 eventSearchInput.addEventListener("input", () => renderTypedPosts("event"));
-eventSearchButton.addEventListener("click", () => renderTypedPosts("event"));
+
 
 activityFilterButtons.forEach((button) => {
   button.addEventListener("click", () => {

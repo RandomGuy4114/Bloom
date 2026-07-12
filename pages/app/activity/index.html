@@ -22,6 +22,7 @@
             </div>
             <div class="topbar-action-row">
                 <button onclick="window.location.href='../../communities/communities/'">Communities</button>
+                <button onclick="window.location.href='../map/'">Map</button>
                 <button onclick="window.location.href='../settings/'">Settings</button>
             </div>
         </div>
@@ -32,8 +33,10 @@
         <button onclick="window.location.href='../activity/'" class="sidebarButton">Activity</button>
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='../../communities/communities/'">Communities</button>
+        <button class="sidebarButton" onclick="window.location.href='../map/'">Map</button>
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='../settings/'">Settings</button>
+        <button type="button" class="sidebarButton supporter-button" onclick="window.location.href = '../supporter/'">Buy Bloom Supporter</button>
     </div>
     <div class="main-layout">
         <div class="feed-container">
@@ -60,11 +63,11 @@
                     <div class="event-search">
                         <input type="search" id="eventSearchInput" aria-label="Search events" placeholder="Search events" style="padding: 10px; width: 90%; border-radius: 5px; border: 1px solid #ccc; height: 40px;">
                     </div>
-                    <div class="event-filters" style="margin-top: 10px; text-align: center;">
+                    <div class="divider"></div>
+                    <div class="event-filters">
                         <button type="button" class="filter-button is-active" data-event-filter="all" aria-pressed="true">All</button>
                         <button type="button" class="filter-button" data-event-filter="my" aria-pressed="false">My Events</button>
                         <button type="button" class="filter-button" data-event-filter="nearby" aria-pressed="false">Nearby</button>
-                        <button type="button" class="search-button" id="eventSearchButton">Search</button>
                     </div>
                     <div class="divider"></div>
                     <div id="eventFeedContainer" class="posts-container"></div>

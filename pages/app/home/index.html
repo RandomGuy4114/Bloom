@@ -23,6 +23,7 @@
             </div>
             <div class="topbar-action-row">
                 <button onclick="window.location.href='../../communities/communities/'">Communities</button>
+                <button onclick="window.location.href='../map/'">Map</button>
                 <button onclick="window.location.href='../settings/'">Settings</button>
             </div>
         </div>
@@ -33,8 +34,10 @@
         <button onclick="window.location.href='../activity/'" class="sidebarButton">Activity</button>
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='../../communities/communities/'">Communities</button>
+        <button class="sidebarButton" onclick="window.location.href='../map/'">Map</button>
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='../settings/'">Settings</button>
+        <button type="button" class="sidebarButton supporter-button" onclick="window.location.href = '../supporter/'">Buy Bloom Supporter</button>
     </div>
     <div class="main-layout">
         <div class="feed-container">
@@ -46,7 +49,6 @@
                     <div class="post-type-selector" role="radiogroup" aria-label="Post type">
                         <button type="button" class="post-type-option is-selected" data-post-type="post" data-i18n-key="postType.post" data-i18n-ignore aria-pressed="true">Post</button>
                         <button type="button" class="post-type-option" data-post-type="activity" data-i18n-key="postType.activity" data-i18n-ignore aria-pressed="false">Activity</button>
-                        <button type="button" class="post-type-option" data-post-type="event" data-i18n-key="postType.event" data-i18n-ignore aria-pressed="false">Event</button>
                     </div>
                     <input type="text" id="titleInput" aria-label="Post title" placeholder="Post title" maxlength="200">
                     <input type="text" class="TypeInput" id="postInput" aria-label="Post content" placeholder="Write your post" maxlength="10000">
