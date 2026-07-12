@@ -50,3 +50,5 @@ I have big plans for Bloom, so the future for this service is very bright. The l
 
 ## Contributing
 Bloom is completely **Open Source**. Contributions, bug reports, and feature requests are all welcome. Feel free to check the issues page or open a pull request.
+You can also donate to my ko-fi to help support the project.
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=flat-square&logo=ko-fi&logoColor=white)](https://ko-fi.com/FormalBlaze)
