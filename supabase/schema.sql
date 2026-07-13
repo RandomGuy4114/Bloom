@@ -80,6 +80,67 @@ $$;
 ALTER FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."consume_patreon_oauth_state"("p_state_hash" "text") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $_$
+declare
+  state_user_id uuid;
+begin
+  if p_state_hash !~ '^[a-f0-9]{64}$' then
+    return null;
+  end if;
+
+  delete from public.patreon_oauth_states
+    where state_hash = p_state_hash
+      and expires_at > now()
+    returning user_id into state_user_id;
+
+  return state_user_id;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."consume_patreon_oauth_state"("p_state_hash" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."delete_owned_community"("target_community" "uuid") RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+declare
+  active_user uuid := auth.uid();
+  target_owner uuid;
+  is_global boolean;
+begin
+  if active_user is null then
+    raise exception 'Authentication required';
+  end if;
+
+  select user_id, global
+    into target_owner, is_global
+    from public."Communities"
+    where id = target_community
+    for update;
+
+  if target_owner is null or target_owner <> active_user or is_global is true then
+    raise exception 'Only the owner can delete a local community';
+  end if;
+
+  delete from public."Posts" where community = target_community;
+  update public.profiles
+    set joined_communities = array_remove(coalesce(joined_communities, array[]::uuid[]), target_community)
+    where target_community = any(coalesce(joined_communities, array[]::uuid[]));
+  delete from public."Communities" where id = target_community and user_id = active_user;
+
+  return 'deleted';
+end;
+$$;
+
+
+ALTER FUNCTION "public"."delete_owned_community"("target_community" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."event_trigger_fn"() RETURNS "event_trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -92,42 +153,27 @@ $$;
 ALTER FUNCTION "public"."event_trigger_fn"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_public_profile"("target_user" "uuid") RETURNS TABLE("id" "uuid", "username" "text", "display_name" "text", "bio" "text", "avatar_url" "text")
+CREATE OR REPLACE FUNCTION "public"."get_public_profile"("target_user" "uuid") RETURNS TABLE("id" "uuid", "username" "text", "display_name" "text", "bio" "text", "avatar_url" "text", "supporter" boolean)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
     AS $$
-    SELECT "profile"."id", "profile"."username", "profile"."display_name", "profile"."bio", "profile"."avatar_url"
-    FROM "public"."profiles" AS "profile"
-    WHERE "profile"."id" = "target_user";
+  select
+    profile.id,
+    profile.username,
+    profile.display_name,
+    profile.bio,
+    profile.avatar_url,
+    profile.supporter
+  from public.profiles as profile
+  where profile.id = target_user;
 $$;
 
 
 ALTER FUNCTION "public"."get_public_profile"("target_user" "uuid") OWNER TO "postgres";
 
 
+COMMENT ON FUNCTION "public"."get_public_profile"("target_user" "uuid") IS 'Returns display-safe profile fields and the server-controlled Supporter rank.';
 
-CREATE OR REPLACE FUNCTION "public"."is_valid_event_location"("event_location" "text") RETURNS boolean
-    LANGUAGE "plpgsql" IMMUTABLE
-    SET "search_path" TO ''
-    AS $$
-DECLARE
-    latitude_value double precision;
-    longitude_value double precision;
-BEGIN
-    IF event_location IS NULL OR event_location !~ '^[+-]?[0-9]+(\.[0-9]+)?\s*,\s*[+-]?[0-9]+(\.[0-9]+)?$' THEN
-        RETURN false;
-    END IF;
-    latitude_value := trim(split_part(event_location, ',', 1))::double precision;
-    longitude_value := trim(split_part(event_location, ',', 2))::double precision;
-    RETURN latitude_value BETWEEN -90 AND 90
-       AND longitude_value BETWEEN -180 AND 180;
-EXCEPTION WHEN OTHERS THEN
-    RETURN false;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."is_valid_event_location"("event_location" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."handle_auth_user_ban_or_delete"() RETURNS "trigger"
@@ -192,14 +238,10 @@ CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     SET "search_path" TO ''
     AS $$
 begin
-  insert into public.profiles (id, username, display_name, birthday)
+  insert into public.profiles (id, username, birthday)
   values (
     new.id,
     nullif(new.raw_user_meta_data->>'username', '')::text,
-    coalesce(
-      nullif(new.raw_user_meta_data->>'display_name', '')::text,
-      nullif(new.raw_user_meta_data->>'username', '')::text
-    ),
     case
       when nullif(new.raw_user_meta_data->>'birthday', '') is null then null
       else (new.raw_user_meta_data->>'birthday')::date
@@ -207,7 +249,6 @@ begin
   )
   on conflict (id) do update set
     username = excluded.username,
-    display_name = excluded.display_name,
     birthday = excluded.birthday;
 
   return new;
@@ -231,7 +272,7 @@ begin
   values (
     new.id,
     v_username,
-    coalesce(nullif(new.raw_user_meta_data->>'display_name', '')::text, v_username),
+    v_username,
     case
       when nullif(new.raw_user_meta_data->>'birthday', '') is null then null
       else (new.raw_user_meta_data->>'birthday')::date
@@ -367,6 +408,230 @@ $$;
 
 ALTER FUNCTION "public"."leave_community"("target_community" "uuid") OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."normalize_supporter_entitlements"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $_$
+begin
+  if new.supporter is not true then
+    new.bio := left(coalesce(new.bio, ''), 500);
+    if new."Theme" not in ('light', 'dark') then
+      new."Theme" := 'light';
+    end if;
+    if new.avatar_url ~* '\.gif(\?|$)' then
+      new.avatar_url := null;
+    end if;
+  end if;
+  return new;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."normalize_supporter_entitlements"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", "p_event_type" "text", "p_patreon_user_id" "text", "p_membership_status" "text", "p_supporter" boolean) RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $_$
+declare
+  inserted_hash text;
+begin
+  if p_event_hash !~ '^[a-f0-9]{64}$'
+    or p_event_type not in (
+      'members:create',
+      'members:update',
+      'members:delete',
+      'members:pledge:create',
+      'members:pledge:update',
+      'members:pledge:delete'
+    )
+    or nullif(p_patreon_user_id, '') is null
+    or char_length(coalesce(p_membership_status, '')) > 100 then
+    raise exception 'Invalid Patreon webhook event';
+  end if;
+
+  insert into public.patreon_webhook_events (event_hash, event_type, patreon_user_id)
+  values (p_event_hash, p_event_type, p_patreon_user_id)
+  on conflict (event_hash) do nothing
+  returning event_hash into inserted_hash;
+
+  if inserted_hash is null then
+    return 'duplicate';
+  end if;
+
+  update public.profiles
+  set supporter = coalesce(p_supporter, false),
+      patreon_membership_status = coalesce(p_membership_status, 'none'),
+      supporter_verified_at = now()
+  where patreon_user_id = p_patreon_user_id;
+
+  delete from public.patreon_webhook_events
+  where received_at < now() - interval '180 days';
+
+  return 'processed';
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", "p_event_type" "text", "p_patreon_user_id" "text", "p_membership_status" "text", "p_supporter" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."search_bloom"("search_term" "text", "user_latitude" double precision DEFAULT NULL::double precision, "user_longitude" double precision DEFAULT NULL::double precision, "result_limit" integer DEFAULT 6) RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+    active_user uuid := auth.uid();
+    normalized_term text := lower(trim(coalesce(search_term, '')));
+    capped_limit integer := greatest(1, least(coalesce(result_limit, 6), 10));
+    has_location boolean := user_latitude BETWEEN -90 AND 90
+        AND user_longitude BETWEEN -180 AND 180;
+    user_results jsonb;
+    community_results jsonb;
+    post_results jsonb;
+BEGIN
+    IF active_user IS NULL THEN
+        RAISE EXCEPTION 'Authentication required' USING ERRCODE = '42501';
+    END IF;
+
+    IF char_length(normalized_term) < 2 OR char_length(normalized_term) > 100 THEN
+        RETURN jsonb_build_object('users', '[]'::jsonb, 'communities', '[]'::jsonb, 'posts', '[]'::jsonb);
+    END IF;
+
+    SELECT coalesce(jsonb_agg(to_jsonb(result_row)), '[]'::jsonb)
+    INTO user_results
+    FROM (
+        SELECT
+            profile.id,
+            profile.username,
+            profile.display_name,
+            profile.avatar_url
+        FROM public.profiles AS profile
+        WHERE EXISTS (
+            SELECT 1
+            FROM public."Communities" AS shared_community
+            WHERE active_user = ANY(coalesce(shared_community.members, ARRAY[]::uuid[]))
+              AND profile.id = ANY(coalesce(shared_community.members, ARRAY[]::uuid[]))
+        )
+          AND (
+              position(normalized_term IN lower(coalesce(profile.display_name, ''))) > 0
+              OR position(normalized_term IN lower(coalesce(profile.username, ''))) > 0
+          )
+        ORDER BY
+            (lower(profile.username) = normalized_term) DESC,
+            lower(profile.display_name),
+            lower(profile.username)
+        LIMIT capped_limit
+    ) AS result_row;
+
+    SELECT coalesce(jsonb_agg(to_jsonb(result_row)), '[]'::jsonb)
+    INTO community_results
+    FROM (
+        SELECT
+            community.id,
+            community.name,
+            left(coalesce(community.description, ''), 180) AS description,
+            CASE
+                WHEN active_user = ANY(coalesce(community.members, ARRAY[]::uuid[])) THEN 'joined'
+                WHEN coalesce(community.global, false) THEN 'global'
+                ELSE 'nearby'
+            END AS scope
+        FROM public."Communities" AS community
+        WHERE (
+            active_user = ANY(coalesce(community.members, ARRAY[]::uuid[]))
+            OR coalesce(community.global, false)
+            OR (
+                has_location
+                AND community.latitude IS NOT NULL
+                AND community.longitude IS NOT NULL
+                AND community.radius_meters IS NOT NULL
+                AND public.community_distance_meters(
+                    user_latitude,
+                    user_longitude,
+                    community.latitude,
+                    community.longitude
+                ) <= community.radius_meters
+            )
+        )
+          AND (
+              position(normalized_term IN lower(coalesce(community.name, ''))) > 0
+              OR position(normalized_term IN lower(coalesce(community.description, ''))) > 0
+          )
+        ORDER BY
+            (active_user = ANY(coalesce(community.members, ARRAY[]::uuid[]))) DESC,
+            coalesce(community.global, false) DESC,
+            lower(community.name)
+        LIMIT capped_limit
+    ) AS result_row;
+
+    SELECT coalesce(jsonb_agg(to_jsonb(result_row)), '[]'::jsonb)
+    INTO post_results
+    FROM (
+        SELECT
+            post.id,
+            post.title,
+            left(coalesce(post.body, ''), 180) AS body,
+            post.post_type,
+            community.name AS community_name
+        FROM public."Posts" AS post
+        JOIN public."Communities" AS community ON community.id = post.community
+        WHERE active_user = ANY(coalesce(community.members, ARRAY[]::uuid[]))
+          AND (
+              position(normalized_term IN lower(coalesce(post.title, ''))) > 0
+              OR position(normalized_term IN lower(coalesce(post.body, ''))) > 0
+          )
+        ORDER BY post.created_at DESC
+        LIMIT capped_limit
+    ) AS result_row;
+
+    RETURN jsonb_build_object(
+        'users', user_results,
+        'communities', community_results,
+        'posts', post_results
+    );
+END;
+$$;
+
+
+ALTER FUNCTION "public"."search_bloom"("search_term" "text", "user_latitude" double precision, "user_longitude" double precision, "result_limit" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."validate_post_image_entitlements"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $$
+declare
+  author_is_supporter boolean := false;
+  image_url text;
+  image_limit integer;
+begin
+  select coalesce(profile.supporter, false)
+    into author_is_supporter
+    from public.profiles as profile
+    where profile.id = new.user_id;
+
+  image_limit := case when author_is_supporter then 5 else 1 end;
+  if cardinality(new.img_links) > image_limit then
+    raise exception 'Post image limit exceeded';
+  end if;
+
+  foreach image_url in array new.img_links loop
+    if image_url not like 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Post%20Images/%'
+      and image_url not like 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Post Images/%' then
+      raise exception 'Invalid post image URL';
+    end if;
+  end loop;
+
+  new.img_link := new.img_links[1];
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."validate_post_image_entitlements"() OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -383,7 +648,9 @@ CREATE TABLE IF NOT EXISTS "public"."Communities" (
     "global" boolean DEFAULT false,
     "latitude" double precision,
     "longitude" double precision,
-    "radius_meters" integer
+    "radius_meters" integer,
+    CONSTRAINT "Communities_banner_origin_check" CHECK ((("banner_url" IS NULL) OR ("banner_url" = ''::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community%20Banners/%'::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community Banners/%'::"text"))),
+    CONSTRAINT "Communities_valid_details_check" CHECK (((("char_length"(COALESCE("name", ''::"text")) >= 1) AND ("char_length"(COALESCE("name", ''::"text")) <= 100)) AND (("char_length"(COALESCE("description", ''::"text")) >= 1) AND ("char_length"(COALESCE("description", ''::"text")) <= 1000)) AND (("global" IS TRUE) OR ((("latitude" >= ('-90'::integer)::double precision) AND ("latitude" <= (90)::double precision)) AND (("longitude" >= ('-180'::integer)::double precision) AND ("longitude" <= (180)::double precision)) AND (("radius_meters" >= 100) AND ("radius_meters" <= 100000))))))
 );
 
 
@@ -422,17 +689,42 @@ CREATE TABLE IF NOT EXISTS "public"."Posts" (
     "communityName" "text",
     "post_type" "text",
     "img_link" "text",
-    "location" "text"
+    "location" "text",
+    "img_links" "text"[] DEFAULT '{}'::"text"[] NOT NULL
 );
 
 
 ALTER TABLE "public"."Posts" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."patreon_oauth_states" (
+    "state_hash" "text" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "expires_at" timestamp with time zone NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "patreon_oauth_states_state_hash_check" CHECK (("state_hash" ~ '^[a-f0-9]{64}$'::"text"))
+);
+
+
+ALTER TABLE "public"."patreon_oauth_states" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."patreon_webhook_events" (
+    "event_hash" "text" NOT NULL,
+    "event_type" "text" NOT NULL,
+    "patreon_user_id" "text" NOT NULL,
+    "received_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "patreon_webhook_events_event_hash_check" CHECK (("event_hash" ~ '^[a-f0-9]{64}$'::"text"))
+);
+
+
+ALTER TABLE "public"."patreon_webhook_events" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "id" "uuid" NOT NULL,
     "username" "text" NOT NULL,
-    "display_name" "text" NOT NULL,
+    "display_name" "text",
     "bio" "text",
     "avatar_url" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
@@ -440,20 +732,33 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "FirstTimeOpen" boolean DEFAULT true,
     "Language" "text" DEFAULT 'en'::"text",
     "birthday" "date",
-    "requestedDelete" boolean DEFAULT false NOT NULL
+    "requestedDelete" boolean DEFAULT false NOT NULL,
+    "paddle_customer_id" "text",
+    "supporter" boolean,
+    "patreon_user_id" "text",
+    "patreon_membership_status" "text",
+    "supporter_verified_at" timestamp with time zone,
+    "Theme" "text" DEFAULT 'light'::"text" NOT NULL,
+    "isBusiness" boolean DEFAULT false,
+    CONSTRAINT "profiles_bio_length_check" CHECK (("char_length"(COALESCE("bio", ''::"text")) <=
+CASE
+    WHEN "supporter" THEN 1500
+    ELSE 500
+END)),
+    CONSTRAINT "profiles_gif_avatar_supporter_check" CHECK (("supporter" OR ("avatar_url" IS NULL) OR ("avatar_url" !~* '\.gif(\?|$)'::"text"))),
+    CONSTRAINT "profiles_theme_check" CHECK ((("Theme" = ANY (ARRAY['light'::"text", 'dark'::"text"])) OR ("supporter" AND ("Theme" = ANY (ARRAY['forest'::"text", 'midnight'::"text", 'sunset'::"text"])))))
 );
 
 
 ALTER TABLE "public"."profiles" OWNER TO "postgres";
 
 
+COMMENT ON COLUMN "public"."profiles"."patreon_user_id" IS 'Patreon identity linked through the server-side OAuth callback. Unique to one Bloom account.';
+
+
+
 ALTER TABLE ONLY "public"."Communities"
     ADD CONSTRAINT "Communities_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE "public"."Communities"
-    ADD CONSTRAINT "Communities_valid_details_check" CHECK (((("char_length"(COALESCE("name", ''::"text")) >= 1) AND ("char_length"(COALESCE("name", ''::"text")) <= 100)) AND (("char_length"(COALESCE("description", ''::"text")) >= 1) AND ("char_length"(COALESCE("description", ''::"text")) <= 1000)) AND (("global" IS TRUE) OR (("latitude" IS NOT NULL) AND ("longitude" IS NOT NULL) AND ("radius_meters" IS NOT NULL) AND (("latitude" >= ('-90'::integer)::double precision) AND ("latitude" <= (90)::double precision)) AND (("longitude" >= ('-180'::integer)::double precision) AND ("longitude" <= (180)::double precision)) AND (("radius_meters" >= 1) AND ("radius_meters" <= 20000)))))) NOT VALID;
 
 
 
@@ -472,13 +777,18 @@ ALTER TABLE "public"."Posts"
 
 
 
-ALTER TABLE "public"."Posts"
-    ADD CONSTRAINT "Posts_event_location_check" CHECK ((("post_type" = 'event'::"text") AND "public"."is_valid_event_location"("location")) OR (("post_type" <> 'event'::"text") AND ("location" IS NULL))) NOT VALID;
-
-
-
 ALTER TABLE ONLY "public"."Posts"
     ADD CONSTRAINT "Posts_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."patreon_oauth_states"
+    ADD CONSTRAINT "patreon_oauth_states_pkey" PRIMARY KEY ("state_hash");
+
+
+
+ALTER TABLE ONLY "public"."patreon_webhook_events"
+    ADD CONSTRAINT "patreon_webhook_events_pkey" PRIMARY KEY ("event_hash");
 
 
 
@@ -497,13 +807,7 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
-ALTER TABLE ONLY "public"."profiles"
-    ADD CONSTRAINT "profiles_display_name_length_check" CHECK ((char_length(TRIM(BOTH FROM "display_name")) >= 1) AND (char_length(TRIM(BOTH FROM "display_name")) <= 50));
-
-
-
-ALTER TABLE ONLY "public"."profiles"
-    ADD CONSTRAINT "profiles_username_format_check" CHECK (("username" ~ '^[A-Za-z0-9_]{3,30}$'::"text")) NOT VALID;
+CREATE INDEX "Communities_members_search_idx" ON "public"."Communities" USING "gin" ("members");
 
 
 
@@ -511,11 +815,27 @@ CREATE UNIQUE INDEX "PostReports_post_reporter_key" ON "public"."PostReports" US
 
 
 
-CREATE UNIQUE INDEX "profiles_username_lower_key" ON "public"."profiles" USING "btree" (lower("username"));
+CREATE INDEX "patreon_oauth_states_expires_at_idx" ON "public"."patreon_oauth_states" USING "btree" ("expires_at");
+
+
+
+CREATE INDEX "patreon_webhook_events_received_at_idx" ON "public"."patreon_webhook_events" USING "btree" ("received_at");
+
+
+
+CREATE UNIQUE INDEX "profiles_patreon_user_id_key" ON "public"."profiles" USING "btree" ("patreon_user_id") WHERE ("patreon_user_id" IS NOT NULL);
 
 
 
 CREATE OR REPLACE TRIGGER "add_community_owner_membership_trigger" BEFORE INSERT ON "public"."Communities" FOR EACH ROW EXECUTE FUNCTION "public"."add_community_owner_membership"();
+
+
+
+CREATE OR REPLACE TRIGGER "normalize_supporter_entitlements_trigger" BEFORE INSERT OR UPDATE OF "supporter", "bio", "avatar_url", "Theme" ON "public"."profiles" FOR EACH ROW EXECUTE FUNCTION "public"."normalize_supporter_entitlements"();
+
+
+
+CREATE OR REPLACE TRIGGER "validate_post_image_entitlements_trigger" BEFORE INSERT OR UPDATE OF "img_links", "user_id" ON "public"."Posts" FOR EACH ROW EXECUTE FUNCTION "public"."validate_post_image_entitlements"();
 
 
 
@@ -529,18 +849,17 @@ ALTER TABLE ONLY "public"."PostReports"
 
 
 
+ALTER TABLE ONLY "public"."patreon_oauth_states"
+    ADD CONSTRAINT "patreon_oauth_states_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
-CREATE POLICY "Users can update their own profile" ON "public"."profiles" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "id")) WITH CHECK (("auth"."uid"() = "id"));
-
-
-
-CREATE POLICY "Authenticated users can create permitted posts" ON "public"."Posts" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
-   FROM "public"."Communities" "community_record"
-  WHERE (("community_record"."id" = "Posts"."community") AND (( SELECT "auth"."uid"() AS "uid") = ANY (COALESCE("community_record"."members", ARRAY[]::"uuid"[]))) AND ((NOT COALESCE("community_record"."global", false)) OR (COALESCE(((( SELECT "auth"."jwt"() AS "jwt") -> 'app_metadata'::"text") ->> 'role'::"text"), ''::"text") = 'admin'::"text"))))))));
+CREATE POLICY "Authenticated users can create permitted posts" ON "public"."Posts" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_post_to_community"("community")));
 
 
 
@@ -573,18 +892,38 @@ CREATE POLICY "Enable insert for users based on user_id" ON "public"."profiles" 
 
 
 
+CREATE POLICY "Enable update for users based on user_id" ON "public"."profiles" FOR UPDATE USING ((( SELECT "auth"."uid"() AS "uid") = "id"));
+
+
+
+CREATE POLICY "Owners can edit community details" ON "public"."Communities" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
 ALTER TABLE "public"."PostReports" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Posts" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "Users can create their own local community" ON "public"."Communities" FOR INSERT TO "authenticated" WITH CHECK (((( SELECT "auth"."uid"() AS "uid") = "user_id") AND ("global" IS NOT TRUE) AND (("members" IS NULL) OR ("members" <@ ARRAY[( SELECT "auth"."uid"() AS "uid")]))));
+CREATE POLICY "Users can create their own local community" ON "public"."Communities" FOR INSERT TO "authenticated" WITH CHECK ((("auth"."uid"() = "user_id") AND ("global" IS NOT TRUE) AND (("members" IS NULL) OR ("members" <@ ARRAY["auth"."uid"()])) AND (("radius_meters" >= 100) AND ("radius_meters" <=
+CASE
+    WHEN (EXISTS ( SELECT 1
+       FROM "public"."profiles"
+      WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."supporter" IS TRUE)))) THEN 100000
+    ELSE 20000
+END))));
 
 
 
 CREATE POLICY "Users can read their own profile" ON "public"."profiles" FOR SELECT TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "id"));
 
+
+
+ALTER TABLE "public"."patreon_oauth_states" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."patreon_webhook_events" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
@@ -604,6 +943,7 @@ GRANT ALL ON FUNCTION "public"."add_community_owner_membership"() TO "service_ro
 
 
 
+REVOKE ALL ON FUNCTION "public"."can_post_to_community"("target_community" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."can_post_to_community"("target_community" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."can_post_to_community"("target_community" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."can_post_to_community"("target_community" "uuid") TO "service_role";
@@ -613,6 +953,17 @@ GRANT ALL ON FUNCTION "public"."can_post_to_community"("target_community" "uuid"
 GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "anon";
 GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."consume_patreon_oauth_state"("p_state_hash" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."consume_patreon_oauth_state"("p_state_hash" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") TO "service_role";
 
 
 
@@ -674,9 +1025,38 @@ GRANT ALL ON FUNCTION "public"."leave_community"("target_community" "uuid") TO "
 
 
 
-GRANT ALL ON TABLE "public"."Communities" TO "anon";
-GRANT ALL ON TABLE "public"."Communities" TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."normalize_supporter_entitlements"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."normalize_supporter_entitlements"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", "p_event_type" "text", "p_patreon_user_id" "text", "p_membership_status" "text", "p_supporter" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", "p_event_type" "text", "p_patreon_user_id" "text", "p_membership_status" "text", "p_supporter" boolean) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."search_bloom"("search_term" "text", "user_latitude" double precision, "user_longitude" double precision, "result_limit" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."search_bloom"("search_term" "text", "user_latitude" double precision, "user_longitude" double precision, "result_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."search_bloom"("search_term" "text", "user_latitude" double precision, "user_longitude" double precision, "result_limit" integer) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."validate_post_image_entitlements"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."validate_post_image_entitlements"() TO "service_role";
+
+
+
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Communities" TO "anon";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Communities" TO "authenticated";
 GRANT ALL ON TABLE "public"."Communities" TO "service_role";
+
+
+
+GRANT UPDATE("name") ON TABLE "public"."Communities" TO "authenticated";
+
+
+
+GRANT UPDATE("description") ON TABLE "public"."Communities" TO "authenticated";
 
 
 
@@ -692,31 +1072,23 @@ GRANT ALL ON SEQUENCE "public"."PostReports_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."Posts" TO "anon";
-GRANT ALL ON TABLE "public"."Posts" TO "authenticated";
+GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Posts" TO "anon";
+GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Posts" TO "authenticated";
 GRANT ALL ON TABLE "public"."Posts" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."patreon_oauth_states" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."patreon_webhook_events" TO "service_role";
 
 
 
 GRANT ALL ON TABLE "public"."profiles" TO "anon";
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."profiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."profiles" TO "service_role";
-
-
-
-GRANT UPDATE("username") ON TABLE "public"."profiles" TO "authenticated";
-
-
-
-GRANT UPDATE("display_name") ON TABLE "public"."profiles" TO "authenticated";
-
-
-
-GRANT UPDATE("bio") ON TABLE "public"."profiles" TO "authenticated";
-
-
-
-GRANT UPDATE("avatar_url") ON TABLE "public"."profiles" TO "authenticated";
 
 
 
@@ -729,6 +1101,10 @@ GRANT UPDATE("Language") ON TABLE "public"."profiles" TO "authenticated";
 
 
 GRANT UPDATE("requestedDelete") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT UPDATE("Theme") ON TABLE "public"."profiles" TO "authenticated";
 
 
 
@@ -756,3 +1132,10 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
+
+
+
+
+
+

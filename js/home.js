@@ -27,16 +27,18 @@ const createPostButton = document.getElementById("createPostButton");
 const postImageInput = document.getElementById("postImageInput");
 const postImageButton = document.getElementById("postImageButton");
 const postImagePreview = document.getElementById("postImagePreview");
+const postImageLimitHint = document.getElementById("postImageLimitHint");
 const postTypeButtons = [...document.querySelectorAll("[data-post-type]")];
-const postImagesBucket = "Post Images";
-const maximumPostImageSize = 10 * 1024 * 1024;
 const allowedPostImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const KonamiCode = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
 
 let currentUser;
 let joinedCommunities = [];
 let postableCommunityIds = new Set();
 let selectedPostType = "post";
 let currentUserIsAdmin = false;
+let currentUserIsSupporter = false;
+let konamiIndex = 0;
 
 // Components
 
@@ -110,6 +112,7 @@ async function renderFeedPosts(posts) {
       communityName: communityName || "",
       authorName: authorProfile?.display_name || authorProfile?.username || "",
       authorAvatarUrl: authorProfile?.avatar_url || "",
+      authorIsSupporter: authorProfile?.supporter === true,
     };
   }));
 
@@ -120,10 +123,12 @@ async function renderFeedPosts(posts) {
     body: post.body,
     location: post.location,
     imgLink: post.img_link,
+    imgLinks: post.img_links,
     footer: `Posted on: ${formatDateTime(post.created_at)}`,
     authorUserId: postDetails[index].authorUserId,
     authorName: postDetails[index].authorName,
     authorAvatarUrl: postDetails[index].authorAvatarUrl,
+    authorIsSupporter: postDetails[index].authorIsSupporter,
     communityName: postDetails[index].communityName,
     manageHref: isPostOwner(post, currentUser.id) ? `${PAGE_URLS.post}?postId=${post.id}` : null,
   }));
@@ -135,7 +140,7 @@ async function renderFeedPosts(posts) {
 async function loadJoinedCommunities() {
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("joined_communities")
+    .select("joined_communities, supporter")
     .eq("id", currentUser.id)
     .single();
 
@@ -146,6 +151,10 @@ async function loadJoinedCommunities() {
   }
 
   joinedCommunities = profile?.joined_communities ?? [];
+  currentUserIsSupporter = profile?.supporter === true;
+  postImageLimitHint.textContent = currentUserIsSupporter
+    ? "Supporter: up to 5 images, 25 MB each."
+    : "Up to 1 image, 10 MB.";
   currentUserIsAdmin = currentUser?.app_metadata?.role === "admin";
 
   if (!joinedCommunities.length) {
@@ -184,7 +193,9 @@ async function createPost() {
   const title = titleInput.value.trim();
   const body = postInput.value.trim();
   const selectedCommunity = communitySelect.value;
-  const imageFile = postImageInput.files?.[0];
+  const imageFiles = [...(postImageInput.files ?? [])];
+  const imageLimit = currentUserIsSupporter ? 5 : 1;
+  const maximumPostImageSize = (currentUserIsSupporter ? 25 : 10) * 1024 * 1024;
 
   if (!title) {
     alert("Please add a post title before posting.");
@@ -206,12 +217,16 @@ async function createPost() {
     alert("Only administrators can create posts in global communities.");
     return;
   }
-  if (imageFile && !allowedPostImageTypes.has(imageFile.type)) {
+  if (imageFiles.length > imageLimit) {
+    alert(`You can upload up to ${imageLimit} image${imageLimit === 1 ? "" : "s"} per post.`);
+    return;
+  }
+  if (imageFiles.some((file) => !allowedPostImageTypes.has(file.type))) {
     alert("Choose a JPEG, PNG, WebP, or GIF image.");
     return;
   }
-  if (imageFile && imageFile.size > maximumPostImageSize) {
-    alert("Post images must be 10 MB or smaller.");
+  if (imageFiles.some((file) => file.size > maximumPostImageSize)) {
+    alert(`Each post image must be ${currentUserIsSupporter ? 25 : 10} MB or smaller.`);
     return;
   }
 
@@ -226,43 +241,17 @@ async function createPost() {
       return;
     }
 
-    let imagePath;
-    let imageUrl = "";
-    if (imageFile) {
-      const extension = imageFile.name.split(".").pop()?.toLowerCase() || "image";
-      imagePath = `${currentUser.id}/${crypto.randomUUID()}.${extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from(postImagesBucket)
-        .upload(imagePath, imageFile, {
-          cacheControl: "3600",
-          contentType: imageFile.type,
-        });
-      if (uploadError) {
-        console.error("Error uploading post image:", uploadError.message);
-        alert("Unable to upload the image. Please try again.");
-        return;
-      }
-      imageUrl = supabase.storage.from(postImagesBucket).getPublicUrl(imagePath).data.publicUrl;
-    }
-
-    const { error } = await supabase
-      .from("Posts")
-      .insert([{
-        title,
-        body,
-        user_id: currentUser.id,
-        community: selectedCommunity,
-        post_type: selectedPostType,
-        location: null,
-        img_link: imageUrl || null,
-      }]);
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("body", body);
+    formData.append("community", selectedCommunity);
+    formData.append("postType", selectedPostType);
+    imageFiles.forEach((file) => formData.append("images", file));
+    const { error } = await supabase.functions.invoke("create-post", { body: formData });
 
     if (error) {
-      if (imagePath) {
-        await supabase.storage.from(postImagesBucket).remove([imagePath]);
-      }
       console.error("Error creating post:", error.message);
-      alert("Error creating post. Please try again.");
+      alert("The post could not be published. Check that its text and images follow the community guidelines, then try again.");
       return;
     }
 
@@ -329,19 +318,20 @@ postTypeButtons.forEach((button) => {
 createPostButton?.addEventListener("click", createPost);
 postImageButton?.addEventListener("click", () => postImageInput.click());
 postImageInput?.addEventListener("change", () => {
-  const file = postImageInput.files?.[0];
+  const files = [...(postImageInput.files ?? [])];
   postImagePreview.replaceChildren();
-  postImagePreview.hidden = !file;
-  if (!file) {
+  postImagePreview.hidden = !files.length;
+  if (!files.length) {
     return;
   }
-
-  const image = document.createElement("img");
-  const previewUrl = URL.createObjectURL(file);
-  image.src = previewUrl;
-  image.alt = "Post image preview";
-  image.addEventListener("load", () => URL.revokeObjectURL(previewUrl), { once: true });
-  postImagePreview.appendChild(image);
+  files.forEach((file, index) => {
+    const image = document.createElement("img");
+    const previewUrl = URL.createObjectURL(file);
+    image.src = previewUrl;
+    image.alt = `Post image preview ${index + 1}`;
+    image.addEventListener("load", () => URL.revokeObjectURL(previewUrl), { once: true });
+    postImagePreview.appendChild(image);
+  });
 });
 postInput?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -364,6 +354,21 @@ await withLoadingOverlay(async () => {
     checkFirstTimeUser(),
   ]);
 }, "Loading your feed...");
+
+
+window.addEventListener("keydown", (event) => {
+  const key = event.key;
+  if (key === KonamiCode[konamiIndex]) {
+    konamiIndex++;
+    if (konamiIndex === KonamiCode.length) {
+      alert("Konami Code activated! You found the secret!");
+      window.location.href = "https://randomguy4114.github.io/The-Epic-Calculator/"
+      konamiIndex = 0;
+    }
+  } else {
+    konamiIndex = 0;
+  }
+});
 
 // Console
 

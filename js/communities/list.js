@@ -1,10 +1,12 @@
 // Dependencies
 
 import { supabase } from "../supabase.js";
+import { t } from "../i18n.js";
 import {
   createPopupShell,
   filterBySearch,
   getCurrentUserOrRedirect,
+  getUserProfile,
   getUserLocation,
   isWithinCommunityRadius,
   joinCommunity,
@@ -29,6 +31,7 @@ let userLocation;
 let allCommunities = [];
 let joinedCommunities = [];
 let joinedCommunityIds = new Set();
+let userIsSupporter = false;
 
 // Components
 
@@ -170,6 +173,7 @@ function renderMyCommunities() {
 }
 
 function createCommunityForm() {
+  const maximumRadius = userIsSupporter ? 20000 : 5000;
   const form = document.createElement("form");
   form.id = "create-community-form";
   form.innerHTML = `
@@ -177,16 +181,25 @@ function createCommunityForm() {
     <input type="text" id="communityName" placeholder="Community name" maxlength="100" />
     <label for="communityDescription">Community Description:</label>
     <textarea id="communityDescription" placeholder="Describe your community" maxlength="1000"></textarea>
-    <button type="submit" id="submitCommunityButton">Create Community</button>
     <label for="communityLocation">Community Radius:</label>
-    <select id="communityLocation">
-      <option value="100">100 meters</option>
-      <option value="500">500 meters</option>
-      <option value="2000">2 kilometers</option>
-      <option value="20000">20 kilometers</option>
-    </select>
+    <div class="community-radius-control">
+      <input type="range" id="communityLocation" min="100" max="${maximumRadius}" step="100" value="500" aria-describedby="communityRadiusValue">
+      <output id="communityRadiusValue" for="communityLocation" data-i18n-ignore>500 meters</output>
+    </div>
+    <p>${userIsSupporter ? "Supporters can create communities with up to a 20 kilometer radius." : "Standard accounts can create communities with up to a 5 kilometer radius."}</p>
     <p>Note: The community made will only be accessible to people near your selected radius</p>
+    <button type="submit" id="submitCommunityButton">Create Community</button>
   `;
+  const radiusInput = form.querySelector("#communityLocation");
+  const radiusOutput = form.querySelector("#communityRadiusValue");
+  const updateRadiusOutput = () => {
+    const meters = Number(radiusInput.value);
+    radiusOutput.value = t(meters >= 1000
+      ? `${(meters / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} kilometers`
+      : `${meters} meters`);
+  };
+  radiusInput.addEventListener("input", updateRadiusOutput);
+  updateRadiusOutput();
   return form;
 }
 
@@ -286,9 +299,12 @@ await withLoadingOverlay(async () => {
     return;
   }
 
-  [userLocation] = await Promise.all([
+  const [location, profile] = await Promise.all([
     getUserLocation(),
+    getUserProfile(user.id),
     showCurrentUser(user, usernameLabel),
   ]);
+  userLocation = location;
+  userIsSupporter = profile?.supporter === true;
   await loadCommunities();
 }, "Loading communities...");

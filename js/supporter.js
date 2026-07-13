@@ -9,83 +9,85 @@ import {
 
 // Definitions
 
-const paddleClientToken = "live_a78666236cfe51641543b122f30";
-const supporterProductId = "pro_01kxa7adj886zy9zemh5tngf0e";
-const supporterItem = {
-  priceId: "pri_01kxa7b8axdvap0erdrpj5bgpy",
-  quantity: 1,
-};
-
 const usernameLabel = document.getElementById("username-label");
-const supporterPriceElement = document.getElementById("SupportPriceElement");
-const buySupporterButton = document.getElementById("buySupporterButton");
+const connectPatreonButton = document.getElementById("connectPatreonButton");
+const supporterStatus = document.getElementById("supporterStatus");
 
-let paddle;
 let currentUser;
 
-// Paddle
+// Components
 
-function initializePaddle() {
-  if (!window.Paddle) {
-    throw new Error("Paddle.js failed to load.");
-  }
+function showPatreonResult() {
+  const result = new URLSearchParams(window.location.search).get("patreon");
+  const messages = {
+    active: "Your Patreon Supporter membership is active.",
+    inactive: "This Patreon account does not have the required active membership.",
+    linked: "This Patreon account is already linked to another Bloom account.",
+    denied: "Patreon authorization was canceled.",
+    error: "Unable to verify your Patreon membership. Please try again.",
+  };
 
-  paddle = window.Paddle;
-  paddle.Initialize({ token: paddleClientToken });
-}
-
-async function loadSupporterPrice() {
-  try {
-    const preview = await paddle.PricePreview({ items: [supporterItem] });
-    const supporterLineItem = preview.data.details.lineItems.find(
-      (item) => item.product.id === supporterProductId,
-    );
-
-    if (!supporterLineItem) {
-      throw new Error("The Bloom Supporter product was not returned by Paddle.");
-    }
-
-    supporterPriceElement.textContent = `${supporterLineItem.formattedTotals.subtotal} / month`;
-  } catch (error) {
-    console.error("Error loading the Bloom Supporter price:", error);
-    supporterPriceElement.textContent = "Price unavailable";
-  }
-}
-
-async function openSupporterCheckout() {
-  if (!paddle || !currentUser) {
+  if (!messages[result]) {
     return;
   }
 
-  buySupporterButton.disabled = true;
-  try {
-    await withLoadingOverlay(async () => {
-      const { data, error } = await supabase.functions.invoke("create-supporter-checkout");
-      const transactionId = data?.transactionId;
+  supporterStatus.textContent = messages[result];
+  supporterStatus.dataset.status = result;
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
 
-      if (error || !/^txn_[a-z0-9]{26}$/.test(transactionId ?? "")) {
-        console.error("Unable to create a secure Supporter checkout:", error);
-        alert("Unable to start checkout. Please try again.");
-        return;
-      }
+async function loadSupporterStatus() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("supporter, patreon_user_id, patreon_membership_status, supporter_verified_at")
+    .eq("id", currentUser.id)
+    .single();
 
-      paddle.Checkout.open({ transactionId });
-    }, "Preparing secure checkout...");
-  } catch (error) {
-    console.error("Secure Supporter checkout failed:", error);
-    alert("Unable to start checkout. Please try again.");
-  } finally {
-    buySupporterButton.disabled = false;
+  if (error) {
+    console.error("Unable to load Patreon status:", error.message);
+    return;
+  }
+
+  if (!new URLSearchParams(window.location.search).has("patreon")) {
+    supporterStatus.textContent = data?.supporter
+      ? "Your Patreon Supporter membership is active."
+      : data?.patreon_user_id
+        ? "Your Patreon membership is not currently active."
+        : "Connect Patreon to verify your Supporter membership.";
+    supporterStatus.dataset.status = data?.supporter ? "active" : "inactive";
   }
 }
 
 // Events
 
-buySupporterButton.addEventListener("click", openSupporterCheckout);
+connectPatreonButton.addEventListener("click", async () => {
+  connectPatreonButton.disabled = true;
+  try {
+    await withLoadingOverlay(async () => {
+      const { data, error } = await supabase.functions.invoke("start-patreon-oauth");
+      let authorizationUrl;
+      try {
+        authorizationUrl = new URL(data?.authorizationUrl);
+      } catch {
+        authorizationUrl = null;
+      }
+
+      if (error || authorizationUrl?.origin !== "https://www.patreon.com") {
+        console.error("Unable to start Patreon authorization:", error);
+        alert("Unable to connect Patreon. Please try again.");
+        return;
+      }
+
+      window.location.assign(authorizationUrl.href);
+    }, "Connecting to Patreon...");
+  } finally {
+    connectPatreonButton.disabled = false;
+  }
+});
 
 // Initialization
 
-buySupporterButton.disabled = true;
+connectPatreonButton.disabled = true;
 
 await withLoadingOverlay(async () => {
   currentUser = await getCurrentUserOrRedirect();
@@ -93,14 +95,10 @@ await withLoadingOverlay(async () => {
     return;
   }
 
-  await showCurrentUser(currentUser, usernameLabel);
-
-  try {
-    initializePaddle();
-    await loadSupporterPrice();
-    buySupporterButton.disabled = false;
-  } catch (error) {
-    console.error("Unable to initialize Bloom Supporter checkout:", error);
-    supporterPriceElement.textContent = "Checkout unavailable";
-  }
+  await Promise.all([
+    showCurrentUser(currentUser, usernameLabel),
+    loadSupporterStatus(),
+  ]);
+  showPatreonResult();
+  connectPatreonButton.disabled = false;
 }, "Loading supporter page...");

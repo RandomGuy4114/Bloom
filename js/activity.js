@@ -94,10 +94,12 @@ function renderTypedPosts(type) {
     body: post.body,
     location: post.location,
     imgLink: post.img_link,
+    imgLinks: post.img_links,
     footer: `Posted on: ${formatDateTime(post.created_at)}`,
     authorUserId: post.authorUserId,
     authorName: post.authorName,
     authorAvatarUrl: post.authorAvatarUrl,
+    authorIsSupporter: post.authorIsSupporter,
     communityName: post.communityName,
     manageHref: isPostOwner(post, user.id) ? `${PAGE_URLS.post}?postId=${post.id}` : null,
   }));
@@ -167,6 +169,7 @@ async function loadTypedPosts() {
         || profilesById.get(authorId)?.username
         || "",
       authorAvatarUrl: profilesById.get(authorId)?.avatar_url || "",
+      authorIsSupporter: profilesById.get(authorId)?.supporter === true,
       communityName: community?.name || "",
       communityDetails: community,
     };

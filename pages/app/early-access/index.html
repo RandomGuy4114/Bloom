@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloom - Post</title>
+    <title>Bloom - Early Access</title>
     <link rel="icon" href="../../../Assets/BloomLogo.png" type="image/png">
     <link rel="stylesheet" href="../../../css/styles.css">
 </head>
@@ -11,7 +11,7 @@
     <div class="topbar">
         <h1 class="topbar-logo">Bloom <p id="verText">ALPHA</p></h1>
         <nav style="display: flex; align-items: center;">
-            <p id="username-label" style="margin: 10px;">Communities</p>
+            <p id="username-label" style="margin: 10px;"></p>
             <div class="pfp-frame"></div>
         </nav>
         <div class="topbar-actions" aria-label="Mobile navigation">
@@ -36,24 +36,18 @@
         <button class="sidebarButton" onclick="window.location.href='../map/'">Map</button>
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='../settings/'">Settings</button>
-        <button type="button" class="sidebarButton supporter-button" onclick="window.location.href = '../supporter/'">Buy Bloom Supporter</button>
+        <button type="button" class="sidebarButton supporter-button" onclick="window.location.href='../supporter/'">Buy Bloom Supporter</button>
     </div>
-    <div class="main-layout">
-        <div class="feed-container">
-            <div class="post-container">
-                <h1 style="text-align: center;">Manage Post</h1>
-                <div class="post" id="post">
-                    <h1 id="postTitle"></h1>
-                    <p id="postContent"></p>
-                </div>
-                <div class="post" id="managePostTools">
-                    <button id="editPostButton">Edit Post</button>
-                    <button id="deletePostButton">Delete Post</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <main class="main-layout">
+        <section class="settings-container settings-dashboard">
+            <header class="settings-header">
+                <h1>Early Access</h1>
+                <p>Preview experimental features before they are released to everyone.</p>
+            </header>
+            <div id="earlyAccessContent" class="settings-card early-access-card"></div>
+        </section>
+    </main>
+    <script type="module" src="../../../js/i18n.js"></script>
+    <script type="module" src="../../../js/early-access.js"></script>
 </body>
-<script type="module" src="../../../js/i18n.js"></script>
-<script type="module" src="../../../js/post.js"></script>
 </html>

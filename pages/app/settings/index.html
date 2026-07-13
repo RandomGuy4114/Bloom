@@ -11,7 +11,7 @@
     <div class="topbar">
         <h1 class="topbar-logo">Bloom <p id="verText">ALPHA</p></h1>
         <nav style="display: flex; align-items: center;">
-            <p id="username-label" style="margin: 10px;">Communities</p>
+            <p id="username-label" style="margin: 10px;"></p>
             <div class="pfp-frame"></div>
         </nav>
         <div class="topbar-actions" aria-label="Mobile navigation">
@@ -39,18 +39,44 @@
         <button type="button" class="sidebarButton supporter-button" onclick="window.location.href = '../supporter/'">Buy Bloom Supporter</button>
     </div>
     <div class="main-layout">
-        <div class="settings-container">
-            <h1 style="text-align: center;">Settings</h1>
-            <div class="settings-section" style="display: flex; flex-direction: column; align-items: center;">
-                <h2>Account Settings</h2>
-                <button id="changePasswordButton" style="margin: 10px;">Change Password</button>
-                <button id="deleteAccountButton" style="margin: 10px;">Delete Account</button>
-                <select id="LangDropdown" label="Language" aria-label="Select Language">
-                    <option value="en">English</option>
-                    <option value="es">Spanish</option>                    
-                </select>
-                <button id="changeLangButton" style="margin: 10px;">Change Language</button>
-                <button id="logoutButton" style="margin: 10px;">Logout</button>
+        <div class="settings-container settings-dashboard">
+            <header class="settings-header">
+                <h1>Settings</h1>
+                <p>Manage your account, appearance, language, and preview features.</p>
+            </header>
+            <div class="settings-grid">
+                <section class="settings-card">
+                    <h2>Appearance</h2>
+                    <p>Choose how Bloom looks across your account.</p>
+                    <label for="ThemeDropdown">Theme</label>
+                    <select id="ThemeDropdown" aria-label="Select theme"></select>
+                    <p id="themeSupporterHint" class="settings-help"></p>
+                    <button id="changeThemeButton">Apply Theme</button>
+                </section>
+                <section class="settings-card">
+                    <h2>Language</h2>
+                    <p>Choose the language used throughout Bloom.</p>
+                    <label for="LangDropdown">Language</label>
+                    <select id="LangDropdown" label="Language" aria-label="Select Language">
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                    </select>
+                    <button id="changeLangButton">Change Language</button>
+                </section>
+                <section class="settings-card">
+                    <h2>Early Access</h2>
+                    <p>Preview experimental Bloom features before their public release.</p>
+                    <button id="earlyAccessButton">Open Early Access</button>
+                </section>
+                <section class="settings-card">
+                    <h2>Account Settings</h2>
+                    <p>Manage your password and account session.</p>
+                    <div class="settings-actions">
+                        <button id="changePasswordButton">Change Password</button>
+                        <button id="logoutButton" class="secondary-action">Logout</button>
+                        <button id="deleteAccountButton" class="danger-action">Delete Account</button>
+                    </div>
+                </section>
             </div>
         </div>
     </div>

@@ -6,6 +6,7 @@ import {
   clearUserProfileCache,
   createPopupShell,
   createPostCard,
+  createSupporterBadge,
   formatDateTime,
   getCurrentUserOrRedirect,
   getQueryParameter,
@@ -18,8 +19,6 @@ import {
 
 // Definitions
 
-const avatarBucket = "Profile Pictures";
-const maximumAvatarSize = 5 * 1024 * 1024;
 const allowedAvatarTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const usernameLabel = document.getElementById("username-label");
 const profilePicture = document.querySelector(".profile-pfp");
@@ -51,6 +50,12 @@ function renderProfile(profile) {
   profileName.dataset.i18nIgnore = "true";
   profileUsername.dataset.i18nIgnore = "true";
   profileName.textContent = displayName;
+  if (profile.supporter === true) {
+    profileName.appendChild(createSupporterBadge());
+  }
+  if (profile.id === 'd026f563-e776-4a67-9fd2-10eef3ec60f1') {
+    profileName.appendChild(createSupporterBadge({ compact: false }, "Owner", "#FFD700"));
+  }
   profileUsername.textContent = username ? `@${username}` : "";
   applyAvatar(profilePicture, profile.avatar_url, "Profile picture");
 
@@ -69,6 +74,9 @@ function renderProfile(profile) {
 }
 
 function createEditProfileForm() {
+  const isSupporter = currentProfile?.supporter === true;
+  const bioLimit = isSupporter ? 1500 : 500;
+  const avatarLimitMb = isSupporter ? 15 : 5;
   const form = document.createElement("form");
   form.className = "popup-form edit-profile-form";
   form.innerHTML = `
@@ -78,10 +86,11 @@ function createEditProfileForm() {
     <label for="editProfileUsername">Username</label>
     <input id="editProfileUsername" type="text" minlength="3" maxlength="30" autocomplete="username" placeholder="Username" required>
     <label for="editProfileBio">Bio</label>
-    <textarea id="editProfileBio" maxlength="500" placeholder="Tell your community about yourself"></textarea>
+    <textarea id="editProfileBio" maxlength="${bioLimit}" placeholder="Tell your community about yourself"></textarea>
+    <p class="profile-upload-help">${bioLimit} characters maximum${isSupporter ? " with Supporter" : ""}.</p>
     <label for="editProfileAvatar">Profile picture</label>
-    <input id="editProfileAvatar" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
-    <p class="profile-upload-help">JPEG, PNG, WebP, or GIF. Maximum 5 MB.</p>
+    <input id="editProfileAvatar" type="file" accept="${isSupporter ? "image/jpeg,image/png,image/webp,image/gif" : "image/jpeg,image/png,image/webp"}">
+    <p class="profile-upload-help">JPEG, PNG, or WebP. ${isSupporter ? `Animated GIF supported. Maximum ${avatarLimitMb} MB.` : `Maximum ${avatarLimitMb} MB. Animated GIF avatars require Supporter.`}</p>
     <div class="popup-actions">
       <button type="button" class="secondary-action">Cancel</button>
       <button type="submit">Save changes</button>
@@ -102,6 +111,9 @@ function openEditProfilePopup() {
   const usernameInput = form.querySelector("#editProfileUsername");
   const bioInput = form.querySelector("#editProfileBio");
   const avatarInput = form.querySelector("#editProfileAvatar");
+  const isSupporter = currentProfile.supporter === true;
+  const maximumAvatarSize = (isSupporter ? 15 : 5) * 1024 * 1024;
+  const maximumBioLength = isSupporter ? 1500 : 500;
   let previewUrl;
 
   displayNameInput.value = currentProfile.display_name || currentProfile.username || "";
@@ -126,8 +138,14 @@ function openEditProfilePopup() {
       applyAvatar(preview, currentProfile.avatar_url, "Profile picture preview");
       return;
     }
+    if (file.type === "image/gif" && !isSupporter) {
+      alert("Animated GIF profile pictures require Supporter.");
+      avatarInput.value = "";
+      applyAvatar(preview, currentProfile.avatar_url, "Profile picture preview");
+      return;
+    }
     if (file.size > maximumAvatarSize) {
-      alert("Profile pictures must be 5 MB or smaller.");
+      alert(`Profile pictures must be ${isSupporter ? 15 : 5} MB or smaller.`);
       avatarInput.value = "";
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -163,53 +181,35 @@ function openEditProfilePopup() {
       alert("Username can only contain letters, numbers, and underscores.");
       return;
     }
-    if (bio.length > 500) {
-      alert("Bio must be 500 characters or fewer.");
+    if (bio.length > maximumBioLength) {
+      alert(`Bio must be ${maximumBioLength} characters or fewer.`);
       return;
     }
 
     let updatedProfile;
     await withLoadingOverlay(async () => {
-      let avatarUrl = currentProfile.avatar_url || "";
-
       if (avatarFile) {
-        const avatarPath = `${currentUser.id}/avatar`;
-        const { error: uploadError } = await supabase.storage
-          .from(avatarBucket)
-          .upload(avatarPath, avatarFile, {
-            upsert: true,
-            cacheControl: "3600",
-            contentType: avatarFile.type,
-          });
+        const uploadBody = new FormData();
+        uploadBody.append("avatar", avatarFile);
+        const { data: uploadData, error: uploadError } = await supabase.functions
+          .invoke("upload-avatar", { body: uploadBody });
 
-        if (uploadError) {
-          console.error("Error uploading profile picture:", uploadError.message);
-          alert("Unable to upload your profile picture. Please try again.");
+        if (uploadError || !uploadData?.avatarUrl) {
+          console.error("Error uploading profile picture:", uploadError?.message ?? "Invalid upload response.");
+          alert("The profile picture could not be uploaded. Check that it follows the community guidelines and try again.");
           return;
         }
-
-        const { data: publicUrlData } = supabase.storage.from(avatarBucket).getPublicUrl(avatarPath);
-        avatarUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
       }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .update({ display_name: displayName, username, bio, avatar_url: avatarUrl })
-        .eq("id", currentUser.id)
-        .select("*")
-        .single();
-
-      if (error?.code === "23505") {
-        alert("That username is already in use.");
-        return;
-      }
+      const { data, error } = await supabase.functions.invoke("update-profile", {
+        body: { displayName, username, bio },
+      });
       if (error) {
         console.error("Error updating profile:", error.message);
-        alert("Unable to update your profile. Please try again.");
+        alert("Your profile could not be saved. Check that its text follows the community guidelines and try again.");
         return;
       }
-
-      updatedProfile = data;
+      updatedProfile = data?.profile;
     }, "Saving profile...");
 
     if (!updatedProfile) {
@@ -243,7 +243,7 @@ async function loadProfile() {
     getUserProfile(activeUserId),
     supabase
       .from("Posts")
-      .select("id, title, body, created_at, post_type, img_link, location")
+      .select("id, title, body, created_at, post_type, img_link, img_links, location")
       .eq("user_id", activeUserId)
       .order("created_at", { ascending: false }),
     showCurrentUser(currentUser, usernameLabel),
@@ -270,10 +270,12 @@ async function loadProfile() {
     body: post.body,
     location: post.location,
     imgLink: post.img_link,
+    imgLinks: post.img_links,
     footer: `Posted on: ${formatDateTime(post.created_at)}`,
     authorUserId: activeUserId,
     authorName: currentProfile?.display_name || currentProfile?.username || "",
     authorAvatarUrl: currentProfile?.avatar_url || "",
+    authorIsSupporter: currentProfile?.supporter === true,
     manageHref: ownsProfile ? `${PAGE_URLS.post}?postId=${post.id}` : null,
   }));
   postsContainer.replaceChildren(...cards);

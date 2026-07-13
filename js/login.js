@@ -5,14 +5,16 @@ import { PAGE_URLS, withLoadingOverlay } from "./main.js";
 
 // Definitions
 
-const loginButton = document.getElementById("LoginButton");
+const loginForm = document.getElementById("loginForm");
+const forgotPasswordButton = document.getElementById("forgotPasswordButton");
 const emailInput = document.getElementById("EmailInput");
 const passwordInput = document.getElementById("PasswordInput");
 const errorMessage = document.getElementById("error-message");
 
 // Events
 
-loginButton?.addEventListener("click", async () => {
+loginForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
   const email = emailInput.value.trim();
   const password = passwordInput.value;
 
@@ -31,4 +33,23 @@ loginButton?.addEventListener("click", async () => {
 
     window.location.href = PAGE_URLS.home;
   }, "Signing in...");
+});
+
+forgotPasswordButton?.addEventListener("click", async () => {
+  const email = emailInput.value.trim();
+  if (!email || !emailInput.checkValidity()) {
+    errorMessage.textContent = "Enter your email address first.";
+    emailInput.focus();
+    return;
+  }
+  await withLoadingOverlay(async () => {
+    const redirectTo = new URL("../reset-password/", window.location.href).href;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) {
+      console.error("Error requesting password reset:", error.message);
+      errorMessage.textContent = "Unable to send a password reset email. Please try again.";
+      return;
+    }
+    errorMessage.textContent = "If an account exists for that email, a reset link has been sent.";
+  }, "Sending reset link...");
 });

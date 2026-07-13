@@ -5,38 +5,49 @@ import { PAGE_URLS, withLoadingOverlay } from "./main.js";
 
 // Definitions
 
-const registerButton = document.getElementById("LoginButton");
+const registerForm = document.getElementById("registerForm");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
 const emailInput = document.getElementById("email");
 const birthdayInput = document.getElementById("birthday");
 const errorMessage = document.getElementById("error-message");
+const termsAcceptedInput = document.getElementById("termsAccepted");
 
 // Functions
 
 function checkAge(birthday) {
-  const today = new Date();
-  const birthDate = new Date(birthday);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDifference = today.getMonth() - birthDate.getMonth();
-
-  if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-
-  return age >= 13;
+  return birthday >= oldestAllowedBirthday() && birthday <= thirteenYearsAgo();
 }
 
+function thirteenYearsAgo() {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - 13);
+  return formatDateInput(date);
+}
+
+function oldestAllowedBirthday() {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - 120);
+  return formatDateInput(date);
+}
+
+function formatDateInput(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 // Events
 
-registerButton?.addEventListener("click", async () => {
+registerForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
   const email = emailInput.value.trim();
   const birthday = birthdayInput.value;
 
-  if (!username || !password || !email || !birthday) {
+  if (!username || !password || !email || !birthday || !termsAcceptedInput.checked) {
     errorMessage.textContent = "Please fill in all fields.";
     return;
   }
@@ -51,7 +62,20 @@ registerButton?.addEventListener("click", async () => {
     return;
   }
 
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}$/.test(password)) {
+    errorMessage.textContent = "Use at least 12 characters with uppercase, lowercase, and a number.";
+    return;
+  }
+
   await withLoadingOverlay(async () => {
+    const { data: moderation, error: moderationError } = await supabase.functions.invoke("moderate-username", {
+      body: { username },
+    });
+    if (moderationError || moderation?.approved !== true) {
+      errorMessage.textContent = "That username does not meet the community guidelines. Please choose another one.";
+      return;
+    }
+
     const { data: usernameAvailable, error: existingUserError } = await supabase
       .rpc("is_username_available", { requested_username: username });
 
@@ -69,11 +93,14 @@ registerButton?.addEventListener("click", async () => {
       email,
       password,
       options: { 
-        emailRedirectTo: "https://trybloom.org/pages/auth/confirm",
+        emailRedirectTo: new URL("../confirm/", window.location.href).href,
         data: { 
           username,
           display_name: username,
-          birthday 
+          birthday,
+          accepted_terms: true,
+          terms_version: "2026-07-13",
+          terms_accepted_at: new Date().toISOString(),
         } 
       },
     });
@@ -88,3 +115,8 @@ registerButton?.addEventListener("click", async () => {
     window.location.href = PAGE_URLS.index;
   }, "Creating your account...");
 });
+
+// Initialization
+
+birthdayInput.max = thirteenYearsAgo();
+birthdayInput.min = oldestAllowedBirthday();

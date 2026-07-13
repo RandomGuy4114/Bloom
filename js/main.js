@@ -1,7 +1,7 @@
 // Dependencies
 
 import { supabase } from "./supabase.js";
-import { getLanguage, setLanguage } from "./i18n.js";
+import { getLanguage, setLanguage, t } from "./i18n.js";
 
 // Definitions
 
@@ -11,6 +11,11 @@ let loadingOverlay;
 let loadingRequestCount = 0;
 let previousBodyOverflow = "";
 let openPostMenu;
+let globalSearchInitialized = false;
+let globalSearchLocation;
+let globalSearchLocationRequested = false;
+let globalSearchLocationResolved = false;
+let globalSearchRequestSequence = 0;
 
 export const PAGE_URLS = Object.freeze({
   index: new URL("../", import.meta.url).href,
@@ -20,7 +25,10 @@ export const PAGE_URLS = Object.freeze({
   activity: new URL("../pages/app/activity/", import.meta.url).href,
   map: new URL("../pages/app/map/", import.meta.url).href,
   settings: new URL("../pages/app/settings/", import.meta.url).href,
+  supporter: new URL("../pages/app/supporter/", import.meta.url).href,
+  earlyAccess: new URL("../pages/app/early-access/", import.meta.url).href,
   post: new URL("../pages/app/post/", import.meta.url).href,
+  editPost: new URL("../pages/app/edit-post/", import.meta.url).href,
   communities: new URL("../pages/communities/communities/", import.meta.url).href,
   community: new URL("../pages/communities/community/", import.meta.url).href,
 });
@@ -41,14 +49,227 @@ export async function getCurrentUserOrRedirect(redirectUrl = PAGE_URLS.login) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("Language")
+    .select("Language, Theme, supporter")
     .eq("id", user.id)
     .single();
   if (profile?.Language) {
     setLanguage(profile.Language);
   }
+  applyTheme(profile?.Theme, profile?.supporter === true);
+  initializeGlobalSearch();
 
   return user;
+}
+
+// Global Search
+
+function createGlobalSearchResult({ href, title, description, badge }) {
+  const link = document.createElement("a");
+  link.className = "global-search-result";
+  link.href = href;
+
+  const copy = document.createElement("span");
+  copy.className = "global-search-result-copy";
+  copy.dataset.i18nIgnore = "true";
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  const detail = document.createElement("span");
+  detail.textContent = description;
+  copy.append(heading, detail);
+
+  const typeBadge = document.createElement("span");
+  typeBadge.className = "global-search-result-badge";
+  typeBadge.textContent = t(badge);
+  link.append(copy, typeBadge);
+  return link;
+}
+
+function createGlobalSearchGroup(title, results) {
+  if (!results.length) return null;
+  const section = document.createElement("section");
+  section.className = "global-search-group";
+  const heading = document.createElement("h2");
+  heading.textContent = t(title);
+  section.append(heading, ...results);
+  return section;
+}
+
+function renderGlobalSearchResults(panel, results, locationUnavailable = false) {
+  const userLinks = (results?.users ?? []).map((profile) => createGlobalSearchResult({
+    href: `${PAGE_URLS.profile}?uid=${encodeURIComponent(profile.id)}`,
+    title: profile.display_name || profile.username,
+    description: `@${profile.username}`,
+    badge: "User",
+  }));
+  const communityLinks = (results?.communities ?? []).map((community) => createGlobalSearchResult({
+    href: `${PAGE_URLS.community}?communityID=${encodeURIComponent(community.id)}`,
+    title: community.name,
+    description: community.description || t("Open community"),
+    badge: community.scope === "joined" ? "Joined" : community.scope === "global" ? "Global" : "Nearby",
+  }));
+  const postLinks = (results?.posts ?? []).map((post) => createGlobalSearchResult({
+    href: `${PAGE_URLS.post}?postId=${encodeURIComponent(post.id)}`,
+    title: post.title,
+    description: post.community_name ? `${post.body} · ${t("in")} ${post.community_name}` : post.body,
+    badge: post.post_type === "activity" ? "Activity" : post.post_type === "event" ? "Event" : "Post",
+  }));
+  const groups = [
+    createGlobalSearchGroup("Users", userLinks),
+    createGlobalSearchGroup("Communities", communityLinks),
+    createGlobalSearchGroup("Posts", postLinks),
+  ].filter(Boolean);
+
+  if (!groups.length) {
+    const empty = document.createElement("p");
+    empty.className = "global-search-message";
+    empty.textContent = t("No results found.");
+    panel.replaceChildren(empty);
+    return;
+  }
+
+  panel.replaceChildren(...groups);
+  if (locationUnavailable) {
+    const locationHint = document.createElement("p");
+    locationHint.className = "global-search-location-hint";
+    locationHint.textContent = t("Location access is off, so nearby communities are not included.");
+    panel.appendChild(locationHint);
+  }
+}
+
+async function searchBloom(query, panel, input, location = globalSearchLocation) {
+  const requestSequence = ++globalSearchRequestSequence;
+  panel.setAttribute("aria-busy", "true");
+  const { data, error } = await supabase.rpc("search_bloom", {
+    search_term: query,
+    user_latitude: location?.latitude ?? null,
+    user_longitude: location?.longitude ?? null,
+    result_limit: 6,
+  });
+  if (requestSequence !== globalSearchRequestSequence || input.value.trim() !== query) return;
+  panel.setAttribute("aria-busy", "false");
+  if (error) {
+    console.error("Unable to search Bloom:", error.message);
+    const message = document.createElement("p");
+    message.className = "global-search-message";
+    message.textContent = t("Search is temporarily unavailable.");
+    panel.replaceChildren(message);
+    return;
+  }
+  renderGlobalSearchResults(panel, data, globalSearchLocationResolved && !globalSearchLocation);
+}
+
+function requestGlobalSearchLocation(panel, input) {
+  if (globalSearchLocationRequested) return;
+  globalSearchLocationRequested = true;
+  getUserLocation().then((location) => {
+    globalSearchLocation = location;
+    globalSearchLocationResolved = true;
+    const currentQuery = input.value.trim();
+    if (currentQuery.length >= 2) searchBloom(currentQuery, panel, input, location);
+  });
+}
+
+function initializeGlobalSearch() {
+  if (globalSearchInitialized) return;
+  const topbar = document.querySelector(".topbar");
+  if (!topbar) return;
+  globalSearchInitialized = true;
+
+  const container = document.createElement("div");
+  container.className = "global-search";
+  const label = document.createElement("label");
+  label.className = "visually-hidden";
+  label.htmlFor = "globalSearchInput";
+  label.textContent = "Search Bloom";
+  const input = document.createElement("input");
+  input.id = "globalSearchInput";
+  input.type = "search";
+  input.placeholder = "Search users, communities, and posts";
+  input.autocomplete = "off";
+  input.maxLength = 100;
+  input.setAttribute("aria-label", "Search Bloom");
+  input.setAttribute("aria-controls", "globalSearchResults");
+  input.setAttribute("aria-expanded", "false");
+  const panel = document.createElement("div");
+  panel.id = "globalSearchResults";
+  panel.className = "global-search-results";
+  panel.setAttribute("role", "region");
+  panel.setAttribute("aria-label", "Search results");
+  panel.setAttribute("aria-live", "polite");
+  panel.hidden = true;
+  container.append(label, input, panel);
+  topbar.insertBefore(container, topbar.querySelector("nav"));
+
+  let debounceTimer;
+  const closeResults = () => {
+    panel.hidden = true;
+    input.setAttribute("aria-expanded", "false");
+  };
+  const openResults = () => {
+    panel.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+  };
+
+  input.addEventListener("input", () => {
+    window.clearTimeout(debounceTimer);
+    const query = input.value.trim();
+    if (query.length < 2) {
+      globalSearchRequestSequence++;
+      closeResults();
+      panel.replaceChildren();
+      return;
+    }
+    openResults();
+    const loading = document.createElement("p");
+    loading.className = "global-search-message";
+    loading.textContent = t("Searching...");
+    panel.replaceChildren(loading);
+    debounceTimer = window.setTimeout(() => {
+      searchBloom(query, panel, input);
+      requestGlobalSearchLocation(panel, input);
+    }, 250);
+  });
+
+  input.addEventListener("focus", () => {
+    if (input.value.trim().length >= 2 && panel.childElementCount) openResults();
+  });
+  input.addEventListener("keydown", (event) => {
+    const links = [...panel.querySelectorAll(".global-search-result")];
+    if (event.key === "Escape") {
+      closeResults();
+      input.blur();
+    } else if (event.key === "ArrowDown" && links.length) {
+      event.preventDefault();
+      links[0].focus();
+    }
+  });
+  panel.addEventListener("keydown", (event) => {
+    if (!['ArrowDown', 'ArrowUp', 'Escape'].includes(event.key)) return;
+    const links = [...panel.querySelectorAll(".global-search-result")];
+    const index = links.indexOf(document.activeElement);
+    event.preventDefault();
+    if (event.key === "Escape") {
+      closeResults();
+      input.focus();
+    } else if (event.key === "ArrowDown") {
+      (links[index + 1] ?? links[0])?.focus();
+    } else {
+      (links[index - 1] ?? links.at(-1))?.focus();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!container.contains(event.target)) closeResults();
+  });
+  document.addEventListener("keydown", (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      input.focus();
+    }
+  });
+  window.addEventListener("bloom:languagechange", () => {
+    const query = input.value.trim();
+    if (query.length >= 2) searchBloom(query, panel, input);
+  });
 }
 
 export async function getCurrentUsername() {
@@ -89,6 +310,52 @@ export async function getUserProfile(userId) {
 
 export function clearUserProfileCache(userId) {
   userProfileCache.delete(userId);
+}
+
+export function isSupporter(profile) {
+  return profile?.supporter === true;
+}
+
+export async function userHasSupporter(userId) {
+  return isSupporter(await getUserProfile(userId));
+}
+
+export function createSupporterBadge({ compact = false } = {}, text = 'Supporter', color = '#FFD700') {
+  const badge = document.createElement("span");
+  badge.className = `supporter-badge${compact ? " supporter-badge--compact" : ""}`;
+  badge.setAttribute("aria-label", `Bloom ${text}`);
+  badge.title = text;
+
+  const icon = document.createElement("span");
+  icon.setAttribute("aria-hidden", "true");
+   icon.textContent = text === "Supporter" ? "★" : text === "Owner" ? "👑" : "🌟";
+  badge.appendChild(icon);
+
+  if (!compact) {
+    const label = document.createElement("span");
+    label.textContent = text;
+    badge.appendChild(label);
+  }
+
+  return badge;
+}
+
+export const STANDARD_THEMES = Object.freeze(["light", "dark"]);
+export const SUPPORTER_THEMES = Object.freeze(["forest", "midnight", "sunset"]);
+
+export function getAvailableThemes(supporter = false) {
+  return supporter ? [...STANDARD_THEMES, ...SUPPORTER_THEMES] : [...STANDARD_THEMES];
+}
+
+export function applyTheme(theme = "light", supporter = false) {
+  const selectedTheme = getAvailableThemes(supporter).includes(theme) ? theme : "light";
+  const darkTheme = selectedTheme === "dark" || selectedTheme === "midnight";
+  document.documentElement.dataset.themeName = selectedTheme;
+  if (document.body) {
+    document.body.dataset.theme = darkTheme ? "dark" : "light";
+    document.body.dataset.themeName = selectedTheme;
+  }
+  return selectedTheme;
 }
 
 export async function getCommunityNameFromID(communityID) {
@@ -408,6 +675,14 @@ export function isTrustedImageUrl(value, bucketName, allowBlob = false) {
   }
 }
 
+export function getPostImageUrls(imgLinks, imgLink) {
+  const candidates = Array.isArray(imgLinks) ? [...imgLinks] : [];
+  if (imgLink) {
+    candidates.unshift(imgLink);
+  }
+  return [...new Set(candidates)].filter((url) => isTrustedImageUrl(url, "Post Images"));
+}
+
 export function applyAvatar(element, avatarUrl, altText = "") {
   if (!element) {
     return;
@@ -552,9 +827,9 @@ export function attachPostTypeBadge(card, postType = "post") {
   }
 
   const types = {
-    post: { iconClass: "ri-mail-fill", label: "Post" },
-    activity: { iconClass: "ri-user-3-line", label: "Activity" },
-    event: { iconClass: "ri-calendar-event-line", label: "Event" },
+    post: { icon: "📝", label: "Post" },
+    activity: { icon: "⚡", label: "Activity" },
+    event: { icon: "📅", label: "Event" },
   };
   const normalizedType = types[postType] ? postType : "post";
   const badge = document.createElement("div");
@@ -562,10 +837,9 @@ export function attachPostTypeBadge(card, postType = "post") {
   badge.dataset.postType = normalizedType;
 
   const icon = document.createElement("span");
+  icon.className = "post-type-icon";
   icon.setAttribute("aria-hidden", "true");
-  const iconGlyph = document.createElement("i");
-  iconGlyph.className = types[normalizedType].iconClass;
-  icon.appendChild(iconGlyph);
+  icon.textContent = types[normalizedType].icon;
   const label = document.createElement("span");
   label.dataset.i18nKey = `postType.${normalizedType}`;
   label.dataset.i18nIgnore = "true";
@@ -582,10 +856,12 @@ export function createPostCard({
   body,
   location,
   imgLink,
+  imgLinks = [],
   footer,
   authorUserId,
   authorName,
   authorAvatarUrl,
+  authorIsSupporter = false,
   communityName,
   manageHref,
 }) {
@@ -632,15 +908,21 @@ export function createPostCard({
     card.appendChild(footerElement);
   }
 
-  if (isTrustedImageUrl(imgLink, "Post Images")) {
-    const image = document.createElement("img");
-    image.className = "post-image";
-    image.src = imgLink;
-    image.alt = title ? `Image for ${title}` : "Post image";
-    image.loading = "lazy";
-    image.decoding = "async";
-    image.addEventListener("error", () => image.remove(), { once: true });
-    card.insertBefore(image, footerElement);
+  const imageUrls = getPostImageUrls(imgLinks, imgLink);
+  if (imageUrls.length) {
+    const gallery = document.createElement("div");
+    gallery.className = `post-image-gallery post-image-gallery--${Math.min(imageUrls.length, 5)}`;
+    imageUrls.forEach((imageUrl, index) => {
+      const image = document.createElement("img");
+      image.className = "post-image";
+      image.src = imageUrl;
+      image.alt = title ? `Image ${index + 1} for ${title}` : `Post image ${index + 1}`;
+      image.loading = "lazy";
+      image.decoding = "async";
+      image.addEventListener("error", () => image.remove(), { once: true });
+      gallery.appendChild(image);
+    });
+    card.insertBefore(gallery, footerElement);
   }
 
   if (authorName || communityName) {
@@ -657,14 +939,22 @@ export function createPostCard({
       authorNameElement.dataset.i18nIgnore = "true";
       authorNameElement.textContent = authorName;
       header.append(avatar, authorNameElement);
+      let authorLink;
 
       if (authorUserId) {
-        const authorLink = document.createElement("a");
+        authorLink = document.createElement("a");
         authorLink.className = "post-author-link";
         authorLink.href = `${PAGE_URLS.profile}?uid=${encodeURIComponent(authorUserId)}`;
         authorLink.setAttribute("aria-label", "Open author profile");
         authorNameElement.replaceWith(authorLink);
         authorLink.appendChild(authorNameElement);
+      }
+
+      if (authorIsSupporter) {
+        (authorLink ?? header).appendChild(createSupporterBadge({ compact: true }));
+      }
+      if (authorUserId === 'd026f563-e776-4a67-9fd2-10eef3ec60f1') {
+          (authorLink ?? header).appendChild(createSupporterBadge({ compact: false }, "Owner", "#FFD700"));
       }
     }
 
@@ -694,7 +984,13 @@ export async function showCurrentUser(user, element) {
 
   const profile = await getUserProfile(user.id);
   element.dataset.i18nIgnore = "true";
-  element.textContent = profile?.display_name || profile?.username || user.email || "";
+  element.replaceChildren(document.createTextNode(profile?.display_name || profile?.username || user.email || ""));
+  if (isSupporter(profile)) {
+    element.appendChild(createSupporterBadge({ compact: true }));
+  }
+  if (user.id === 'd026f563-e776-4a67-9fd2-10eef3ec60f1') {
+      element.appendChild(createSupporterBadge({ compact: false }, "Owner", "#FFD700"));
+  }
   const avatar = element.closest(".topbar")?.querySelector(".pfp-frame");
   applyAvatar(avatar, profile?.avatar_url, "Profile picture");
   attachAccountMenu(avatar);

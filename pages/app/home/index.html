@@ -52,7 +52,8 @@
                     </div>
                     <input type="text" id="titleInput" aria-label="Post title" placeholder="Post title" maxlength="200">
                     <input type="text" class="TypeInput" id="postInput" aria-label="Post content" placeholder="Write your post" maxlength="10000">
-                    <input type="file" id="postImageInput" class="post-image-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Add image">
+                    <input type="file" id="postImageInput" class="post-image-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Add images" multiple>
+                    <p id="postImageLimitHint" class="composer-help"></p>
                     <div id="postImagePreview" class="post-image-preview" hidden></div>
                     <div class="post-composer-actions">
                         <button type="button" id="postImageButton" class="post-image-picker" aria-label="Add image" title="Add image"><i class="ri-file-image-line"></i></button>

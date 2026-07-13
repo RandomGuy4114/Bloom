@@ -45,9 +45,13 @@
     <div class="main-layout">
         <div class="feed-container">
             <div class="communities-profile" style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+                <div id="communityBanner" class="community-banner" hidden></div>
                 <h1 id="comName" style="text-align: center;"></h1>
                 <p id="comDesc" style="text-align: center; color: grey;"></p>
-                <button id="joinCommunityButton">Join Community</button>
+                <div class="community-page-actions">
+                    <button id="editCommunityButton" type="button" hidden>Edit Community</button>
+                    <button id="joinCommunityButton">Join Community</button>
+                </div>
 
             </div>
             <div class="feed-updates">

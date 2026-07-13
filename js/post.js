@@ -6,9 +6,9 @@ import {
   attachPostTypeBadge,
   formatEventLocation,
   getCurrentUserOrRedirect,
+  getPostImageUrls,
   getQueryParameter,
   isPostOwner as isPostOwnerRecord,
-  isTrustedImageUrl,
   PAGE_URLS,
   renderEmptyState,
   showCurrentUser,
@@ -76,14 +76,20 @@ async function loadPost() {
     locationRow.append(icon, label, value);
     postContent.insertAdjacentElement("afterend", locationRow);
   }
-  postContainer.querySelector(".post-image")?.remove();
-  if (isTrustedImageUrl(post.img_link, "Post Images")) {
-    const image = document.createElement("img");
-    image.className = "post-image";
-    image.src = post.img_link;
-    image.alt = post.title ? `Image for ${post.title}` : "Post image";
-    image.addEventListener("error", () => image.remove(), { once: true });
-    postContent.insertAdjacentElement("afterend", image);
+  postContainer.querySelector(".post-image-gallery")?.remove();
+  const imageUrls = getPostImageUrls(post.img_links, post.img_link);
+  if (imageUrls.length) {
+    const gallery = document.createElement("div");
+    gallery.className = `post-image-gallery post-image-gallery--${Math.min(imageUrls.length, 5)}`;
+    imageUrls.forEach((imageUrl, index) => {
+      const image = document.createElement("img");
+      image.className = "post-image";
+      image.src = imageUrl;
+      image.alt = post.title ? `Image ${index + 1} for ${post.title}` : `Post image ${index + 1}`;
+      image.addEventListener("error", () => image.remove(), { once: true });
+      gallery.appendChild(image);
+    });
+    postContent.insertAdjacentElement("afterend", gallery);
   }
   postTitle.style.paddingRight = "40px";
   attachPostTypeBadge(postContainer, post.post_type);
@@ -107,7 +113,7 @@ editPostButton?.addEventListener("click", () => {
     return;
   }
 
-  window.location.href = new URL(`../edit-post/?postId=${postId}`, PAGE_URLS.post).href;
+  window.location.href = `${PAGE_URLS.editPost}?postId=${encodeURIComponent(postId)}`;
 });
 
 deletePostButton?.addEventListener("click", async () => {

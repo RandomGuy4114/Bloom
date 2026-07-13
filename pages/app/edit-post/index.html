@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloom - Post</title>
+    <title>Bloom - Edit Post</title>
     <link rel="icon" href="../../../Assets/BloomLogo.png" type="image/png">
     <link rel="stylesheet" href="../../../css/styles.css">
 </head>
@@ -11,7 +11,7 @@
     <div class="topbar">
         <h1 class="topbar-logo">Bloom <p id="verText">ALPHA</p></h1>
         <nav style="display: flex; align-items: center;">
-            <p id="username-label" style="margin: 10px;">Communities</p>
+            <p id="username-label" style="margin: 10px;"></p>
             <div class="pfp-frame"></div>
         </nav>
         <div class="topbar-actions" aria-label="Mobile navigation">
@@ -36,24 +36,25 @@
         <button class="sidebarButton" onclick="window.location.href='../map/'">Map</button>
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='../settings/'">Settings</button>
-        <button type="button" class="sidebarButton supporter-button" onclick="window.location.href = '../supporter/'">Buy Bloom Supporter</button>
+        <button type="button" class="sidebarButton supporter-button" onclick="window.location.href='../supporter/'">Buy Bloom Supporter</button>
     </div>
-    <div class="main-layout">
+    <main class="main-layout">
         <div class="feed-container">
-            <div class="post-container">
-                <h1 style="text-align: center;">Manage Post</h1>
-                <div class="post" id="post">
-                    <h1 id="postTitle"></h1>
-                    <p id="postContent"></p>
+            <form id="editPostForm" class="post post-editor">
+                <h1>Edit Post</h1>
+                <label for="editPostTitle">Post title</label>
+                <input id="editPostTitle" type="text" minlength="1" maxlength="200" required>
+                <label for="editPostBody">Post content</label>
+                <textarea id="editPostBody" minlength="1" maxlength="10000" required></textarea>
+                <p id="editPostError" class="form-error" role="alert" aria-live="polite"></p>
+                <div class="popup-actions">
+                    <button id="cancelEditPost" type="button" class="secondary-action">Cancel</button>
+                    <button type="submit">Save changes</button>
                 </div>
-                <div class="post" id="managePostTools">
-                    <button id="editPostButton">Edit Post</button>
-                    <button id="deletePostButton">Delete Post</button>
-                </div>
-            </div>
+            </form>
         </div>
-    </div>
+    </main>
+    <script type="module" src="../../../js/i18n.js"></script>
+    <script type="module" src="../../../js/edit-post.js"></script>
 </body>
-<script type="module" src="../../../js/i18n.js"></script>
-<script type="module" src="../../../js/post.js"></script>
 </html>

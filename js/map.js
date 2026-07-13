@@ -15,8 +15,6 @@ import {
 
 const usernameLabel = document.getElementById("username-label");
 const eventList = document.getElementById("event-list");
-const postImagesBucket = "Post Images";
-const maximumPostImageSize = 10 * 1024 * 1024;
 const allowedPostImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 let currentUser;
@@ -26,6 +24,7 @@ let map;
 let eventMarkerLayer;
 let locationMarker;
 let selectedLocation;
+let currentUserIsSupporter = false;
 export let joinedCommunityEvents = [];
 
 // Components
@@ -34,7 +33,7 @@ function createEventComposer() {
   eventList.innerHTML = `
     <form id="eventComposer" class="event-composer">
       <div class="event-composer-heading">
-        <p class="post-type-badge post-type-badge--event">Event</p>
+        <p class="post-type-badge post-type-badge--event"><span class="post-type-icon" aria-hidden="true">📅</span><span>Event</span></p>
         <h2>Create Event</h2>
         <p>Choose a community, then click the map where the event will happen.</p>
       </div>
@@ -49,7 +48,8 @@ function createEventComposer() {
         <span>Tap or click anywhere on the map. You can drag the marker to adjust it.</span>
       </div>
       <output id="selectedEventLocation" class="selected-event-location" aria-live="polite">No location selected</output>
-      <input type="file" id="eventImageInput" class="post-image-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Add image">
+      <input type="file" id="eventImageInput" class="post-image-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Add images" multiple>
+      <p id="eventImageLimitHint" class="composer-help"></p>
       <div id="eventImagePreview" class="post-image-preview" hidden></div>
       <div class="event-composer-actions">
         <button type="button" id="eventImageButton" class="event-image-button" aria-label="Add image" title="Add image"><span aria-hidden="true">📎</span><span>Add image</span></button>
@@ -229,20 +229,21 @@ function parseEventLocation(value) {
 function showEventImagePreview() {
   const input = document.getElementById("eventImageInput");
   const preview = document.getElementById("eventImagePreview");
-  const file = input.files?.[0];
+  const files = [...(input.files ?? [])];
   preview.replaceChildren();
-  preview.hidden = !file;
+  preview.hidden = !files.length;
 
-  if (!file) {
+  if (!files.length) {
     return;
   }
-
-  const image = document.createElement("img");
-  const previewUrl = URL.createObjectURL(file);
-  image.src = previewUrl;
-  image.alt = "Event image preview";
-  image.addEventListener("load", () => URL.revokeObjectURL(previewUrl), { once: true });
-  preview.appendChild(image);
+  files.forEach((file, index) => {
+    const image = document.createElement("img");
+    const previewUrl = URL.createObjectURL(file);
+    image.src = previewUrl;
+    image.alt = `Event image preview ${index + 1}`;
+    image.addEventListener("load", () => URL.revokeObjectURL(previewUrl), { once: true });
+    preview.appendChild(image);
+  });
 }
 
 function resetEventComposer() {
@@ -264,7 +265,7 @@ function resetEventComposer() {
 async function loadJoinedCommunityIds(userId) {
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("joined_communities")
+    .select("joined_communities, supporter")
     .eq("id", userId)
     .single();
 
@@ -273,6 +274,15 @@ async function loadJoinedCommunityIds(userId) {
     return [];
   }
 
+  if (currentUser?.id === userId) {
+    currentUserIsSupporter = profile?.supporter === true;
+    const hint = document.getElementById("eventImageLimitHint");
+    if (hint) {
+      hint.textContent = currentUserIsSupporter
+        ? "Supporter: up to 5 images, 25 MB each."
+        : "Up to 1 image, 10 MB.";
+    }
+  }
   return [...new Set(profile?.joined_communities ?? [])].filter(Boolean);
 }
 
@@ -284,7 +294,7 @@ export async function getJoinedCommunityEvents(userId, communityIds = null) {
 
   const { data: events, error } = await supabase
     .from("Posts")
-    .select("id, title, body, user_id, community, post_type, location, img_link, created_at")
+    .select("id, title, body, user_id, community, post_type, location, img_link, img_links, created_at")
     .in("community", ids)
     .eq("post_type", "event")
     .order("created_at", { ascending: false });
@@ -303,7 +313,9 @@ async function createEvent(event) {
   const community = document.getElementById("eventCommunitySelect").value;
   const title = document.getElementById("eventTitleInput").value.trim();
   const body = document.getElementById("eventBodyInput").value.trim();
-  const imageFile = document.getElementById("eventImageInput").files?.[0];
+  const imageFiles = [...(document.getElementById("eventImageInput").files ?? [])];
+  const imageLimit = currentUserIsSupporter ? 5 : 1;
+  const maximumPostImageSize = (currentUserIsSupporter ? 25 : 10) * 1024 * 1024;
 
   if (!title) {
     alert("Please add an event title before publishing.");
@@ -321,12 +333,16 @@ async function createEvent(event) {
     alert("Choose a location by clicking the map.");
     return;
   }
-  if (imageFile && !allowedPostImageTypes.has(imageFile.type)) {
+  if (imageFiles.length > imageLimit) {
+    alert(`You can upload up to ${imageLimit} image${imageLimit === 1 ? "" : "s"} per post.`);
+    return;
+  }
+  if (imageFiles.some((file) => !allowedPostImageTypes.has(file.type))) {
     alert("Choose a JPEG, PNG, WebP, or GIF image.");
     return;
   }
-  if (imageFile && imageFile.size > maximumPostImageSize) {
-    alert("Post images must be 10 MB or smaller.");
+  if (imageFiles.some((file) => file.size > maximumPostImageSize)) {
+    alert(`Each post image must be ${currentUserIsSupporter ? 25 : 10} MB or smaller.`);
     return;
   }
 
@@ -341,43 +357,19 @@ async function createEvent(event) {
       return;
     }
 
-    let imagePath;
-    let imageUrl = "";
-    if (imageFile) {
-      const extension = imageFile.name.split(".").pop()?.toLowerCase() || "image";
-      imagePath = `${currentUser.id}/${crypto.randomUUID()}.${extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from(postImagesBucket)
-        .upload(imagePath, imageFile, {
-          cacheControl: "3600",
-          contentType: imageFile.type,
-        });
-
-      if (uploadError) {
-        console.error("Error uploading event image:", uploadError.message);
-        alert("Unable to upload the image. Please try again.");
-        return;
-      }
-      imageUrl = supabase.storage.from(postImagesBucket).getPublicUrl(imagePath).data.publicUrl;
-    }
-
     const location = `${selectedLocation.latitude.toFixed(6)}, ${selectedLocation.longitude.toFixed(6)}`;
-    const { error } = await supabase.from("Posts").insert([{
-      title,
-      body,
-      user_id: currentUser.id,
-      community,
-      post_type: "event",
-      location,
-      img_link: imageUrl || null,
-    }]);
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("body", body);
+    formData.append("community", community);
+    formData.append("postType", "event");
+    formData.append("location", location);
+    imageFiles.forEach((file) => formData.append("images", file));
+    const { error } = await supabase.functions.invoke("create-post", { body: formData });
 
     if (error) {
-      if (imagePath) {
-        await supabase.storage.from(postImagesBucket).remove([imagePath]);
-      }
       console.error("Error creating event:", error.message);
-      alert("Error creating event. Please try again.");
+      alert("The event could not be published. Check that its text and images follow the community guidelines, then try again.");
       return;
     }
 
