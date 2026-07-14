@@ -48,16 +48,22 @@ CREATE OR REPLACE FUNCTION "public"."can_post_to_community"("target_community" "
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
     AS $$
-    SELECT EXISTS (
-        SELECT 1
-        FROM "public"."Communities" AS "community"
-        WHERE "community"."id" = "target_community"
-          AND "auth"."uid"() = ANY(COALESCE("community"."members", ARRAY[]::uuid[]))
-          AND (
-              NOT COALESCE("community"."global", false)
-              OR COALESCE("auth"."jwt"()->'app_metadata'->>'role', '') = 'admin'
+  select exists (
+    select 1 from public."Communities" community
+    where community.id = target_community
+      and auth.uid() = any(coalesce(community.members, '{}'::uuid[]))
+      and (not coalesce(community.global, false) or coalesce(auth.jwt()->'app_metadata'->>'role', '') = 'admin')
+      and (
+        community.business is not true
+        or (
+          community.user_id = auth.uid()
+          and exists (
+            select 1 from public.profiles
+            where id = auth.uid() and "isBusiness" is true and business_supporter is true
           )
-    );
+        )
+      )
+  );
 $$;
 
 
@@ -102,6 +108,51 @@ $_$;
 
 
 ALTER FUNCTION "public"."consume_patreon_oauth_state"("p_state_hash" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."create_business_community"("community_name" "text", "community_description" "text", "location_name" "text", "community_latitude" double precision, "community_longitude" double precision, "community_radius_meters" integer) RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  created_id uuid;
+begin
+  if auth.uid() is null then raise exception 'Authentication required'; end if;
+  if not exists (
+    select 1 from public.profiles
+    where id = auth.uid()
+      and "isBusiness" is true
+      and business_supporter is true
+  ) then
+    raise exception 'Active Bloom Business Patreon membership required';
+  end if;
+  if char_length(trim(coalesce(community_name, ''))) not between 1 and 100
+     or char_length(trim(coalesce(community_description, ''))) not between 1 and 1000
+     or char_length(trim(coalesce(location_name, ''))) > 300
+     or community_latitude not between -90 and 90
+     or community_longitude not between -180 and 180
+     or community_radius_meters not between 100 and 40000 then
+    raise exception 'Invalid business community details';
+  end if;
+
+  insert into public."Communities" (
+    name, description, user_id, members, global, business,
+    location_label, latitude, longitude, radius_meters
+  ) values (
+    trim(community_name), trim(community_description), auth.uid(), array[auth.uid()], false, true,
+    nullif(trim(location_name), ''), community_latitude, community_longitude, community_radius_meters
+  ) returning id into created_id;
+
+  update public.profiles
+  set joined_communities = array_append(coalesce(joined_communities, '{}'::uuid[]), created_id)
+  where id = auth.uid() and not (created_id = any(coalesce(joined_communities, '{}'::uuid[])));
+
+  return created_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."create_business_community"("community_name" "text", "community_description" "text", "location_name" "text", "community_latitude" double precision, "community_longitude" double precision, "community_radius_meters" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."delete_owned_community"("target_community" "uuid") RETURNS "text"
@@ -151,6 +202,64 @@ $$;
 
 
 ALTER FUNCTION "public"."event_trigger_fn"() OWNER TO "postgres";
+
+SET default_tablespace = '';
+
+SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."Posts" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "user_id" "uuid" DEFAULT "gen_random_uuid"(),
+    "community" "uuid" DEFAULT "gen_random_uuid"(),
+    "title" "text",
+    "body" "text",
+    "communityName" "text",
+    "post_type" "text",
+    "img_link" "text",
+    "location" "text",
+    "img_links" "text"[] DEFAULT '{}'::"text"[] NOT NULL
+);
+
+
+ALTER TABLE "public"."Posts" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_home_feed"("user_latitude" double precision DEFAULT NULL::double precision, "user_longitude" double precision DEFAULT NULL::double precision, "feed_limit" integer DEFAULT 100) RETURNS SETOF "public"."Posts"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  with viewer as (
+    select coalesce(joined_communities, '{}'::uuid[]) as joined
+    from public.profiles where id = auth.uid()
+  )
+  select post.*
+  from public."Posts" post
+  join public."Communities" community on community.id = post.community
+  cross join viewer
+  where post.community = any(viewer.joined)
+     or (
+       community.business is true
+       and exists (
+         select 1 from public.profiles owner_profile
+         where owner_profile.id = community.user_id
+           and owner_profile.business_supporter is true
+       )
+       and not (post.community = any(viewer.joined))
+       and user_latitude is not null and user_longitude is not null
+       and post.created_at >= now() - interval '30 days'
+       and public.community_distance_meters(
+         user_latitude, user_longitude, community.latitude, community.longitude
+       ) <= community.radius_meters
+       and mod(abs(hashtext(post.id::text || auth.uid()::text)::bigint), 4) = 0
+     )
+  order by post.created_at desc
+  limit least(greatest(feed_limit, 1), 200);
+$$;
+
+
+ALTER FUNCTION "public"."get_home_feed"("user_latitude" double precision, "user_longitude" double precision, "feed_limit" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_public_profile"("target_user" "uuid") RETURNS TABLE("id" "uuid", "username" "text", "display_name" "text", "bio" "text", "avatar_url" "text", "supporter" boolean)
@@ -238,18 +347,25 @@ CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     SET "search_path" TO ''
     AS $$
 begin
-  insert into public.profiles (id, username, birthday)
+  insert into public.profiles (id, username, display_name, birthday, "isBusiness")
   values (
     new.id,
     nullif(new.raw_user_meta_data->>'username', '')::text,
+    coalesce(
+      nullif(new.raw_user_meta_data->>'display_name', '')::text,
+      nullif(new.raw_user_meta_data->>'username', '')::text
+    ),
     case
       when nullif(new.raw_user_meta_data->>'birthday', '') is null then null
       else (new.raw_user_meta_data->>'birthday')::date
-    end
+    end,
+    coalesce(new.raw_user_meta_data->>'account_type', '') = 'business'
   )
   on conflict (id) do update set
     username = excluded.username,
-    birthday = excluded.birthday;
+    display_name = excluded.display_name,
+    birthday = excluded.birthday,
+    "isBusiness" = excluded."isBusiness";
 
   return new;
 end;
@@ -268,20 +384,22 @@ declare
 begin
   v_username := nullif(new.raw_user_meta_data->>'username', '')::text;
 
-  insert into public.profiles (id, username, display_name, birthday)
+  insert into public.profiles (id, username, display_name, birthday, "isBusiness")
   values (
     new.id,
     v_username,
-    v_username,
+    coalesce(nullif(new.raw_user_meta_data->>'display_name', '')::text, v_username),
     case
       when nullif(new.raw_user_meta_data->>'birthday', '') is null then null
       else (new.raw_user_meta_data->>'birthday')::date
-    end
+    end,
+    coalesce(new.raw_user_meta_data->>'account_type', '') = 'business'
   )
   on conflict (id) do update set
     username = excluded.username,
     display_name = excluded.display_name,
-    birthday = excluded.birthday;
+    birthday = excluded.birthday,
+    "isBusiness" = excluded."isBusiness";
 
   return new;
 end;
@@ -478,6 +596,39 @@ $_$;
 ALTER FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", "p_event_type" "text", "p_patreon_user_id" "text", "p_membership_status" "text", "p_supporter" boolean) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", "p_event_type" "text", "p_patreon_user_id" "text", "p_membership_status" "text", "p_supporter" boolean, "p_business_supporter" boolean) RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'public'
+    AS $_$
+declare inserted_hash text;
+begin
+  if p_event_hash !~ '^[a-f0-9]{64}$'
+    or p_event_type not in ('members:create','members:update','members:delete','members:pledge:create','members:pledge:update','members:pledge:delete')
+    or nullif(p_patreon_user_id, '') is null
+    or char_length(coalesce(p_membership_status, '')) > 100 then
+    raise exception 'Invalid Patreon webhook event';
+  end if;
+  insert into public.patreon_webhook_events (event_hash, event_type, patreon_user_id)
+  values (p_event_hash, p_event_type, p_patreon_user_id)
+  on conflict (event_hash) do nothing returning event_hash into inserted_hash;
+  if inserted_hash is null then return 'duplicate'; end if;
+
+  update public.profiles
+  set supporter = coalesce(p_supporter, false),
+      business_supporter = coalesce(p_business_supporter, false) and "isBusiness" is true,
+      patreon_membership_status = coalesce(p_membership_status, 'none'),
+      supporter_verified_at = now(),
+      business_supporter_verified_at = now()
+  where patreon_user_id = p_patreon_user_id;
+  delete from public.patreon_webhook_events where received_at < now() - interval '180 days';
+  return 'processed';
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", "p_event_type" "text", "p_patreon_user_id" "text", "p_membership_status" "text", "p_supporter" boolean, "p_business_supporter" boolean) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."search_bloom"("search_term" "text", "user_latitude" double precision DEFAULT NULL::double precision, "user_longitude" double precision DEFAULT NULL::double precision, "result_limit" integer DEFAULT 6) RETURNS "jsonb"
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -598,6 +749,45 @@ $$;
 ALTER FUNCTION "public"."search_bloom"("search_term" "text", "user_latitude" double precision, "user_longitude" double precision, "result_limit" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."update_business_profile"("business_name" "text", "description" "text" DEFAULT NULL::"text", "location_text" "text" DEFAULT NULL::"text", "latitude" double precision DEFAULT NULL::double precision, "longitude" double precision DEFAULT NULL::double precision, "contact_email" "text" DEFAULT NULL::"text", "contact_phone" "text" DEFAULT NULL::"text", "website" "text" DEFAULT NULL::"text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $_$
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+  if char_length(trim(coalesce(business_name, ''))) not between 1 and 50 then
+    raise exception 'Business name must contain 1 to 50 characters';
+  end if;
+  if contact_email is not null and trim(contact_email) <> '' and trim(contact_email) !~* '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
+    raise exception 'Invalid contact email';
+  end if;
+  if website is not null and trim(website) <> '' and trim(website) !~* '^https://[^[:space:]]+$' then
+    raise exception 'Website must use HTTPS';
+  end if;
+
+  update public.profiles
+  set display_name = nullif(trim(business_name), ''),
+      business_description = nullif(trim(description), ''),
+      business_location = nullif(trim(location_text), ''),
+      business_latitude = latitude,
+      business_longitude = longitude,
+      business_contact_email = nullif(trim(contact_email), ''),
+      business_contact_phone = nullif(trim(contact_phone), ''),
+      business_website = nullif(trim(website), '')
+  where id = auth.uid() and "isBusiness" is true;
+
+  if not found then
+    raise exception 'Business account required';
+  end if;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."update_business_profile"("business_name" "text", "description" "text", "location_text" "text", "latitude" double precision, "longitude" double precision, "contact_email" "text", "contact_phone" "text", "website" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."validate_post_image_entitlements"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'pg_catalog', 'public'
@@ -632,10 +822,6 @@ $$;
 
 ALTER FUNCTION "public"."validate_post_image_entitlements"() OWNER TO "postgres";
 
-SET default_tablespace = '';
-
-SET default_table_access_method = "heap";
-
 
 CREATE TABLE IF NOT EXISTS "public"."Communities" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -649,7 +835,10 @@ CREATE TABLE IF NOT EXISTS "public"."Communities" (
     "latitude" double precision,
     "longitude" double precision,
     "radius_meters" integer,
-    CONSTRAINT "Communities_banner_origin_check" CHECK ((("banner_url" IS NULL) OR ("banner_url" = ''::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community%20Banners/%'::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community Banners/%'::"text")))
+    "location_label" "text",
+    "business" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "Communities_banner_origin_check" CHECK ((("banner_url" IS NULL) OR ("banner_url" = ''::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community%20Banners/%'::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community Banners/%'::"text"))),
+    CONSTRAINT "Communities_location_label_check" CHECK (("char_length"(COALESCE("location_label", ''::"text")) <= 300))
 );
 
 
@@ -676,24 +865,6 @@ ALTER TABLE "public"."PostReports" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS
     CACHE 1
 );
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."Posts" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "user_id" "uuid" DEFAULT "gen_random_uuid"(),
-    "community" "uuid" DEFAULT "gen_random_uuid"(),
-    "title" "text",
-    "body" "text",
-    "communityName" "text",
-    "post_type" "text",
-    "img_link" "text",
-    "location" "text",
-    "img_links" "text"[] DEFAULT '{}'::"text"[] NOT NULL
-);
-
-
-ALTER TABLE "public"."Posts" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."patreon_oauth_states" (
@@ -739,11 +910,21 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "supporter_verified_at" timestamp with time zone,
     "Theme" "text" DEFAULT 'light'::"text" NOT NULL,
     "isBusiness" boolean DEFAULT false,
+    "business_description" "text",
+    "business_location" "text",
+    "business_latitude" double precision,
+    "business_longitude" double precision,
+    "business_contact_email" "text",
+    "business_contact_phone" "text",
+    "business_website" "text",
+    "business_supporter" boolean DEFAULT false,
+    "business_supporter_verified_at" timestamp with time zone,
     CONSTRAINT "profiles_bio_length_check" CHECK (("char_length"(COALESCE("bio", ''::"text")) <=
 CASE
     WHEN "supporter" THEN 1500
     ELSE 500
 END)),
+    CONSTRAINT "profiles_business_details_check" CHECK ((("char_length"(COALESCE("business_description", ''::"text")) <= 1500) AND ("char_length"(COALESCE("business_location", ''::"text")) <= 300) AND ("char_length"(COALESCE("business_contact_email", ''::"text")) <= 254) AND ("char_length"(COALESCE("business_contact_phone", ''::"text")) <= 40) AND ("char_length"(COALESCE("business_website", ''::"text")) <= 2048) AND (("business_latitude" IS NULL) OR (("business_latitude" >= ('-90'::integer)::double precision) AND ("business_latitude" <= (90)::double precision))) AND (("business_longitude" IS NULL) OR (("business_longitude" >= ('-180'::integer)::double precision) AND ("business_longitude" <= (180)::double precision))) AND (("business_latitude" IS NULL) = ("business_longitude" IS NULL)))),
     CONSTRAINT "profiles_gif_avatar_supporter_check" CHECK (("supporter" OR ("avatar_url" IS NULL) OR ("avatar_url" !~* '\.gif(\?|$)'::"text"))),
     CONSTRAINT "profiles_theme_check" CHECK ((("Theme" = ANY (ARRAY['light'::"text", 'dark'::"text"])) OR ("supporter" AND ("Theme" = ANY (ARRAY['forest'::"text", 'midnight'::"text", 'sunset'::"text"])))))
 );
@@ -910,7 +1091,7 @@ ALTER TABLE "public"."PostReports" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."Posts" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "Users can create their own local community" ON "public"."Communities" FOR INSERT TO "authenticated" WITH CHECK ((("auth"."uid"() = "user_id") AND ("global" IS NOT TRUE) AND (("members" IS NULL) OR ("members" <@ ARRAY["auth"."uid"()])) AND (("radius_meters" >= 100) AND ("radius_meters" <=
+CREATE POLICY "Users can create their own local community" ON "public"."Communities" FOR INSERT TO "authenticated" WITH CHECK ((("auth"."uid"() = "user_id") AND ("global" IS NOT TRUE) AND ("business" IS NOT TRUE) AND (("members" IS NULL) OR ("members" <@ ARRAY["auth"."uid"()])) AND (("radius_meters" >= 100) AND ("radius_meters" <=
 CASE
     WHEN (EXISTS ( SELECT 1
        FROM "public"."profiles"
@@ -965,6 +1146,12 @@ GRANT ALL ON FUNCTION "public"."consume_patreon_oauth_state"("p_state_hash" "tex
 
 
 
+REVOKE ALL ON FUNCTION "public"."create_business_community"("community_name" "text", "community_description" "text", "location_name" "text", "community_latitude" double precision, "community_longitude" double precision, "community_radius_meters" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_business_community"("community_name" "text", "community_description" "text", "location_name" "text", "community_latitude" double precision, "community_longitude" double precision, "community_radius_meters" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_business_community"("community_name" "text", "community_description" "text", "location_name" "text", "community_latitude" double precision, "community_longitude" double precision, "community_radius_meters" integer) TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") TO "service_role";
@@ -974,6 +1161,18 @@ GRANT ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid
 GRANT ALL ON FUNCTION "public"."event_trigger_fn"() TO "anon";
 GRANT ALL ON FUNCTION "public"."event_trigger_fn"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."event_trigger_fn"() TO "service_role";
+
+
+
+GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Posts" TO "anon";
+GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Posts" TO "authenticated";
+GRANT ALL ON TABLE "public"."Posts" TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."get_home_feed"("user_latitude" double precision, "user_longitude" double precision, "feed_limit" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."get_home_feed"("user_latitude" double precision, "user_longitude" double precision, "feed_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_home_feed"("user_latitude" double precision, "user_longitude" double precision, "feed_limit" integer) TO "service_role";
 
 
 
@@ -1039,9 +1238,20 @@ GRANT ALL ON FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", 
 
 
 
+REVOKE ALL ON FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", "p_event_type" "text", "p_patreon_user_id" "text", "p_membership_status" "text", "p_supporter" boolean, "p_business_supporter" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", "p_event_type" "text", "p_patreon_user_id" "text", "p_membership_status" "text", "p_supporter" boolean, "p_business_supporter" boolean) TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."search_bloom"("search_term" "text", "user_latitude" double precision, "user_longitude" double precision, "result_limit" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."search_bloom"("search_term" "text", "user_latitude" double precision, "user_longitude" double precision, "result_limit" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."search_bloom"("search_term" "text", "user_latitude" double precision, "user_longitude" double precision, "result_limit" integer) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."update_business_profile"("business_name" "text", "description" "text", "location_text" "text", "latitude" double precision, "longitude" double precision, "contact_email" "text", "contact_phone" "text", "website" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."update_business_profile"("business_name" "text", "description" "text", "location_text" "text", "latitude" double precision, "longitude" double precision, "contact_email" "text", "contact_phone" "text", "website" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_business_profile"("business_name" "text", "description" "text", "location_text" "text", "latitude" double precision, "longitude" double precision, "contact_email" "text", "contact_phone" "text", "website" "text") TO "service_role";
 
 
 
@@ -1073,12 +1283,6 @@ GRANT ALL ON TABLE "public"."PostReports" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."PostReports_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."PostReports_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."PostReports_id_seq" TO "service_role";
-
-
-
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Posts" TO "anon";
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Posts" TO "authenticated";
-GRANT ALL ON TABLE "public"."Posts" TO "service_role";
 
 
 

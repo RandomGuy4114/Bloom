@@ -24,14 +24,29 @@ loginForm?.addEventListener("submit", async (event) => {
   }
 
   await withLoadingOverlay(async () => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       console.error("Error signing in:", error.message);
       errorMessage.textContent = "Error signing in. Please check your credentials and try again.";
       return;
     }
 
-    window.location.href = PAGE_URLS.home;
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("isBusiness")
+      .eq("id", authData.user.id)
+      .single();
+
+    if (profileError) {
+      console.error("Unable to determine account type:", profileError.message);
+      await supabase.auth.signOut();
+      errorMessage.textContent = "Unable to load your account. Please try again.";
+      return;
+    }
+
+    window.location.href = profile?.isBusiness === true
+      ? PAGE_URLS.businessHome
+      : PAGE_URLS.home;
   }, "Signing in...");
 });
 

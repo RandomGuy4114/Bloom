@@ -35,6 +35,7 @@ const searchPostInput = document.getElementById("searchPostInput");
 const communityMembersContainer = document.getElementById("communityMembersContainer");
 const communityBannerElement = document.getElementById("communityBanner");
 const editCommunityButton = document.getElementById("editCommunityButton");
+const businessCommunityTag = document.getElementById("businessCommunityTag");
 const communityID = getQueryParameter("communityID");
 
 let user;
@@ -162,6 +163,7 @@ function renderCommunityIdentity() {
   communityNameElement.textContent = communityDetails?.name || "";
   communityDescriptionElement.dataset.i18nIgnore = "true";
   communityDescriptionElement.textContent = communityDetails?.description || "";
+  businessCommunityTag.hidden = communityDetails?.business !== true;
   editCommunityButton.hidden = communityDetails?.user_id !== user?.id;
 }
 
@@ -337,7 +339,7 @@ async function loadCommunity() {
   const [{ data: community, error: communityError }, { data: posts, error: postsError }] = await Promise.all([
     supabase
       .from("Communities")
-      .select("name, description, user_id, banner_url, members, global, latitude, longitude, radius_meters")
+      .select("name, description, user_id, banner_url, members, global, business, location_label, latitude, longitude, radius_meters")
       .eq("id", communityID)
       .single(),
     supabase.from("Posts").select("*").eq("community", communityID).order("created_at", { ascending: false }),

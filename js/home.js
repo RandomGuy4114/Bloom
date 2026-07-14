@@ -9,6 +9,7 @@ import {
   getCommunityNameFromID,
   getCurrentUserOrRedirect,
   getUserProfile,
+  getUserLocation,
   isPostOwner,
   PAGE_URLS,
   renderEmptyState,
@@ -164,21 +165,20 @@ async function loadJoinedCommunities() {
     createPostButton.disabled = true;
     communitySelect.disabled = true;
     await populateCommunitySelect();
-    renderEmptyState(feed, "Join a community to see posts here.");
-    return;
+  } else {
+    const canCreatePost = await populateCommunitySelect(communitySelect.value);
+    postInput.disabled = !canCreatePost;
+    titleInput.disabled = !canCreatePost;
+    postImageInput.disabled = !canCreatePost;
+    createPostButton.disabled = !canCreatePost;
   }
 
-  const canCreatePost = await populateCommunitySelect(communitySelect.value);
-  postInput.disabled = !canCreatePost;
-  titleInput.disabled = !canCreatePost;
-  postImageInput.disabled = !canCreatePost;
-  createPostButton.disabled = !canCreatePost;
-
-  const { data: posts, error: postsError } = await supabase
-    .from("Posts")
-    .select("*")
-    .in("community", joinedCommunities)
-    .order("created_at", { ascending: false });
+  const location = await getUserLocation();
+  const { data: posts, error: postsError } = await supabase.rpc("get_home_feed", {
+    user_latitude: location?.latitude ?? null,
+    user_longitude: location?.longitude ?? null,
+    feed_limit: 100,
+  });
 
   if (postsError) {
     console.error("Error fetching posts from joined communities:", postsError.message);

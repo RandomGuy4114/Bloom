@@ -44,7 +44,8 @@ function createCommunityCard(community, includeMembershipButton = true) {
   communityName.dataset.i18nIgnore = "true";
   communityName.textContent = community.name;
   const communityScope = document.createElement("span");
-  communityScope.textContent = community.global ? " (Global)" : " (Local)";
+  communityScope.textContent = community.business ? " Business" : community.global ? " (Global)" : " (Local)";
+  if (community.business) communityScope.className = "business-community-tag";
   heading.append(communityName, communityScope);
 
   const description = document.createElement("p");

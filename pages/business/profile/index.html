@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloom - Business Profile</title>
+    <link rel="icon" href="../../../Assets/BloomLogo.png" type="image/png">
+    <link rel="stylesheet" href="../../../css/styles.css">
+</head>
+<body class="app-page">
+    <header class="topbar">
+        <h1 class="topbar-logo">Bloom <span id="verText">BUSINESS</span></h1>
+        <nav aria-label="Account" style="display:flex;align-items:center"><p id="username-label" style="margin:10px"></p><div class="pfp-frame"></div></nav>
+        <div class="topbar-actions" aria-label="Mobile navigation">
+            <div class="topbar-action-row"><button data-business-route="businessHome">Business Home</button><button data-business-route="businessProfile">Business Profile</button></div>
+            <div class="topbar-action-row"><button data-business-route="businessSettings">Business Settings</button><button data-business-route="businessDashboard">Business Dashboard</button></div>
+        </div>
+    </header>
+    <aside class="sidebar" aria-label="Business navigation">
+        <button class="sidebarButton" data-business-route="businessHome">Business Home</button>
+        <button class="sidebarButton" data-business-route="businessProfile">Business Profile</button>
+        <div class="divider"></div>
+        <button class="sidebarButton" data-business-route="businessSettings">Business Settings</button>
+        <button class="sidebarButton" data-business-route="businessDashboard">Business Dashboard</button>
+    </aside>
+    <main class="main-layout">
+        <div class="settings-container settings-dashboard">
+            <header class="settings-header"><p class="settings-eyebrow">Bloom for Business</p><h1>Business Profile</h1><p>Manage the information customers can use to identify and contact your business.</p></header>
+            <form id="businessProfileForm" class="business-profile-form">
+                <section class="settings-card">
+                    <h2>Business Information</h2>
+                    <label for="businessName">Business name</label>
+                    <input id="businessName" maxlength="50" required>
+                    <label for="businessDescription">Business description</label>
+                    <textarea id="businessDescription" maxlength="1500" rows="6"></textarea>
+                    <label for="businessLocation">Business address or location</label>
+                    <input id="businessLocation" maxlength="300" autocomplete="street-address">
+                    <div class="business-coordinate-grid">
+                        <div><label for="businessLatitude">Latitude</label><input id="businessLatitude" type="number" min="-90" max="90" step="any"></div>
+                        <div><label for="businessLongitude">Longitude</label><input id="businessLongitude" type="number" min="-180" max="180" step="any"></div>
+                    </div>
+                    <button id="useBusinessLocation" type="button" class="secondary-action">Use My Current Location</button>
+                </section>
+                <section class="settings-card">
+                    <h2>Contact Information</h2>
+                    <label for="businessEmail">Public contact email</label>
+                    <input id="businessEmail" type="email" maxlength="254" autocomplete="email">
+                    <label for="businessPhone">Public phone number</label>
+                    <input id="businessPhone" type="tel" maxlength="40" autocomplete="tel">
+                    <label for="businessWebsite">Website</label>
+                    <input id="businessWebsite" type="url" maxlength="2048" pattern="https://.*" title="Use a secure address beginning with https://" placeholder="https://example.com" autocomplete="url">
+                    <p id="businessProfileMessage" class="form-error" role="status" aria-live="polite"></p>
+                    <button type="submit">Save Business Profile</button>
+                </section>
+            </form>
+        </div>
+    </main>
+    <script type="module" src="../../../js/i18n.js"></script>
+    <script type="module" src="../../../js/business-profile.js"></script>
+</body>
+</html>

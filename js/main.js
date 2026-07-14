@@ -21,6 +21,10 @@ export const PAGE_URLS = Object.freeze({
   index: new URL("../", import.meta.url).href,
   login: new URL("../pages/auth/login/", import.meta.url).href,
   home: new URL("../pages/app/home/", import.meta.url).href,
+  businessHome: new URL("../pages/business/home/", import.meta.url).href,
+  businessProfile: new URL("../pages/business/profile/", import.meta.url).href,
+  businessSettings: new URL("../pages/business/settings/", import.meta.url).href,
+  businessDashboard: new URL("../pages/business/dashboard/", import.meta.url).href,
   profile: new URL("../pages/app/profile/", import.meta.url).href,
   activity: new URL("../pages/app/activity/", import.meta.url).href,
   map: new URL("../pages/app/map/", import.meta.url).href,
@@ -977,7 +981,7 @@ export function createPostCard({
   return attachPostOptions(card, { postId, manageHref });
 }
 
-export async function showCurrentUser(user, element) {
+export async function showCurrentUser(user, element, profileHref = PAGE_URLS.profile) {
   if (!user || !element) {
     return;
   }
@@ -993,10 +997,10 @@ export async function showCurrentUser(user, element) {
   }
   const avatar = element.closest(".topbar")?.querySelector(".pfp-frame");
   applyAvatar(avatar, profile?.avatar_url, "Profile picture");
-  attachAccountMenu(avatar);
+  attachAccountMenu(avatar, profileHref);
 }
 
-function attachAccountMenu(avatar) {
+function attachAccountMenu(avatar, profileHref = PAGE_URLS.profile) {
   if (!avatar || avatar.dataset.accountMenuReady === "true") {
     return;
   }
@@ -1015,7 +1019,7 @@ function attachAccountMenu(avatar) {
   menu.hidden = true;
 
   const profileLink = document.createElement("a");
-  profileLink.href = PAGE_URLS.profile;
+  profileLink.href = profileHref;
   profileLink.className = "account-menu-item";
   profileLink.setAttribute("role", "menuitem");
   profileLink.textContent = "Profile";
