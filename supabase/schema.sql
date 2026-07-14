@@ -649,8 +649,7 @@ CREATE TABLE IF NOT EXISTS "public"."Communities" (
     "latitude" double precision,
     "longitude" double precision,
     "radius_meters" integer,
-    CONSTRAINT "Communities_banner_origin_check" CHECK ((("banner_url" IS NULL) OR ("banner_url" = ''::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community%20Banners/%'::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community Banners/%'::"text"))),
-    CONSTRAINT "Communities_valid_details_check" CHECK (((("char_length"(COALESCE("name", ''::"text")) >= 1) AND ("char_length"(COALESCE("name", ''::"text")) <= 100)) AND (("char_length"(COALESCE("description", ''::"text")) >= 1) AND ("char_length"(COALESCE("description", ''::"text")) <= 1000)) AND (("global" IS TRUE) OR ((("latitude" >= ('-90'::integer)::double precision) AND ("latitude" <= (90)::double precision)) AND (("longitude" >= ('-180'::integer)::double precision) AND ("longitude" <= (180)::double precision)) AND (("radius_meters" >= 100) AND ("radius_meters" <= 100000))))))
+    CONSTRAINT "Communities_banner_origin_check" CHECK ((("banner_url" IS NULL) OR ("banner_url" = ''::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community%20Banners/%'::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community Banners/%'::"text")))
 );
 
 
@@ -759,6 +758,11 @@ COMMENT ON COLUMN "public"."profiles"."patreon_user_id" IS 'Patreon identity lin
 
 ALTER TABLE ONLY "public"."Communities"
     ADD CONSTRAINT "Communities_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE "public"."Communities"
+    ADD CONSTRAINT "Communities_valid_details_check" CHECK (((("char_length"(COALESCE("name", ''::"text")) >= 1) AND ("char_length"(COALESCE("name", ''::"text")) <= 100)) AND (("char_length"(COALESCE("description", ''::"text")) >= 1) AND ("char_length"(COALESCE("description", ''::"text")) <= 1000)) AND (("global" IS TRUE) OR ((("latitude" >= ('-90'::integer)::double precision) AND ("latitude" <= (90)::double precision)) AND (("longitude" >= ('-180'::integer)::double precision) AND ("longitude" <= (180)::double precision)) AND (("radius_meters" >= 100) AND ("radius_meters" <= 40000)))))) NOT VALID;
 
 
 
@@ -910,8 +914,8 @@ CREATE POLICY "Users can create their own local community" ON "public"."Communit
 CASE
     WHEN (EXISTS ( SELECT 1
        FROM "public"."profiles"
-      WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."supporter" IS TRUE)))) THEN 100000
-    ELSE 20000
+      WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."supporter" IS TRUE)))) THEN 40000
+    ELSE 25000
 END))));
 
 

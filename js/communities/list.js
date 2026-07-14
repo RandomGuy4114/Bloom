@@ -173,7 +173,7 @@ function renderMyCommunities() {
 }
 
 function createCommunityForm() {
-  const maximumRadius = userIsSupporter ? 20000 : 5000;
+  const maximumRadius = userIsSupporter ? 40000 : 25000;
   const form = document.createElement("form");
   form.id = "create-community-form";
   form.innerHTML = `
@@ -186,7 +186,7 @@ function createCommunityForm() {
       <input type="range" id="communityLocation" min="100" max="${maximumRadius}" step="100" value="500" aria-describedby="communityRadiusValue">
       <output id="communityRadiusValue" for="communityLocation" data-i18n-ignore>500 meters</output>
     </div>
-    <p>${userIsSupporter ? "Supporters can create communities with up to a 20 kilometer radius." : "Standard accounts can create communities with up to a 5 kilometer radius."}</p>
+    <p>${userIsSupporter ? "Supporters can create communities with up to a 40 kilometer radius." : "Standard accounts can create communities with up to a 25 kilometer radius."}</p>
     <p>Note: The community made will only be accessible to people near your selected radius</p>
     <button type="submit" id="submitCommunityButton">Create Community</button>
   `;

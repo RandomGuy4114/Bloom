@@ -14,7 +14,7 @@ Bloom Supporter helps fund the project and unlocks these account benefits:
 * **Longer Bios:** Use up to 1,500 characters instead of the standard 500-character limit.
 * **Animated Profile Pictures:** Upload animated GIF profile pictures with a 15 MB profile-picture limit instead of 5 MB.
 * **More Post Images:** Add up to five images per post instead of one, with a 25 MB limit per image instead of 10 MB.
-* **Larger Community Areas:** Create local communities with radiuses up to 20 kilometers instead of the standard 5-kilometer limit.
+* **Larger Community Areas:** Create local communities with radiuses up to 40 kilometers instead of the standard 25-kilometer limit.
 * **Community Banners:** Upload and replace banners for communities you own.
 * **Exclusive Themes:** Unlock the Forest, Midnight, and Sunset themes.
 * **Early Access:** Preview eligible experimental Bloom features before their public release.
