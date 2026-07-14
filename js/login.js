@@ -32,7 +32,7 @@ loginForm?.addEventListener("submit", async (event) => {
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       console.error("Error signing in:", error.message);
-      errorMessage.textContent = "Error signing in. Please check your credentials and try again.";
+      errorMessage.textContent = "Error signing in: " + error.message;
       return;
     }
 
