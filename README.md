@@ -84,9 +84,7 @@ The webhook signature is verified before any membership is updated. Cancellation
 Your backend should now be done! If you have any issues, feel free to make a bug report!
 
 ## The Future and What's To Come
-I have big plans for Bloom, so the future for this service is very bright. The list below will show some features I would like to add to Bloom (which you can help on making!)
-
-[List goes here]
+I have big plans for Bloom, so the future for this service is very bright. Suggestions for the platform are always accepted!
 
 ## Contributing
 Bloom is completely **Open Source**. Contributions, bug reports, and feature requests are all welcome. Feel free to check the issues page or open a pull request.
