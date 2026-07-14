@@ -62,10 +62,6 @@ registerForm?.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)) {
-    errorMessage.textContent = "Use at least 8 characters with uppercase, lowercase, and a number.";
-    return;
-  }
 
   await withLoadingOverlay(async () => {
     const { data: moderation, error: moderationError } = await supabase.functions.invoke("moderate-username", {
