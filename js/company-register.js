@@ -12,7 +12,7 @@ const passwordInput = document.getElementById("password");
 const birthdayInput = document.getElementById("birthday");
 const termsInput = document.getElementById("termsAccepted");
 const errorMessage = document.getElementById("error-message");
-const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}$/;
+const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 const usernamePattern = /^[a-zA-Z0-9_]+$/;
 
 // Functions
@@ -69,7 +69,7 @@ form?.addEventListener("submit", async (event) => {
     return;
   }
   if (!passwordPattern.test(password)) {
-    setError("Use at least 12 characters with uppercase, lowercase, and a number.");
+    setError("Use at least 8 characters with uppercase, lowercase, and a number.");
     return;
   }
   if (birthday < birthdayBoundary(120) || birthday > birthdayBoundary(13)) {

@@ -19,8 +19,8 @@ form?.addEventListener("submit", async (event) => {
     errorMessage.textContent = "Passwords do not match.";
     return;
   }
-  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}$/.test(password)) {
-    errorMessage.textContent = "Use at least 12 characters with uppercase, lowercase, and a number.";
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)) {
+    errorMessage.textContent = "Use at least 8 characters with uppercase, lowercase, and a number.";
     return;
   }
   await withLoadingOverlay(async () => {

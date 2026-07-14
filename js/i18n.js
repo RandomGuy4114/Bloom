@@ -372,7 +372,7 @@ const spanish = {
   "Creating business community...": "Creando la comunidad empresarial...",
   "Publishing your business post...": "Publicando tu contenido empresarial...",
   "Business post published.": "Contenido empresarial publicado.",
-  "Use at least 12 characters with uppercase, lowercase, and a number.": "Usa al menos 12 caracteres con mayúsculas, minúsculas y un número.",
+  "Use at least 8 characters with uppercase, lowercase, and a number.": "Usa al menos 8 caracteres con mayúsculas, minúsculas y un número.",
   "I agree to the": "Acepto los",
   "Terms of Service": "Términos de servicio",
   "Privacy Policy": "Política de privacidad",
