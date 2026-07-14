@@ -408,6 +408,7 @@ const spanish = {
   "Bio:": "Biografía:",
   "Unable to load posts right now.": "No se pueden cargar las publicaciones en este momento.",
   "No posts yet.": "Aún no hay publicaciones.",
+  "No posts are visible from your joined communities.": "No hay publicaciones visibles de las comunidades a las que te uniste.",
   "You": "Tú",
   "in": "en",
   "Current password": "Contraseña actual",

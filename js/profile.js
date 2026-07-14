@@ -239,18 +239,37 @@ async function loadProfile() {
   }
 
   activeUserId = requestedUserId || currentUser.id;
-  const [profile, { data: posts, error: postsError }] = await Promise.all([
+  const [profile, { data: viewerProfile, error: viewerProfileError }] = await Promise.all([
     getUserProfile(activeUserId),
     supabase
-      .from("Posts")
-      .select("id, title, body, created_at, post_type, img_link, img_links, location")
-      .eq("user_id", activeUserId)
-      .order("created_at", { ascending: false }),
+      .from("profiles")
+      .select("joined_communities")
+      .eq("id", currentUser.id)
+      .single(),
     showCurrentUser(currentUser, usernameLabel),
   ]);
 
   currentProfile = profile;
   renderProfile(profile);
+
+  if (viewerProfileError) {
+    console.error("Error fetching joined communities:", viewerProfileError.message);
+    renderEmptyState(postsContainer, "Unable to load posts right now.");
+    return;
+  }
+
+  const joinedCommunityIds = viewerProfile?.joined_communities ?? [];
+  if (!joinedCommunityIds.length) {
+    renderEmptyState(postsContainer, "No posts are visible from your joined communities.");
+    return;
+  }
+
+  const { data: posts, error: postsError } = await supabase
+    .from("Posts")
+    .select("id, title, body, created_at, post_type, img_link, img_links, location, community")
+    .eq("user_id", activeUserId)
+    .in("community", joinedCommunityIds)
+    .order("created_at", { ascending: false });
 
   if (postsError) {
     console.error("Error fetching posts:", postsError.message);
@@ -258,7 +277,7 @@ async function loadProfile() {
     return;
   }
   if (!posts?.length) {
-    renderEmptyState(postsContainer, "No posts yet.");
+    renderEmptyState(postsContainer, "No posts are visible from your joined communities.");
     return;
   }
 
