@@ -926,7 +926,7 @@ CASE
 END)),
     CONSTRAINT "profiles_business_details_check" CHECK ((("char_length"(COALESCE("business_description", ''::"text")) <= 1500) AND ("char_length"(COALESCE("business_location", ''::"text")) <= 300) AND ("char_length"(COALESCE("business_contact_email", ''::"text")) <= 254) AND ("char_length"(COALESCE("business_contact_phone", ''::"text")) <= 40) AND ("char_length"(COALESCE("business_website", ''::"text")) <= 2048) AND (("business_latitude" IS NULL) OR (("business_latitude" >= ('-90'::integer)::double precision) AND ("business_latitude" <= (90)::double precision))) AND (("business_longitude" IS NULL) OR (("business_longitude" >= ('-180'::integer)::double precision) AND ("business_longitude" <= (180)::double precision))) AND (("business_latitude" IS NULL) = ("business_longitude" IS NULL)))),
     CONSTRAINT "profiles_gif_avatar_supporter_check" CHECK (("supporter" OR ("avatar_url" IS NULL) OR ("avatar_url" !~* '\.gif(\?|$)'::"text"))),
-    CONSTRAINT "profiles_theme_check" CHECK ((("Theme" = ANY (ARRAY['light'::"text", 'dark'::"text"])) OR ("supporter" AND ("Theme" = ANY (ARRAY['forest'::"text", 'midnight'::"text", 'sunset'::"text"])))))
+    CONSTRAINT "profiles_theme_check" CHECK ((("Theme" = ANY (ARRAY['light'::"text", 'dark'::"text"])) OR ("supporter" AND ("Theme" = ANY (ARRAY['forest'::"text", 'midnight'::"text", 'sunset'::"text", 'frutiger-aero'::"text"])))))
 );
 
 
@@ -1340,7 +1340,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
 
 
 

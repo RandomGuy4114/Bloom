@@ -24,11 +24,13 @@ button {
     background-color: #9CB080;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 10px;
     transition: background-color 0.3s ease;
     cursor: pointer;
     padding: 10px 20px;
+    transition: all 0.3s ease;
 }
+
 
 a {
     color: #9CB080;
@@ -52,7 +54,7 @@ input {
     margin-top: 5px;
     padding: 10px;
     width: 250px;
-    border-radius: 5px;
+    border-radius: 10px;
     border: 1px solid #ccc;
 }
 
@@ -69,7 +71,7 @@ textarea {
     padding: 10px;
     width: 250px;
     height: 100px;
-    border-radius: 5px;
+    border-radius: 10px;
     border: 1px solid #ccc;
     resize: vertical; /* Allow vertical resizing */
 }
@@ -78,7 +80,7 @@ select {
     margin-top: 5px;
     padding: 10px;
     width: 270px; /* Slightly wider to accommodate the dropdown arrow */
-    border-radius: 5px;
+    border-radius: 10px;
     border: 1px solid #ccc;
     background-color: white;
 }
@@ -109,7 +111,7 @@ label {
     background-color: #9CB080;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 10px;
     padding: 8px 12px;
     cursor: pointer;
 }
@@ -174,6 +176,24 @@ label {
     padding-left: 20px;
     text-align: left;
 }
+
+.community-profile {
+    display: flex;
+    background-color: transparent;
+    padding: 30px;
+    border-radius: 20px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    margin-top: 0;
+    flex: 1;
+    flex-direction: row;
+    width: 100%;
+    height: 100vw;
+    align-items: center;
+    justify-content: center;
+}
+
+
 
 
 
@@ -1355,28 +1375,39 @@ body[data-theme="dark"] .profile-username {
 }
 
 .community {
-    background-color: #f9f9f9;
-    padding: 15px;
-    border-radius: 5px;
+    display: flex;
+    background: white;
+    border-radius: 20px;
+    padding-bottom: 10px;
     border: 1px solid #e0e0e0;
     margin-bottom: 15px;
-    display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
+    padding-right: 20px;
     justify-content: center;
     text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+}
+
+.community:hover {
+    transform: translateY(-2px);
+    background-color: #f9f9f9;
 }
 
 .communities-profile {
     background-color: #ffffff;
-    padding: 20px;
-    border-radius: 10px;
+    padding: 30px;
+    border-radius: 20px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
     flex: 1;
     align-items: center;
     justify-content: center;
 }
+
+
 
 .popup-overlay {
   position: fixed;
@@ -3105,9 +3136,147 @@ body[data-theme-name="midnight"] {
     --theme-hover: #2c2e52;
 }
 
+body[data-theme-name="frutiger-aero"] {
+    --theme-page: #72ccef;
+    --theme-surface: rgba(247, 253, 255, 0.82);
+    --theme-raised: rgba(255, 255, 255, 0.94);
+    --theme-border: rgba(46, 143, 191, 0.48);
+    --theme-text: #12354a;
+    --theme-muted: #496c7c;
+    --theme-accent: #087fc1;
+    --theme-hover: #05679d;
+    --theme-green: #3c9b50;
+    --theme-green-hover: #2d7d3e;
+    --theme-glass-highlight: rgba(255, 255, 255, 0.76);
+}
+
 body:is([data-theme-name="forest"], [data-theme-name="sunset"], [data-theme-name="midnight"]) {
     background: var(--theme-page);
     color: var(--theme-text);
+}
+
+
+body:is([data-theme-name="frutiger-aero"]) {
+    background-color: var(--theme-page);
+    background-image:
+        radial-gradient(circle at 18% 13%, rgba(255, 255, 255, 0.92) 0 5%, transparent 14%),
+        radial-gradient(circle at 72% 20%, rgba(255, 255, 255, 0.58) 0 7%, transparent 18%),
+        linear-gradient(180deg, #49b9ed 0%, #9ce3f7 48%, #d7f4f6 69%, #87d66d 70%, #4eae54 100%);
+    background-attachment: fixed;
+    border-color: var(--theme-border);
+    color: var(--theme-text);
+}
+
+body:is([data-theme-name="frutiger-aero"]) :is(
+    .topbar,
+    .sidebar,
+    .rightBar,
+    .sidebar-profile,
+    .communities-profile,
+    .feed-updates,
+    .activities-profile,
+    .profile-sidebar,
+    .profile-posts,
+    .profile,
+    .settings-container,
+    .settings-card,
+    .event-list,
+    .eventsFeedContainer,
+    .post,
+    .activity-item,
+    .supporter-feature,
+    .popup-card,
+    .account-menu,
+    .post-type-selector,
+    input,
+    textarea, select,
+    .TypeInput,
+    .community
+) {
+    background: var(--theme-surface);
+    backdrop-filter: blur(16px) saturate(125%);
+    -webkit-backdrop-filter: blur(16px) saturate(125%);
+    border-color: var(--theme-border);
+    color: var(--theme-text);
+    box-shadow: none;
+}
+
+body[data-theme-name="frutiger-aero"] :is(.topbar, .sidebar) {
+    background: rgba(241, 251, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.82);
+}
+
+body[data-theme-name="frutiger-aero"] :is(input, textarea, select, .TypeInput) {
+    background: var(--theme-raised);
+    border-color: var(--theme-border);
+    color: var(--theme-text);
+}
+
+body[data-theme-name="frutiger-aero"] :is(input, textarea, .TypeInput)::placeholder {
+    color: var(--theme-muted);
+    opacity: 0.86;
+}
+
+body[data-theme-name="frutiger-aero"] :is(a, .topbar-logo, .post-author-name, .settings-eyebrow, .supporter-feature h3) {
+    color: var(--theme-accent);
+}
+
+body[data-theme-name="frutiger-aero"] :is(h1, h2, h3, h4, strong, label, output) {
+    color: var(--theme-text);
+}
+
+body[data-theme-name="frutiger-aero"] :is(p, .settings-help, .composer-help, .activity-meta) {
+    color: var(--theme-muted);
+}
+
+body[data-theme-name="frutiger-aero"] #verText {
+    background: var(--theme-accent);
+    border-color: rgba(255, 255, 255, 0.72);
+    color: #ffffff !important;
+}
+
+body:is([data-theme-name="frutiger-aero"]) :is(
+    button
+) {
+    background: linear-gradient(180deg, #1598da, var(--theme-accent));
+    border-color: rgba(4, 94, 145, 0.45);
+    color: #ffffff;
+    box-shadow: none;
+}
+
+body:is([data-theme-name="frutiger-aero"]) :is(button):hover {
+    background: linear-gradient(180deg, #087fc1, var(--theme-hover));
+}
+
+body[data-theme-name="frutiger-aero"] .sidebar :is(.sidebarButton, .supporter-button) {
+    background: transparent;
+    border-color: transparent;
+    color: var(--theme-text);
+}
+
+body[data-theme-name="frutiger-aero"] .sidebar :is(.sidebarButton, .supporter-button):is(:hover, :focus-visible) {
+    background: rgba(8, 127, 193, 0.12);
+}
+
+body[data-theme-name="frutiger-aero"] .sidebar .supporter-button {
+    color: #6d5d12;
+}
+
+body[data-theme-name="frutiger-aero"] :is(.post-type-badge--activity, .business-community-tag) {
+    background: rgba(70, 166, 79, 0.16);
+    border-color: rgba(45, 125, 62, 0.48);
+    color: var(--theme-green);
+}
+
+body[data-theme-name="frutiger-aero"] :is(.post-type-badge--event, .post-location) {
+    background: rgba(8, 127, 193, 0.12);
+    border-color: rgba(8, 127, 193, 0.4);
+    color: #05679d;
+}
+
+body[data-theme-name="frutiger-aero"] :is(.divider, hr) {
+    background: rgba(46, 143, 191, 0.28);
+    border-color: transparent;
 }
 
 body:is([data-theme-name="forest"], [data-theme-name="sunset"], [data-theme-name="midnight"]) :is(
@@ -3264,6 +3433,18 @@ body[data-theme-name="midnight"] {
     --composer-option-text: #e1e2f3;
     --composer-post-accent: #7774c8;
     --composer-activity-accent: #4f72b8;
+}
+
+body[data-theme-name="frutiger-aero"] {
+    --composer-title-bg: rgba(255, 255, 255, 0.9);
+    --composer-title-border: rgba(8, 127, 193, 0.48);
+    --composer-title-text: #12354a;
+    --composer-title-placeholder: #557888;
+    --composer-selector-bg: rgba(229, 247, 253, 0.88);
+    --composer-option-bg: rgba(255, 255, 255, 0.72);
+    --composer-option-text: #17465f;
+    --composer-post-accent: #087fc1;
+    --composer-activity-accent: #3c9b50;
 }
 
 body #titleInput {

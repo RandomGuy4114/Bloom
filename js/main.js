@@ -345,7 +345,7 @@ export function createSupporterBadge({ compact = false } = {}, text = 'Supporter
 }
 
 export const STANDARD_THEMES = Object.freeze(["light", "dark"]);
-export const SUPPORTER_THEMES = Object.freeze(["forest", "midnight", "sunset"]);
+export const SUPPORTER_THEMES = Object.freeze(["forest", "midnight", "sunset", "frutiger-aero"]);
 
 export function getAvailableThemes(supporter = false) {
   return supporter ? [...STANDARD_THEMES, ...SUPPORTER_THEMES] : [...STANDARD_THEMES];

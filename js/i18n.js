@@ -65,6 +65,7 @@ const spanish = {
   "Sunset": "Atardecer",
   "Supporter themes are unlocked.": "Los temas de Supporter están desbloqueados.",
   "Forest, Midnight, and Sunset themes are available with Supporter.": "Los temas Bosque, Medianoche y Atardecer están disponibles con Supporter.",
+  "Forest, Midnight, Frutiger Aero, and Sunset themes are available with Supporter.": "Los temas Bosque, Medianoche, Frutiger Aero y Atardecer están disponibles con Supporter.",
   "Choose the language used throughout Bloom.": "Elige el idioma que se usa en Bloom.",
   "Early Access": "Acceso anticipado",
   "Open Early Access": "Abrir Acceso anticipado",

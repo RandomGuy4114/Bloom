@@ -37,9 +37,30 @@ let userIsSupporter = false;
 
 function createCommunityCard(community, includeMembershipButton = true) {
   const communityElement = document.createElement("div");
+  const communityProfile = document.createElement("div");
   communityElement.className = "community";
+  communityProfile.className = "community-profile";
+  communityElement.appendChild(communityProfile);
+
+  const picture = document.createElement("img");
+  picture.src = community.picture_url || "../../../Assets/MainImage.webp";
+  picture.alt = `${community.name} profile picture`;
+  picture.className = "community-picture";
+  picture.width = 100;
+  picture.height = 100;
+  picture.style.objectFit = "cover";
+  picture.style.borderRadius = "10%";
+  picture.style.border = "5px solid #ccc";
+  communityProfile.appendChild(picture);
+  picture.style.float = "left";
+  const infoSection = document.createElement("div");
+  infoSection.className = "community-info";
+  communityProfile.appendChild(infoSection);
+
+
 
   const heading = document.createElement("h2");
+  heading.style.paddingLeft = "20px";
   const communityName = document.createElement("span");
   communityName.dataset.i18nIgnore = "true";
   communityName.textContent = community.name;
@@ -51,9 +72,10 @@ function createCommunityCard(community, includeMembershipButton = true) {
   const description = document.createElement("p");
   description.dataset.i18nIgnore = "true";
   description.textContent = community.description;
+  description.style.paddingLeft = "20px";
 
   const memberCount = document.createElement("p");
-  memberCount.textContent = `Members: ${community.members?.length || 0}`;
+  memberCount.innerHTML = `<i class="ri-user-line"></i> ${community.members?.length || 0}`;
 
   const actions = document.createElement("div");
   actions.className = "com-buttons";
@@ -61,7 +83,7 @@ function createCommunityCard(community, includeMembershipButton = true) {
   const viewButton = document.createElement("button");
   viewButton.type = "button";
   viewButton.style.cssText = "padding: 10px; margin: 5px;";
-  viewButton.textContent = "View Community";
+  viewButton.innerHTML = '<i class="ri-search-line"></i> View Community';
   viewButton.addEventListener("click", () => {
     window.location.href = `${PAGE_URLS.community}?communityID=${community.id}`;
   });
@@ -72,7 +94,7 @@ function createCommunityCard(community, includeMembershipButton = true) {
     joinButton.type = "button";
     joinButton.style.cssText = "padding: 10px; margin: 5px;";
     const isMember = joinedCommunityIds.has(community.id) || (community.members?.includes(user.id) ?? false);
-    joinButton.textContent = isMember ? "Leave Community" : "Join Community";
+    joinButton.innerHTML = isMember ? '<i class="ri-close-line"></i> Leave Community' : '<i class="ri-user-add-line"></i> Join Community';
     joinButton.classList.toggle("danger-action", isMember);
     joinButton.addEventListener("click", async () => {
       if (joinedCommunityIds.has(community.id) || community.members?.includes(user.id)) {
@@ -120,7 +142,8 @@ function createCommunityCard(community, includeMembershipButton = true) {
     actions.appendChild(joinButton);
   }
 
-  communityElement.append(heading, description, memberCount, actions);
+  infoSection.append(heading, description, memberCount);
+  communityElement.appendChild(actions);
   return communityElement;
 }
 

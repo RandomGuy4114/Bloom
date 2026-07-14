@@ -163,6 +163,7 @@ function populateThemes() {
     forest: "Forest",
     midnight: "Midnight",
     sunset: "Sunset",
+    "frutiger-aero": "Frutiger Aero"
   };
   const options = getAvailableThemes(supporter).map((theme) => {
     const option = document.createElement("option");
@@ -174,7 +175,7 @@ function populateThemes() {
   themeDropdown.value = applyTheme(currentProfile?.Theme, supporter);
   themeSupporterHint.textContent = supporter
     ? "Supporter themes are unlocked."
-    : "Forest, Midnight, and Sunset themes are available with Supporter.";
+    : "Forest, Midnight, Frutiger Aero, and Sunset themes are available with Supporter.";
 }
 
 async function changeTheme() {
