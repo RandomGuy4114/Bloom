@@ -2,6 +2,11 @@
 
 import { supabase } from "./supabase.js";
 import { PAGE_URLS, withLoadingOverlay } from "./main.js";
+import {
+  clearPendingAccountLanguage,
+  getLanguage,
+  hasPendingAccountLanguage,
+} from "./i18n.js";
 
 // Definitions
 
@@ -29,6 +34,18 @@ loginForm?.addEventListener("submit", async (event) => {
       console.error("Error signing in:", error.message);
       errorMessage.textContent = "Error signing in. Please check your credentials and try again.";
       return;
+    }
+
+    if (hasPendingAccountLanguage()) {
+      const { error: languageError } = await supabase
+        .from("profiles")
+        .update({ Language: getLanguage() })
+        .eq("id", authData.user.id);
+      if (languageError) {
+        console.error("Unable to sync the selected language:", languageError.message);
+      } else {
+        clearPendingAccountLanguage();
+      }
     }
 
     const { data: profile, error: profileError } = await supabase

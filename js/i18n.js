@@ -1,6 +1,7 @@
 // Definitions
 
 const languageStorageKey = "bloom-language";
+const pendingAccountLanguageKey = "bloom-language-pending-account-sync";
 const supportedLanguages = new Set(["en", "es"]);
 const originalText = new WeakMap();
 const originalAttributes = new WeakMap();
@@ -668,6 +669,34 @@ export function getLanguage() {
   return currentLanguage;
 }
 
+export function hasPendingAccountLanguage() {
+  return localStorage.getItem(pendingAccountLanguageKey) === "true";
+}
+
+export function clearPendingAccountLanguage() {
+  localStorage.removeItem(pendingAccountLanguageKey);
+}
+
+function initializeLanguageButton() {
+  const button = document.getElementById("languageButton");
+  if (!button || button.dataset.languageReady === "true") return;
+  button.dataset.languageReady = "true";
+
+  const updateButton = () => {
+    const switchToSpanish = currentLanguage === "en";
+    button.textContent = switchToSpanish ? "Cambiar idioma" : "Change language";
+    button.setAttribute("aria-label", switchToSpanish ? "Cambiar idioma a español" : "Change language to English");
+    button.setAttribute("title", switchToSpanish ? "Cambiar idioma a español" : "Change language to English");
+  };
+
+  button.addEventListener("click", () => {
+    localStorage.setItem(pendingAccountLanguageKey, "true");
+    setLanguage(currentLanguage === "en" ? "es" : "en");
+  });
+  window.addEventListener("bloom:languagechange", updateButton);
+  updateButton();
+}
+
 // Dialogs
 
 const nativeAlert = window.alert.bind(window);
@@ -678,6 +707,7 @@ window.confirm = (message) => nativeConfirm(t(message));
 // Initialization
 
 applyLanguage(currentLanguage);
+initializeLanguageButton();
 new MutationObserver((mutations) => {
   for (const mutation of mutations) {
     if (mutation.type === "characterData") {
