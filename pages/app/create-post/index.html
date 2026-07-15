@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Bloom - Create Post</title>
+    <link rel="icon" href="../../../Assets/BloomLogo.png" type="image/png">
+    <link rel="stylesheet" href="../../../css/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.9.0/fonts/remixicon.css" rel="stylesheet">
+</head>
+<body class="app-page create-post-page">
+    <div class="topbar">
+        <h1 class="topbar-logo">Bloom <span id="verText">ALPHA</span></h1>
+        <nav aria-label="Account" style="display:flex;align-items:center">
+            <p id="username-label" style="margin:10px"></p>
+            <div class="pfp-frame"></div>
+        </nav>
+        <div class="topbar-actions" aria-label="Mobile navigation"></div>
+    </div>
+    <main class="main-layout">
+        <section class="sidebar-profile post-editor" aria-labelledby="createPostTitle">
+            <h1 id="createPostTitle">Create Post</h1>
+            <select id="communitySelect" class="composer-select" aria-label="Community"></select>
+            <div class="post-type-selector" role="radiogroup" aria-label="Post type">
+                <button type="button" class="post-type-option is-selected" data-post-type="post" data-i18n-key="postType.post" data-i18n-ignore aria-pressed="true">Post</button>
+                <button type="button" class="post-type-option" data-post-type="activity" data-i18n-key="postType.activity" data-i18n-ignore aria-pressed="false">Activity</button>
+            </div>
+            <input type="text" class="TypeInput" id="titleInput" aria-label="Post title" placeholder="Post title" maxlength="200">
+            <textarea class="TypeInput" id="postInput" aria-label="Post content" placeholder="Write your post" maxlength="10000"></textarea>
+            <input type="file" id="postImageInput" class="post-image-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Add images" multiple>
+            <p id="postImageLimitHint" class="composer-help"></p>
+            <div id="postImagePreview" class="post-image-preview" hidden></div>
+            <div class="post-composer-actions">
+                <button type="button" id="postImageButton" class="post-image-picker" aria-label="Add images" title="Add images"><i class="ri-attachment-2"></i></button>
+                <button type="button" id="createPostButton">Publish</button>
+            </div>
+        </section>
+    </main>
+    <script type="module" src="../../../js/i18n.js"></script>
+    <script type="module" src="../../../js/create-post.js"></script>
+</body>
+</html>

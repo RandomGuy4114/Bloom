@@ -1,0 +1,23 @@
+{
+  "name": "bloom",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bloom is a web application that helps users discover and connect with local communities and events.",
+  "scripts": {
+    "build": "npm run build:capacitor",
+    "build:capacitor": "node scripts/build-capacitor.mjs",
+    "cap:sync": "npm run build:capacitor && cap sync",
+    "cap:add:android": "cap add android",
+    "cap:add:ios": "cap add ios",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
+    "@capacitor/local-notifications": "^8.2.1",
+    "@capgo/background-geolocation": "^8.3.1"
+  }
+}

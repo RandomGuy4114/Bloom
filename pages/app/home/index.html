@@ -41,11 +41,10 @@
     </div>
     <div class="main-layout">
         <div class="feed-container">
-            
             <div class="sidebar-profile">
                 <div class="CenterLayout">
                     <div class="pfp-frame"></div>
-                    <select id="communitySelect" class="composer-select"></select>
+                    <select id="communitySelect" class="composer-select" aria-label="Community"></select>
                     <div class="post-type-selector" role="radiogroup" aria-label="Post type">
                         <button type="button" class="post-type-option is-selected" data-post-type="post" data-i18n-key="postType.post" data-i18n-ignore aria-pressed="true">Post</button>
                         <button type="button" class="post-type-option" data-post-type="activity" data-i18n-key="postType.activity" data-i18n-ignore aria-pressed="false">Activity</button>
@@ -56,7 +55,7 @@
                     <p id="postImageLimitHint" class="composer-help"></p>
                     <div id="postImagePreview" class="post-image-preview" hidden></div>
                     <div class="post-composer-actions">
-                        <button type="button" id="postImageButton" class="post-image-picker" aria-label="Add image" title="Add image"><i class="ri-file-image-line"></i></button>
+                        <button type="button" id="postImageButton" class="post-image-picker" aria-label="Add images" title="Add images"><i class="ri-attachment-2" aria-hidden="true"></i></button>
                         <button type="button" id="createPostButton">Post</button>
                     </div>
                 </div>
@@ -70,4 +69,5 @@
 </body>
 <script type="module" src="../../../js/i18n.js"></script>
 <script type="module" src="../../../js/home.js"></script>
+<script type="module" src="../../../js/create-post.js"></script>
 </html>

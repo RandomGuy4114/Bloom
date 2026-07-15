@@ -1,4 +1,12 @@
-import { animate } from "https://cdn.jsdelivr.net/npm/motion@latest/+esm"
+import { animate } from "https://cdn.jsdelivr.net/npm/motion@latest/+esm";
+import { supabase } from "./supabase.js";
+
+const homeUrl = new URL("../pages/app/home/", import.meta.url).href;
+const { data: { session } } = await supabase.auth.getSession();
+
+if (session?.user) {
+  window.location.replace(homeUrl);
+}
 
 const title = document.querySelector(".landing-page .LeftSide h1");
 

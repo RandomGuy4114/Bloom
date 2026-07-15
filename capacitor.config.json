@@ -1,0 +1,8 @@
+{
+  "appId": "org.trybloom.app",
+  "appName": "Bloom",
+  "webDir": "mobile",
+  "android": {
+    "useLegacyBridge": true
+  }
+}

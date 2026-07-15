@@ -2,7 +2,6 @@
 
 import { supabase } from "./supabase.js";
 import {
-  canUserPostToCommunity,
   createPopupShell,
   createPostCard,
   formatDateTime,
@@ -15,87 +14,20 @@ import {
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
+  withTimeout,
 } from "./main.js";
 
 // Definitions
 
 const usernameLabel = document.getElementById("username-label");
 const feed = document.getElementById("feed");
-const communitySelect = document.getElementById("communitySelect");
-const titleInput = document.getElementById("titleInput");
-const postInput = document.getElementById("postInput");
-const createPostButton = document.getElementById("createPostButton");
-const postImageInput = document.getElementById("postImageInput");
-const postImageButton = document.getElementById("postImageButton");
-const postImagePreview = document.getElementById("postImagePreview");
-const postImageLimitHint = document.getElementById("postImageLimitHint");
-const postTypeButtons = [...document.querySelectorAll("[data-post-type]")];
-const allowedPostImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const bloomConnectStatusCircle = document.getElementById("bloomConnectStatusCircle");
 const KonamiCode = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
 
 let currentUser;
-let joinedCommunities = [];
-let postableCommunityIds = new Set();
-let selectedPostType = "post";
-let currentUserIsAdmin = false;
-let currentUserIsSupporter = false;
 let konamiIndex = 0;
 
 // Components
-
-async function populateCommunitySelect(selectedCommunityId = null) {
-  communitySelect.innerHTML = "";
-  postableCommunityIds = new Set();
-
-  if (!joinedCommunities.length) {
-    const option = document.createElement("option");
-    option.value = "";
-    option.textContent = "Join a community to post";
-    communitySelect.appendChild(option);
-    communitySelect.disabled = true;
-    return false;
-  }
-
-  const { data: communities, error } = await supabase
-    .from("Communities")
-    .select("id, name, global")
-    .in("id", joinedCommunities);
-
-  if (error) {
-    console.error("Error loading postable communities:", error.message);
-    communitySelect.disabled = true;
-    return false;
-  }
-
-  const postableCommunities = (communities ?? []).filter((community) => (
-    !community.global || currentUserIsAdmin
-  ));
-  postableCommunityIds = new Set(postableCommunities.map((community) => community.id));
-
-  if (!postableCommunities.length) {
-    const option = document.createElement("option");
-    option.value = "";
-    option.textContent = "Only administrators can post in global communities";
-    communitySelect.appendChild(option);
-    communitySelect.disabled = true;
-    return false;
-  }
-
-  const options = postableCommunities.map((community, index) => {
-    const option = document.createElement("option");
-    option.value = community.id;
-    option.dataset.i18nIgnore = "true";
-    option.textContent = community.name;
-    option.selected = selectedCommunityId
-      ? community.id === selectedCommunityId
-      : index === 0;
-    return option;
-  });
-
-  communitySelect.replaceChildren(...options);
-  communitySelect.disabled = false;
-  return true;
-}
 
 async function renderFeedPosts(posts) {
   if (!posts?.length) {
@@ -139,40 +71,6 @@ async function renderFeedPosts(posts) {
 // Data
 
 async function loadJoinedCommunities() {
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("joined_communities, supporter")
-    .eq("id", currentUser.id)
-    .single();
-
-  if (error) {
-    console.error("Error fetching joined communities:", error.message);
-    renderEmptyState(feed, "Unable to load your feed right now.");
-    return;
-  }
-
-  joinedCommunities = profile?.joined_communities ?? [];
-  currentUserIsSupporter = profile?.supporter === true;
-  postImageLimitHint.textContent = currentUserIsSupporter
-    ? "Supporter: up to 5 images, 25 MB each."
-    : "Up to 1 image, 10 MB.";
-  currentUserIsAdmin = currentUser?.app_metadata?.role === "admin";
-
-  if (!joinedCommunities.length) {
-    postInput.disabled = true;
-    titleInput.disabled = true;
-    postImageInput.disabled = true;
-    createPostButton.disabled = true;
-    communitySelect.disabled = true;
-    await populateCommunitySelect();
-  } else {
-    const canCreatePost = await populateCommunitySelect(communitySelect.value);
-    postInput.disabled = !canCreatePost;
-    titleInput.disabled = !canCreatePost;
-    postImageInput.disabled = !canCreatePost;
-    createPostButton.disabled = !canCreatePost;
-  }
-
   const location = await getUserLocation();
   const { data: posts, error: postsError } = await supabase.rpc("get_home_feed", {
     user_latitude: location?.latitude ?? null,
@@ -189,85 +87,10 @@ async function loadJoinedCommunities() {
   await renderFeedPosts(posts);
 }
 
-async function createPost() {
-  const title = titleInput.value.trim();
-  const body = postInput.value.trim();
-  const selectedCommunity = communitySelect.value;
-  const imageFiles = [...(postImageInput.files ?? [])];
-  const imageLimit = currentUserIsSupporter ? 5 : 1;
-  const maximumPostImageSize = (currentUserIsSupporter ? 25 : 10) * 1024 * 1024;
-
-  if (!title) {
-    alert("Please add a post title before posting.");
-    return;
-  }
-  if (!body) {
-    alert("Please write something before posting.");
-    return;
-  }
-  if (!joinedCommunities.length) {
-    alert("Join a community before posting.");
-    return;
-  }
-  if (!selectedCommunity) {
-    alert("Please choose a community to post to.");
-    return;
-  }
-  if (!postableCommunityIds.has(selectedCommunity)) {
-    alert("Only administrators can create posts in global communities.");
-    return;
-  }
-  if (imageFiles.length > imageLimit) {
-    alert(`You can upload up to ${imageLimit} image${imageLimit === 1 ? "" : "s"} per post.`);
-    return;
-  }
-  if (imageFiles.some((file) => !allowedPostImageTypes.has(file.type))) {
-    alert("Choose a JPEG, PNG, WebP, or GIF image.");
-    return;
-  }
-  if (imageFiles.some((file) => file.size > maximumPostImageSize)) {
-    alert(`Each post image must be ${currentUserIsSupporter ? 25 : 10} MB or smaller.`);
-    return;
-  }
-
-  await withLoadingOverlay(async () => {
-    const { allowed, error: accessError } = await canUserPostToCommunity(currentUser.id, selectedCommunity);
-    if (accessError) {
-      alert("Unable to verify posting access. Please try again.");
-      return;
-    }
-    if (!allowed) {
-      alert("Only administrators can create posts in global communities.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("body", body);
-    formData.append("community", selectedCommunity);
-    formData.append("postType", selectedPostType);
-    imageFiles.forEach((file) => formData.append("images", file));
-    const { error } = await supabase.functions.invoke("create-post", { body: formData });
-
-    if (error) {
-      console.error("Error creating post:", error.message);
-      alert("The post could not be published. Check that its text and images follow the community guidelines, then try again.");
-      return;
-    }
-
-    titleInput.value = "";
-    postInput.value = "";
-    postImageInput.value = "";
-    postImagePreview.hidden = true;
-    postImagePreview.replaceChildren();
-    await loadJoinedCommunities();
-  }, "Publishing your post...");
-}
-
 async function checkFirstTimeUser() {
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("FirstTimeOpen")
+    .select("FirstTimeOpen, connect_enabled")
     .eq("id", currentUser.id)
     .single();
 
@@ -275,6 +98,8 @@ async function checkFirstTimeUser() {
     console.error("Error checking user profile:", error.message);
     return;
   }
+
+  bloomConnectStatusCircle?.classList.toggle("connected", profile?.connect_enabled === true);
 
   if (!profile?.FirstTimeOpen) {
     return;
@@ -302,57 +127,31 @@ async function checkFirstTimeUser() {
   }
 }
 
-// Events
-
-postTypeButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    selectedPostType = button.dataset.postType;
-    postTypeButtons.forEach((option) => {
-      const isSelected = option === button;
-      option.classList.toggle("is-selected", isSelected);
-      option.setAttribute("aria-pressed", String(isSelected));
-    });
-  });
-});
-
-createPostButton?.addEventListener("click", createPost);
-postImageButton?.addEventListener("click", () => postImageInput.click());
-postImageInput?.addEventListener("change", () => {
-  const files = [...(postImageInput.files ?? [])];
-  postImagePreview.replaceChildren();
-  postImagePreview.hidden = !files.length;
-  if (!files.length) {
-    return;
-  }
-  files.forEach((file, index) => {
-    const image = document.createElement("img");
-    const previewUrl = URL.createObjectURL(file);
-    image.src = previewUrl;
-    image.alt = `Post image preview ${index + 1}`;
-    image.addEventListener("load", () => URL.revokeObjectURL(previewUrl), { once: true });
-    postImagePreview.appendChild(image);
-  });
-});
-postInput?.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    createPost();
-  }
+window.addEventListener("bloom:connect-encounter", () => {
+  bloomConnectStatusCircle?.classList.remove("connected");
+  bloomConnectStatusCircle?.classList.add("newUserDetected");
 });
 
 // Initialization
 
 await withLoadingOverlay(async () => {
-  currentUser = await getCurrentUserOrRedirect();
-  if (!currentUser) {
-    return;
-  }
+  try {
+    currentUser = await withTimeout(
+      getCurrentUserOrRedirect(),
+      15000,
+      "Authentication took too long.",
+    );
+    if (!currentUser) return;
 
-  await Promise.all([
-    showCurrentUser(currentUser, usernameLabel),
-    loadJoinedCommunities(),
-    checkFirstTimeUser(),
-  ]);
+    await withTimeout(Promise.all([
+      showCurrentUser(currentUser, usernameLabel),
+      loadJoinedCommunities(),
+      checkFirstTimeUser(),
+    ]), 25000, "Feed loading took too long.");
+  } catch (error) {
+    console.error("Unable to finish loading the feed:", error.message);
+    renderEmptyState(feed, "Unable to load your feed right now. Check your connection and try again.");
+  }
 }, "Loading your feed...");
 
 

@@ -21,6 +21,8 @@ export const PAGE_URLS = Object.freeze({
   index: new URL("../", import.meta.url).href,
   login: new URL("../pages/auth/login/", import.meta.url).href,
   home: new URL("../pages/app/home/", import.meta.url).href,
+  createPost: new URL("../pages/app/create-post/", import.meta.url).href,
+  connect: new URL("../pages/app/connect/", import.meta.url).href,
   businessHome: new URL("../pages/business/home/", import.meta.url).href,
   businessProfile: new URL("../pages/business/profile/", import.meta.url).href,
   businessSettings: new URL("../pages/business/settings/", import.meta.url).href,
@@ -61,6 +63,9 @@ export async function getCurrentUserOrRedirect(redirectUrl = PAGE_URLS.login) {
   }
   applyTheme(profile?.Theme, profile?.supporter === true);
   initializeGlobalSearch();
+  import("./connect.js")
+    .then(({ restoreConnect }) => restoreConnect(user))
+    .catch((error) => console.error("Unable to restore Connect:", error.message));
 
   return user;
 }
@@ -627,6 +632,16 @@ export async function withLoadingOverlay(callback, message = "Loading...") {
   }
 }
 
+export function withTimeout(promise, timeout = 15000, message = "The request timed out.") {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = window.setTimeout(() => reject(new Error(message)), timeout);
+    }),
+  ]).finally(() => window.clearTimeout(timer));
+}
+
 export function renderEmptyState(container, message) {
   if (!container) {
     return;
@@ -1168,7 +1183,7 @@ export function getUserLocation() {
     return Promise.resolve(null);
   }
 
-  return new Promise((resolve) => {
+  return withTimeout(new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       ({ coords: { latitude, longitude } }) => resolve({ latitude, longitude }),
       (error) => {
@@ -1177,5 +1192,8 @@ export function getUserLocation() {
       },
       { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 },
     );
+  }), 12000, "Location request timed out.").catch((error) => {
+    console.error("Unable to resolve location:", error.message);
+    return null;
   });
 }

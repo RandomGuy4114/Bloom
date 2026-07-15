@@ -1,7 +1,7 @@
 // Dependencies
 
 import { supabase } from "./supabase.js";
-import { PAGE_URLS, withLoadingOverlay } from "./main.js";
+import { PAGE_URLS, withLoadingOverlay, withTimeout } from "./main.js";
 import {
   clearPendingAccountLanguage,
   getLanguage,
@@ -29,7 +29,19 @@ loginForm?.addEventListener("submit", async (event) => {
   }
 
   await withLoadingOverlay(async () => {
-    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
+    let authResult;
+    try {
+      authResult = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        20000,
+        "Sign-in took too long.",
+      );
+    } catch (requestError) {
+      console.error("Sign-in request failed:", requestError.message);
+      errorMessage.textContent = "Unable to reach Bloom. Check your connection and try again.";
+      return;
+    }
+    const { data: authData, error } = authResult;
     if (error) {
       console.error("Error signing in:", error.message);
       errorMessage.textContent = "Error signing in: " + error.message;
@@ -48,17 +60,26 @@ loginForm?.addEventListener("submit", async (event) => {
       }
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("isBusiness")
-      .eq("id", authData.user.id)
-      .single();
+    let profile = null;
+    let profileError = null;
+    try {
+      const profileResult = await withTimeout(
+        supabase
+          .from("profiles")
+          .select("isBusiness")
+          .eq("id", authData.user.id)
+          .single(),
+        15000,
+        "Account lookup took too long.",
+      );
+      profile = profileResult.data;
+      profileError = profileResult.error;
+    } catch (requestError) {
+      profileError = requestError;
+    }
 
     if (profileError) {
       console.error("Unable to determine account type:", profileError.message);
-      await supabase.auth.signOut();
-      errorMessage.textContent = "Unable to load your account. Please try again.";
-      return;
     }
 
     window.location.href = profile?.isBusiness === true

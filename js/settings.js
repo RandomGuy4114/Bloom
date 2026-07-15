@@ -11,6 +11,7 @@ import {
 } from "./main.js";
 import { getLanguage, setLanguage } from "./i18n.js";
 import { supabase } from "./supabase.js";
+import { setConnectEnabled } from "./connect.js";
 
 // Definitions
 
@@ -23,6 +24,8 @@ const themeDropdown = document.getElementById("ThemeDropdown");
 const changeThemeButton = document.getElementById("changeThemeButton");
 const themeSupporterHint = document.getElementById("themeSupporterHint");
 const earlyAccessButton = document.getElementById("earlyAccessButton");
+const connectEnabledToggle = document.getElementById("connectEnabledToggle");
+const connectStatus = document.getElementById("connectStatus");
 
 let currentUser;
 let currentProfile;
@@ -225,6 +228,24 @@ changeThemeButton?.addEventListener("click", () => withLoadingOverlay(changeThem
 earlyAccessButton?.addEventListener("click", () => {
   window.location.href = PAGE_URLS.earlyAccess;
 });
+connectEnabledToggle?.addEventListener("change", async () => {
+  const enabled = connectEnabledToggle.checked;
+  connectEnabledToggle.disabled = true;
+  connectStatus.textContent = enabled ? "Enabling Connect..." : "Turning Connect off...";
+  try {
+    await setConnectEnabled(currentUser, enabled);
+    currentProfile.connect_enabled = enabled;
+    connectStatus.textContent = enabled
+      ? "Connect is on. Bloom may use your location in the background."
+      : "Connect is off and your stored location was deleted.";
+  } catch (error) {
+    console.error("Unable to update Connect:", error.message);
+    connectEnabledToggle.checked = !enabled;
+    connectStatus.textContent = error.message || "Unable to update Connect.";
+  } finally {
+    connectEnabledToggle.disabled = false;
+  }
+});
 
 // Initialization
 
@@ -236,16 +257,20 @@ await withLoadingOverlay(async () => {
   }
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("Theme, supporter")
+    .select("Theme, supporter, connect_enabled")
     .eq("id", currentUser.id)
     .single();
   if (profileError) {
     console.error("Unable to load appearance settings:", profileError.message);
   }
-  currentProfile = profile ?? { Theme: "light", supporter: false };
+  currentProfile = profile ?? { Theme: "light", supporter: false, connect_enabled: false };
   const usernameLabel = document.getElementById("username-label");
   await showCurrentUser(currentUser, usernameLabel);
   populateThemes();
+  connectEnabledToggle.checked = currentProfile.connect_enabled === true;
+  connectStatus.textContent = connectEnabledToggle.checked
+    ? "Connect is on. Bloom may use your location in the background."
+    : "Connect is off.";
 }, "Loading settings...");
 languageDropdown.value = getLanguage();
 window.addEventListener("bloom:languagechange", (event) => {
