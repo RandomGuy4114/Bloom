@@ -24,6 +24,21 @@ Bloom Supporter helps fund the project and unlocks these account benefits:
 ### Main Usage
 Bloom is available as a website for now, mobile support does work, but there isn't a full app for mobile (Yet!) You can Acess It [here](https://trybloom.org)
 
+### Capacitor Mobile Setup
+
+Bloom includes a Capacitor-ready static build generated in the dedicated `mobile` directory. Install the project dependencies, prepare the mobile assets, and add the native platform you want to use:
+
+```bash
+npm install
+npm run build:capacitor
+npm run cap:add:ios
+npm run cap:add:android
+```
+
+After a native platform has been added, use `npm run cap:sync` whenever the website changes. Open the native projects with `npm run cap:open:ios` or `npm run cap:open:android`.
+
+The iOS build requires macOS and Xcode. Android builds require Android Studio with its supported JDK and Android SDK. Before releasing the native app, configure Supabase redirect URLs and mobile deep links for email confirmation, password recovery, and Patreon OAuth.
+
 Bloom's source code contains everything except the API. So you can help with the development of Bloom or even make your own version (note that you will have to set up your own API for this, I do not allow "Clients" for Bloom.)
 
 ### Self Hosting
