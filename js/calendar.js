@@ -1,6 +1,7 @@
 // Dependencies
-import { getCurrentUserOrRedirect, showCurrentUser, withLoadingOverlay, getUserProfile } from "./main.js";
+import { getCurrentUserOrRedirect, showCurrentUser, withLoadingOverlay } from "./main.js";
 import { supabase } from "./supabase.js";
+import { getLanguage, t } from "./i18n.js";
 
 // Definitions
 const usernameLabel = document.getElementById("username-label");
@@ -56,15 +57,17 @@ async function renderCalendar(User) {
   const viewYear = state.currentDate.getFullYear();
   const viewMonth = state.currentDate.getMonth();
   const today = new Date();
+  const locale = getLanguage() === "es" ? "es" : "en";
 
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
+  monthYear.textContent = new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(viewYear, viewMonth, 1));
 
-  monthYear.textContent = `${monthNames[viewMonth]} ${viewYear}`;
-
-  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weekdayFormatter = new Intl.DateTimeFormat(locale, { weekday: "short" });
+  const weekdays = Array.from({ length: 7 }, (_, index) =>
+    weekdayFormatter.format(new Date(2024, 0, 7 + index))
+  );
   weekdaysContainer.innerHTML = weekdays.map(day => `<li>${day}</li>`).join("");
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -142,14 +145,14 @@ function displayEventsForDate(date) {
   if (!eventDetailsContainer) return;
 
   if (dailyEvents.length === 0) {
-    eventDetailsContainer.innerHTML = `<p class="no-events">No events scheduled for this day.</p>`;
+    eventDetailsContainer.innerHTML = `<p class="no-events">${t("No events scheduled for this day.")}</p>`;
     return;
   }
 
   eventDetailsContainer.innerHTML = dailyEvents.map(event => `
     <div class="event-card">
       <h4>${escapeHTML(event.title)}</h4>
-      <p class="event-location">📍 ${escapeHTML(event.location || "No Location Listed")}</p>
+      <p class="event-location">📍 ${escapeHTML(event.location || t("No Location Listed"))}</p>
       <p class="event-body">${escapeHTML(event.body || "")}</p>
     </div>
   `).join("");
@@ -183,6 +186,10 @@ daysContainer.addEventListener("click", (event) => {
 
     displayEventsForDate(selectedDate);
   }
+});
+
+window.addEventListener("bloom:languagechange", () => {
+  if (state.currentUser) renderCalendar(state.currentUser);
 });
 
 // Initialization
