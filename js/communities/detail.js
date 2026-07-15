@@ -34,6 +34,7 @@ const joinCommunityButton = document.getElementById("joinCommunityButton");
 const searchPostInput = document.getElementById("searchPostInput");
 const communityMembersContainer = document.getElementById("communityMembersContainer");
 const communityBannerElement = document.getElementById("communityBanner");
+const communityPictureElement = document.getElementById("communityPicture");
 const editCommunityButton = document.getElementById("editCommunityButton");
 const businessCommunityTag = document.getElementById("businessCommunityTag");
 const communityID = getQueryParameter("communityID");
@@ -46,6 +47,14 @@ let isCurrentUserMember = false;
 let currentUserProfile;
 
 const allowedBannerTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const allowedCommunityPictureTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function getCommunityImagePath(imageUrl) {
+  if (!isTrustedImageUrl(imageUrl, "Community Images")) return null;
+  const url = new URL(imageUrl);
+  const prefix = "/storage/v1/object/public/Community%20Images/";
+  return decodeURIComponent(url.pathname.slice(prefix.length));
+}
 
 // Components
 
@@ -161,6 +170,26 @@ function renderCommunityIdentity() {
 
   communityNameElement.dataset.i18nIgnore = "true";
   communityNameElement.textContent = communityDetails?.name || "";
+  communityPictureElement.replaceChildren();
+  communityPictureElement.classList.toggle(
+    "community-picture--fallback",
+    !isTrustedImageUrl(communityDetails?.picture_url, "Community Images"),
+  );
+  if (isTrustedImageUrl(communityDetails?.picture_url, "Community Images")) {
+    const image = document.createElement("img");
+    image.src = communityDetails.picture_url;
+    image.alt = `${communityDetails.name || "Community"} community image`;
+    image.decoding = "async";
+    image.addEventListener("error", () => {
+      communityPictureElement.replaceChildren();
+      communityPictureElement.classList.add("community-picture--fallback");
+      communityPictureElement.textContent = communityDetails?.name?.trim().charAt(0).toLocaleUpperCase() || "?";
+    }, { once: true });
+    communityPictureElement.appendChild(image);
+  } else {
+    communityPictureElement.textContent = communityDetails?.name?.trim().charAt(0).toLocaleUpperCase() || "?";
+    communityPictureElement.setAttribute("aria-label", `${communityDetails?.name || "Community"} community image`);
+  }
   communityDescriptionElement.dataset.i18nIgnore = "true";
   communityDescriptionElement.textContent = communityDetails?.description || "";
   businessCommunityTag.hidden = communityDetails?.business !== true;
@@ -180,6 +209,11 @@ function openCommunityEditor() {
     <input id="editCommunityName" type="text" minlength="1" maxlength="100" required>
     <label for="editCommunityBio">Community bio</label>
     <textarea id="editCommunityBio" minlength="1" maxlength="1000" required></textarea>
+    <label for="editCommunityPicture">Community image</label>
+    <div class="community-image-preview" aria-label="Community image preview"></div>
+    <input id="editCommunityPicture" type="file" accept="image/jpeg,image/png,image/webp">
+    <button id="removeCommunityPicture" type="button" class="secondary-action" ${communityDetails.picture_url ? "" : "hidden"}>Remove community image</button>
+    <p class="community-image-help">JPEG, PNG, or WebP. Maximum 5 MB. Leave empty to keep the current image.</p>
     <label for="editCommunityBanner">Community banner</label>
     <div class="community-banner-preview" aria-label="Community banner preview"></div>
     <input id="editCommunityBanner" type="file" accept="image/jpeg,image/png,image/webp" ${isSupporter ? "" : "disabled"}>
@@ -196,14 +230,28 @@ function openCommunityEditor() {
   const nameInput = form.querySelector("#editCommunityName");
   const bioInput = form.querySelector("#editCommunityBio");
   const bannerInput = form.querySelector("#editCommunityBanner");
+  const pictureInput = form.querySelector("#editCommunityPicture");
+  const removePictureButton = form.querySelector("#removeCommunityPicture");
   const removeBannerButton = form.querySelector("#removeCommunityBanner");
   const deleteCommunityButton = form.querySelector("#deleteCommunityButton");
   const preview = form.querySelector(".community-banner-preview");
+  const picturePreview = form.querySelector(".community-image-preview");
   let previewUrl;
+  let picturePreviewUrl;
   let removeBanner = false;
+  let removePicture = false;
 
   nameInput.value = communityDetails.name || "";
   bioInput.value = communityDetails.description || "";
+  if (isTrustedImageUrl(communityDetails.picture_url, "Community Images")) {
+    const image = document.createElement("img");
+    image.src = communityDetails.picture_url;
+    image.alt = "Current community image";
+    picturePreview.appendChild(image);
+  } else {
+    picturePreview.classList.add("community-picture--fallback");
+    picturePreview.textContent = communityDetails.name?.trim().charAt(0).toLocaleUpperCase() || "?";
+  }
   if (isTrustedImageUrl(communityDetails.banner_url, "Community Banners")) {
     const image = document.createElement("img");
     image.src = communityDetails.banner_url;
@@ -254,6 +302,45 @@ function openCommunityEditor() {
       preview.appendChild(image);
     }
   });
+  removePictureButton.addEventListener("click", () => {
+    removePicture = !removePicture;
+    pictureInput.value = "";
+    if (picturePreviewUrl) {
+      URL.revokeObjectURL(picturePreviewUrl);
+      picturePreviewUrl = null;
+    }
+    picturePreview.replaceChildren();
+    picturePreview.classList.toggle("community-picture--fallback", removePicture);
+    picturePreview.textContent = removePicture
+      ? nameInput.value.trim().charAt(0).toLocaleUpperCase() || "?"
+      : "";
+    removePictureButton.textContent = removePicture ? "Undo image removal" : "Remove community image";
+    if (!removePicture && isTrustedImageUrl(communityDetails.picture_url, "Community Images")) {
+      const image = document.createElement("img");
+      image.src = communityDetails.picture_url;
+      image.alt = "Current community image";
+      picturePreview.appendChild(image);
+    }
+  });
+  pictureInput.addEventListener("change", () => {
+    const file = pictureInput.files?.[0];
+    if (!file) return;
+    if (!allowedCommunityPictureTypes.has(file.type) || file.size > 5 * 1024 * 1024) {
+      alert("Choose a JPEG, PNG, or WebP community image that is 5 MB or smaller.");
+      pictureInput.value = "";
+      return;
+    }
+    if (picturePreviewUrl) URL.revokeObjectURL(picturePreviewUrl);
+    picturePreviewUrl = URL.createObjectURL(file);
+    removePicture = false;
+    removePictureButton.hidden = false;
+    removePictureButton.textContent = "Remove community image";
+    picturePreview.classList.remove("community-picture--fallback");
+    const image = document.createElement("img");
+    image.src = picturePreviewUrl;
+    image.alt = "New community image preview";
+    picturePreview.replaceChildren(image);
+  });
   bannerInput.addEventListener("change", () => {
     const file = bannerInput.files?.[0];
     if (!file) return;
@@ -277,6 +364,7 @@ function openCommunityEditor() {
     const name = nameInput.value.trim();
     const description = bioInput.value.trim();
     const banner = bannerInput.files?.[0];
+    const picture = pictureInput.files?.[0];
     if (!name || name.length > 100 || !description || description.length > 1000) {
       alert("Community names must be 1–100 characters and bios must be 1–1000 characters.");
       return;
@@ -295,6 +383,43 @@ function openCommunityEditor() {
         return;
       }
 
+      let pictureUrl = communityDetails.picture_url;
+      if (picture || removePicture) {
+        const previousPath = getCommunityImagePath(communityDetails.picture_url);
+        let uploadedPath = null;
+        if (picture) {
+          const extension = picture.type === "image/png" ? "png" : picture.type === "image/webp" ? "webp" : "jpg";
+          uploadedPath = `${user.id}/${communityID}/picture-${Date.now()}.${extension}`;
+          const { error: uploadPictureError } = await supabase.storage.from("Community Images").upload(uploadedPath, picture, {
+            contentType: picture.type,
+            cacheControl: "3600",
+            upsert: false,
+          });
+          if (uploadPictureError) {
+            alert("The community details were saved, but the community image could not be uploaded.");
+            communityDetails = { ...communityDetails, name, description };
+            renderCommunityIdentity();
+            return;
+          }
+          pictureUrl = supabase.storage.from("Community Images").getPublicUrl(uploadedPath).data.publicUrl;
+        } else {
+          pictureUrl = null;
+        }
+
+        const { error: pictureError } = await supabase.rpc("set_community_picture", {
+          target_community: communityID,
+          new_picture_url: pictureUrl,
+        });
+        if (pictureError) {
+          if (uploadedPath) await supabase.storage.from("Community Images").remove([uploadedPath]);
+          alert("The community details were saved, but the community image could not be updated.");
+          communityDetails = { ...communityDetails, name, description };
+          renderCommunityIdentity();
+          return;
+        }
+        if (previousPath) await supabase.storage.from("Community Images").remove([previousPath]);
+      }
+
       let bannerUrl = communityDetails.banner_url;
       if (banner || removeBanner) {
         const uploadBody = new FormData();
@@ -308,20 +433,21 @@ function openCommunityEditor() {
         if (uploadError || !data || !("bannerUrl" in data)) {
           console.error("Error uploading community banner:", uploadError?.message || "Invalid response");
           alert("The community details were saved, but the banner could not be uploaded.");
-          communityDetails = { ...communityDetails, name, description };
+          communityDetails = { ...communityDetails, name, description, picture_url: pictureUrl };
           renderCommunityIdentity();
           return;
         }
         bannerUrl = data.bannerUrl;
       }
 
-      communityDetails = { ...communityDetails, name, description, banner_url: bannerUrl };
+      communityDetails = { ...communityDetails, name, description, picture_url: pictureUrl, banner_url: bannerUrl };
       saved = true;
     }, "Saving community...");
 
     if (saved) {
       renderCommunityIdentity();
       if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (picturePreviewUrl) URL.revokeObjectURL(picturePreviewUrl);
       closePopup();
     }
   });
@@ -339,7 +465,7 @@ async function loadCommunity() {
   const [{ data: community, error: communityError }, { data: posts, error: postsError }] = await Promise.all([
     supabase
       .from("Communities")
-      .select("name, description, user_id, banner_url, members, global, business, location_label, latitude, longitude, radius_meters")
+      .select("name, description, user_id, banner_url, picture_url, members, global, business, location_label, latitude, longitude, radius_meters")
       .eq("id", communityID)
       .single(),
     supabase.from("Posts").select("*").eq("community", communityID).order("created_at", { ascending: false }),

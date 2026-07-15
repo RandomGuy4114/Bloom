@@ -19,6 +19,7 @@ const connectButton = document.getElementById("connectBusinessPatreon");
 const communityList = document.getElementById("businessCommunityList");
 const businessPostForm = document.getElementById("businessPostForm");
 const businessPostCommunity = document.getElementById("businessPostCommunity");
+const businessCommunityImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 let account;
 
 // Functions
@@ -96,6 +97,8 @@ function openBusinessCommunityForm() {
   form.innerHTML = `
     <label for="businessCommunityName">Community name</label><input id="businessCommunityName" maxlength="100" required>
     <label for="businessCommunityDescription">Description</label><textarea id="businessCommunityDescription" maxlength="1000" required></textarea>
+    <label for="businessCommunityImage">Community image</label><input id="businessCommunityImage" type="file" accept="image/jpeg,image/png,image/webp">
+    <p class="community-image-help">Optional square image. JPEG, PNG, or WebP. Maximum 5 MB.</p>
     <label for="businessCommunityLocation">Location name or address</label><input id="businessCommunityLocation" maxlength="300">
     <div class="business-coordinate-grid"><div><label for="businessCommunityLatitude">Latitude</label><input id="businessCommunityLatitude" type="number" min="-90" max="90" step="any" required></div><div><label for="businessCommunityLongitude">Longitude</label><input id="businessCommunityLongitude" type="number" min="-180" max="180" step="any" required></div></div>
     <button id="useCommunityLocation" type="button" class="secondary-action">Use My Current Location</button>
@@ -117,7 +120,12 @@ function openBusinessCommunityForm() {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     withLoadingOverlay(async () => {
-      const { error } = await supabase.rpc("create_business_community", {
+      const imageFile = form.querySelector("#businessCommunityImage").files?.[0] ?? null;
+      if (imageFile && (!businessCommunityImageTypes.has(imageFile.type) || imageFile.size > 5 * 1024 * 1024)) {
+        alert("Choose a JPEG, PNG, or WebP community image that is 5 MB or smaller.");
+        return;
+      }
+      const { data: communityId, error } = await supabase.rpc("create_business_community", {
         community_name: form.querySelector("#businessCommunityName").value.trim(),
         community_description: form.querySelector("#businessCommunityDescription").value.trim(),
         location_name: form.querySelector("#businessCommunityLocation").value.trim() || null,
@@ -125,6 +133,24 @@ function openBusinessCommunityForm() {
         community_radius_meters: Number(radius.value),
       });
       if (error) { alert(error.message.includes("membership required") ? "An active Bloom Business Patreon membership is required." : "Unable to create the business community."); return; }
+      if (imageFile) {
+        const extension = imageFile.type === "image/png" ? "png" : imageFile.type === "image/webp" ? "webp" : "jpg";
+        const path = `${account.user.id}/${communityId}/picture.${extension}`;
+        const { error: uploadError } = await supabase.storage.from("Community Images").upload(path, imageFile, {
+          contentType: imageFile.type,
+          cacheControl: "3600",
+          upsert: false,
+        });
+        if (!uploadError) {
+          const { data: publicImage } = supabase.storage.from("Community Images").getPublicUrl(path);
+          const { error: pictureError } = await supabase.rpc("set_community_picture", {
+            target_community: communityId,
+            new_picture_url: publicImage.publicUrl,
+          });
+          if (pictureError) await supabase.storage.from("Community Images").remove([path]);
+        }
+        if (uploadError) alert("The community was created, but its image could not be uploaded.");
+      }
       closePopup();
       await loadBusinessCommunities();
     }, "Creating business community...");

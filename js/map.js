@@ -43,6 +43,8 @@ function createEventComposer() {
       <input id="eventTitleInput" type="text" placeholder="Event title" maxlength="200" required>
       <label for="eventBodyInput">Event description</label>
       <textarea id="eventBodyInput" placeholder="Describe the event" maxlength="10000" required></textarea>
+      <label for="eventDateInput">Event date</label>
+      <input id="eventDateInput" type="date" required>
       <div class="event-map-instruction" id="eventMapInstruction">
         <strong>Select a location</strong>
         <span>Tap or click anywhere on the map. You can drag the marker to adjust it.</span>
@@ -59,6 +61,7 @@ function createEventComposer() {
   `;
 
   document.getElementById("eventComposer").addEventListener("submit", createEvent);
+  document.getElementById("eventDateInput").min = getLocalDateValue(new Date());
   document.getElementById("eventImageButton").addEventListener("click", () => {
     document.getElementById("eventImageInput").click();
   });
@@ -124,6 +127,7 @@ function setComposerDisabled(disabled) {
     "eventCommunitySelect",
     "eventTitleInput",
     "eventBodyInput",
+    "eventDateInput",
     "eventImageInput",
     "eventImageButton",
     "createEventButton",
@@ -196,9 +200,11 @@ function renderEventMarkers(events) {
       popup.appendChild(body);
     }
 
-    const date = document.createElement("small");
-    date.textContent = `Posted on ${formatDateTime(event.created_at)}`;
-    popup.appendChild(date);
+    const eventDate = document.createElement("small");
+    eventDate.textContent = event.date
+      ? `${t("Event date:")} ${formatDateTime(`${event.date}T00:00:00`)}`
+      : `Posted on ${formatDateTime(event.created_at)}`;
+    popup.appendChild(eventDate);
     marker.bindPopup(popup);
     eventMarkerLayer.addLayer(marker);
   });
@@ -249,6 +255,7 @@ function showEventImagePreview() {
 function resetEventComposer() {
   document.getElementById("eventTitleInput").value = "";
   document.getElementById("eventBodyInput").value = "";
+  document.getElementById("eventDateInput").value = "";
   document.getElementById("eventImageInput").value = "";
   document.getElementById("eventImagePreview").replaceChildren();
   document.getElementById("eventImagePreview").hidden = true;
@@ -258,6 +265,13 @@ function resetEventComposer() {
     map.removeLayer(locationMarker);
     locationMarker = null;
   }
+}
+
+function getLocalDateValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 // Data
@@ -294,7 +308,7 @@ export async function getJoinedCommunityEvents(userId, communityIds = null) {
 
   const { data: events, error } = await supabase
     .from("Posts")
-    .select("id, title, body, user_id, community, post_type, location, img_link, img_links, created_at")
+    .select("id, title, body, user_id, community, post_type, location, img_link, img_links, date, created_at")
     .in("community", ids)
     .eq("post_type", "event")
     .order("created_at", { ascending: false });
@@ -313,6 +327,7 @@ async function createEvent(event) {
   const community = document.getElementById("eventCommunitySelect").value;
   const title = document.getElementById("eventTitleInput").value.trim();
   const body = document.getElementById("eventBodyInput").value.trim();
+  const date = document.getElementById("eventDateInput").value;
   const imageFiles = [...(document.getElementById("eventImageInput").files ?? [])];
   const imageLimit = currentUserIsSupporter ? 5 : 1;
   const maximumPostImageSize = (currentUserIsSupporter ? 25 : 10) * 1024 * 1024;
@@ -323,6 +338,14 @@ async function createEvent(event) {
   }
   if (!body) {
     alert("Please describe the event before publishing.");
+    return;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    alert("Please choose a valid event date.");
+    return;
+  }
+  if (date < getLocalDateValue(new Date())) {
+    alert("The event date cannot be in the past.");
     return;
   }
   if (!community || !postableCommunityIds.has(String(community))) {
@@ -364,6 +387,7 @@ async function createEvent(event) {
     formData.append("community", community);
     formData.append("postType", "event");
     formData.append("location", location);
+    formData.append("date", date);
     imageFiles.forEach((file) => formData.append("images", file));
     const { error } = await supabase.functions.invoke("create-post", { body: formData });
 

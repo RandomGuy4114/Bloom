@@ -12,31 +12,37 @@
     <link rel="stylesheet" href="../../css/styles.css">
 </head>
 <body class="landing-page">
-    <button type="button" id="languageButton" aria-label="Cambiar idioma" class="languageButton" data-i18n-ignore="true">Cambiar idioma</button>
+    <div class="topbarHome">
+        <button onclick="window.location.href='../auth/register'">Sign Up</button>
+        <button onclick="window.location.href='../auth/login'">Log In</button>
+        <button type="button" id="languageButton" aria-label="Cambiar idioma" data-i18n-ignore="true">Cambiar idioma</button>
+    </div>
     <main>
         <section id="Divider" aria-labelledby="Logo">
             <div class="LeftSide">
-                <h1 id="Logo">Bloom</h1>
-                <p id="Subtitle">Help your community grow.</p>
-                <button type="button" id="GetStartedButton" onclick="window.location.href='../auth/login/'">Get Started</button>
-                <p class="landing-attribution">An open-source project by FormalBlaze</p>
+                <h1 id="Logo" style="font-size: clamp(5rem, 10vw, 15rem); margin-top: 100px">Bloom</h1>
+                <p class="landing-attribution" id="LandingSubtitle" style="font-size: clamp(1rem, 2vw, 1.5rem); margin: 0; opacity: 0;">Making local connections easier</p>
+                <img class="Flower" src="../../Assets/Flower.png" alt="A beautiful flower" width="250" height="250" decoding="async" fetchpriority="high">
+                <img class="FlowerTop" src="../../Assets/Flower.png" alt="A beautiful flower" width="250" height="250" decoding="async" fetchpriority="high">
+                <img class="FlowerBg1" src="../../Assets/Flower.png" alt="A beautiful flower" width="250" height="250" decoding="async" fetchpriority="high">
+                <img class="FlowerBg2" src="../../Assets/Flower.png" alt="A beautiful flower" width="250" height="250" decoding="async" fetchpriority="high">
+                <div class="BottomSection">
+                    <div class="BottomSectionContent">
+                        <h2 class="InfoSectionTitle">Why Bloom?</h2>
+                        <p class="landing-copy">Bloom is meant to make the process of connecting with your local community easier and more enjoyable.</p>
+                    </div>
+                    <div class="BottomSectionContent">
+                        <h2 class="InfoSectionTitle">Bloom And Open Source</h2>
+                        <p class="landing-copy">Bloom is open source, so anyone can contribute. This supports a transparent, community-driven approach to building software.</p>
+                    </div>
+                    <div class="BottomSectionContent">
+                        <h2 class="InfoSectionTitle">Support Bloom</h2>
+                        <p class="landing-copy">If you enjoy using Bloom, consider supporting the project. Your contributions help keep Bloom free and open source for everyone.</p>
+                    </div>
+                    <img class="ImageFrame" src="../../Assets/MapImg.png" alt="A map of the local area" width="100%" height="100%" style="object-fit: cover;" decoding="async" fetchpriority="high">
+                    <img class="ImageFrame2" src="../../Assets/SiteShowcase.png" alt="The Bloom Homepage" width="100%" height="100%" style="object-fit: cover;" decoding="async" fetchpriority="high">
+                </div>
             </div>
-            <div class="RightSide">
-                <img src="../../Assets/MainImage.webp" alt="People connecting through their local community" id="MainImage" width="1400" height="933" decoding="async" fetchpriority="high">
-            </div>
-        </section>
-
-        <section class="CenterLayout landing-info" aria-labelledby="why-bloom-title">
-            <h2 id="why-bloom-title" class="InfoSectionTitle">Why Bloom?</h2>
-            <p class="landing-copy">Bloom helps you connect with people nearby, making it easy to share events, ideas, suggestions, and more.</p>
-            <h2 class="InfoSectionTitle">Bloom and Open Source</h2>
-            <p class="landing-copy">Bloom is open source, so anyone can contribute. This supports a transparent, community-driven approach to building software.</p>
-            <button type="button" id="ViewInGithubButton" aria-label="View Bloom on GitHub" onclick="window.location.href='https://github.com/RandomGuy4114/Bloom'">View on GitHub</button>
-        </section>
-        <section class="CenterLayout landing-info" aria-labelledby="why-bloom-title">
-            <h2 id="why-bloom-title" class="InfoSectionTitle">Support Bloom</h2>
-            <p class="landing-copy">If you enjoy using Bloom, consider supporting the project. Your contributions help keep Bloom free and open source for everyone.</p>
-            <button type="button" id="ViewInGithubButton" aria-label="Support Bloom on Patreon" onclick="window.location.href='https://www.patreon.com/FormalBlaze'">Support on Patreon</button>
         </section>
     </main>
 
@@ -54,5 +60,6 @@
     </footer>
 
     <script type="module" src="../../js/i18n.js"></script>
+    <script type="module" src="../../js/landing.js"></script>
 </body>
 </html>

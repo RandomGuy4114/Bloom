@@ -19,7 +19,7 @@
             <div class="topbar-action-row">
                 <button onclick="window.location.href='../home/'">Home</button>
                 <button onclick="window.location.href='../profile/'">Profile</button>
-                <button onclick="window.location.href='../activity/'">Activity</button>
+                <button onclick="window.location.href='../calendar/'">Calendar</button>
             </div>
             <div class="topbar-action-row">
                 <button onclick="window.location.href='../../communities/communities/'">Communities</button>
@@ -31,7 +31,7 @@
     <div class="sidebar">
         <button onclick="window.location.href='../home/'" class="sidebarButton">Home</button>
         <button onclick="window.location.href='../profile/'" class="sidebarButton">Profile</button>
-        <button onclick="window.location.href='../activity/'" class="sidebarButton">Activity</button>
+        <button onclick="window.location.href='../calendar/'" class="sidebarButton">Calendar</button>
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='../../communities/communities/'">Communities</button>
         <button class="sidebarButton" onclick="window.location.href='../map/'">Map</button>
@@ -50,7 +50,7 @@
                         <button type="button" class="post-type-option is-selected" data-post-type="post" data-i18n-key="postType.post" data-i18n-ignore aria-pressed="true">Post</button>
                         <button type="button" class="post-type-option" data-post-type="activity" data-i18n-key="postType.activity" data-i18n-ignore aria-pressed="false">Activity</button>
                     </div>
-                    <input type="text" id="titleInput" aria-label="Post title" placeholder="Post title" maxlength="200">
+                    <input type="text" class="TypeInput" id="titleInput" aria-label="Post title" placeholder="Post title" maxlength="200">
                     <input type="text" class="TypeInput" id="postInput" aria-label="Post content" placeholder="Write your post" maxlength="10000">
                     <input type="file" id="postImageInput" class="post-image-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Add images" multiple>
                     <p id="postImageLimitHint" class="composer-help"></p>

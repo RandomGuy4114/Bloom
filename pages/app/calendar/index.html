@@ -1,14 +1,13 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloom - Profile</title>
+    <title>Bloom - Calendar</title>
     <link rel="icon" href="../../../Assets/BloomLogo.png" type="image/png">
     <link rel="stylesheet" href="../../../css/styles.css">
 </head>
-<body class="profile-page">
+<body class="app-page">
     <div class="topbar">
         <h1 class="topbar-logo">Bloom <p id="verText">ALPHA</p></h1>
         <nav style="display: flex; align-items: center;">
@@ -28,7 +27,6 @@
             </div>
         </div>
     </div>
-
     <div class="sidebar">
         <button onclick="window.location.href='../home/'" class="sidebarButton">Home</button>
         <button onclick="window.location.href='../profile/'" class="sidebarButton">Profile</button>
@@ -40,26 +38,33 @@
         <button class="sidebarButton" onclick="window.location.href='../settings/'">Settings</button>
         <button type="button" class="sidebarButton supporter-button" onclick="window.location.href = '../supporter/'">Buy Bloom Supporter</button>
     </div>
-
-    <div class="main-layout" style="margin-top: var(--topbar-height);">
-        <div class="feed-container" style="gap: 20px; width: 100%;">
-            
-            <div class="profile-sidebar">
-                <div class="profile-pfp"></div>
-                <h2 class="profile-name"></h2>
-                <p class="profile-username"></p>
-                <div class="profile-details"></div>
-                <button type="button" id="editProfileButton" class="edit-profile-button" hidden>Edit Profile</button>
+    <main class="main-layout" aria-label="Calendar">
+        <div class="CalendarContainer" id="calendar-container">
+            <div class="month" id="monthYearContainer">
+                <ul>
+                    <button id="prev">&#10094;</button>
+                    <button id="next">&#10095;</button>
+                    <li id="monthYear">Placeholder<br><span id="year">2026</span></li>
+                </ul>
             </div>
-
-            <div class="profile-posts">
-                <h2>Posts</h2>
-                <div class="posts-container"></div>
-            </div>
-
+            <ul class="weekdays" id="weekdaysContainer">
+                <li>Sun</li>
+                <li>Mon</li>
+                <li>Tue</li>
+                <li>Wed</li>
+                <li>Thu</li>
+                <li>Fri</li>
+                <li>Sat</li>
+            </ul>
+            <ul class="days" id="daysContainer">
+                <!-- Days will be dynamically generated here -->
+            </ul>
         </div>
-    </div>
-    <script type="module" src="../../../js/i18n.js"></script>
-    <script type="module" src="../../../js/profile.js"></script>
+        <div id="eventDetailsContainer">
+        <!-- Click a day on the calendar to see events -->
+        </div>
+    </main>
 </body>
+<script type="module" src="../../../js/i18n.js"></script>
+<script type="module" src="../../../js/calendar.js"></script>
 </html>

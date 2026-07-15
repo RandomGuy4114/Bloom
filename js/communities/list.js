@@ -9,6 +9,7 @@ import {
   getUserProfile,
   getUserLocation,
   isWithinCommunityRadius,
+  isTrustedImageUrl,
   joinCommunity,
   leaveCommunity,
   PAGE_URLS,
@@ -32,6 +33,8 @@ let allCommunities = [];
 let joinedCommunities = [];
 let joinedCommunityIds = new Set();
 let userIsSupporter = false;
+const allowedCommunityImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const maximumCommunityImageSize = 5 * 1024 * 1024;
 
 // Components
 
@@ -42,17 +45,26 @@ function createCommunityCard(community, includeMembershipButton = true) {
   communityProfile.className = "community-profile";
   communityElement.appendChild(communityProfile);
 
-  const picture = document.createElement("img");
-  picture.src = community.picture_url || "../../../Assets/MainImage.webp";
-  picture.alt = `${community.name} profile picture`;
+  const picture = document.createElement("div");
   picture.className = "community-picture";
-  picture.width = 100;
-  picture.height = 100;
-  picture.style.objectFit = "cover";
-  picture.style.borderRadius = "10%";
-  picture.style.border = "5px solid #ccc";
+  if (isTrustedImageUrl(community.picture_url, "Community Images")) {
+    const image = document.createElement("img");
+    image.src = community.picture_url;
+    image.alt = `${community.name} community image`;
+    image.loading = "lazy";
+    image.decoding = "async";
+    image.addEventListener("error", () => {
+      picture.replaceChildren();
+      picture.classList.add("community-picture--fallback");
+      picture.textContent = community.name?.trim().charAt(0).toLocaleUpperCase() || "?";
+    }, { once: true });
+    picture.appendChild(image);
+  } else {
+    picture.classList.add("community-picture--fallback");
+    picture.textContent = community.name?.trim().charAt(0).toLocaleUpperCase() || "?";
+    picture.setAttribute("aria-label", `${community.name || "Community"} community image`);
+  }
   communityProfile.appendChild(picture);
-  picture.style.float = "left";
   const infoSection = document.createElement("div");
   infoSection.className = "community-info";
   communityProfile.appendChild(infoSection);
@@ -205,6 +217,10 @@ function createCommunityForm() {
     <input type="text" id="communityName" placeholder="Community name" maxlength="100" />
     <label for="communityDescription">Community Description:</label>
     <textarea id="communityDescription" placeholder="Describe your community" maxlength="1000"></textarea>
+    <label for="communityImage">Community Image:</label>
+    <input type="file" id="communityImage" accept="image/jpeg,image/png,image/webp" aria-describedby="communityImageHelp">
+    <p id="communityImageHelp" class="community-image-help">Optional square image. JPEG, PNG, or WebP. Maximum 5 MB.</p>
+    <div id="communityImagePreview" class="community-image-preview" hidden></div>
     <label for="communityLocation">Community Radius:</label>
     <div class="community-radius-control">
       <input type="range" id="communityLocation" min="100" max="${maximumRadius}" step="100" value="500" aria-describedby="communityRadiusValue">
@@ -223,6 +239,20 @@ function createCommunityForm() {
       : `${meters} meters`);
   };
   radiusInput.addEventListener("input", updateRadiusOutput);
+  const imageInput = form.querySelector("#communityImage");
+  const imagePreview = form.querySelector("#communityImagePreview");
+  imageInput.addEventListener("change", () => {
+    imagePreview.replaceChildren();
+    const file = imageInput.files?.[0];
+    imagePreview.hidden = !file;
+    if (!file) return;
+    const image = document.createElement("img");
+    const previewUrl = URL.createObjectURL(file);
+    image.src = previewUrl;
+    image.alt = "Community image preview";
+    image.addEventListener("load", () => URL.revokeObjectURL(previewUrl), { once: true });
+    imagePreview.appendChild(image);
+  });
   updateRadiusOutput();
   return form;
 }
@@ -257,12 +287,31 @@ async function loadCommunities() {
   }
 }
 
-async function createCommunity({ name, description, radiusMeters }) {
+async function uploadCommunityImage(communityId, imageFile) {
+  if (!imageFile) return { pictureUrl: null, path: null, error: null };
+  const extension = imageFile.type === "image/png" ? "png" : imageFile.type === "image/webp" ? "webp" : "jpg";
+  const path = `${user.id}/${communityId}/picture.${extension}`;
+  const { error } = await supabase.storage.from("Community Images").upload(path, imageFile, {
+    cacheControl: "3600",
+    contentType: imageFile.type,
+    upsert: false,
+  });
+  if (error) return { pictureUrl: null, path, error };
+  const { data } = supabase.storage.from("Community Images").getPublicUrl(path);
+  return { pictureUrl: data.publicUrl, path, error: null };
+}
+
+async function createCommunity({ name, description, radiusMeters, imageFile }) {
+  const communityId = crypto.randomUUID();
+  const upload = await uploadCommunityImage(communityId, imageFile);
+  if (upload.error) return { error: upload.error };
   const { error } = await supabase
     .from("Communities")
     .insert([{
+      id: communityId,
       name,
       description,
+      picture_url: upload.pictureUrl,
       user_id: user.id,
       latitude: userLocation.latitude,
       longitude: userLocation.longitude,
@@ -271,6 +320,10 @@ async function createCommunity({ name, description, radiusMeters }) {
     }])
     .select("id")
     .single();
+
+  if (error && upload.path) {
+    await supabase.storage.from("Community Images").remove([upload.path]);
+  }
 
   return { error };
 }
@@ -294,14 +347,19 @@ createCommunityButton?.addEventListener("click", () => {
     const name = form.querySelector("#communityName").value.trim();
     const description = form.querySelector("#communityDescription").value.trim();
     const radiusMeters = Number.parseInt(form.querySelector("#communityLocation").value, 10);
+    const imageFile = form.querySelector("#communityImage").files?.[0] ?? null;
 
     if (!name || !description) {
       alert("Please fill in both the community name and description.");
       return;
     }
+    if (imageFile && (!allowedCommunityImageTypes.has(imageFile.type) || imageFile.size > maximumCommunityImageSize)) {
+      alert("Choose a JPEG, PNG, or WebP community image that is 5 MB or smaller.");
+      return;
+    }
 
     await withLoadingOverlay(async () => {
-      const { error } = await createCommunity({ name, description, radiusMeters });
+      const { error } = await createCommunity({ name, description, radiusMeters, imageFile });
       if (error) {
         console.error("Error creating community:", error.message);
         alert("Failed to create community. Please try again.");

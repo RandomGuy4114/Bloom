@@ -26,7 +26,7 @@ export const PAGE_URLS = Object.freeze({
   businessSettings: new URL("../pages/business/settings/", import.meta.url).href,
   businessDashboard: new URL("../pages/business/dashboard/", import.meta.url).href,
   profile: new URL("../pages/app/profile/", import.meta.url).href,
-  activity: new URL("../pages/app/activity/", import.meta.url).href,
+  calendar: new URL("../pages/app/calendar/", import.meta.url).href,
   map: new URL("../pages/app/map/", import.meta.url).href,
   settings: new URL("../pages/app/settings/", import.meta.url).href,
   supporter: new URL("../pages/app/supporter/", import.meta.url).href,
@@ -551,7 +551,7 @@ function createLoadingOverlay() {
         box-sizing: border-box;
         border: 6px solid rgba(255, 255, 255, 0.3);
         border-top-color: #ffffff;
-        border-radius: 50%;
+        border-radius: var(--border-radius-circle);
         animation: bloom-loading-spin 0.8s linear infinite;
       }
       #bloom-loading-message {
@@ -782,13 +782,13 @@ export function attachPostOptions(card, { postId, manageHref = null, onManage = 
   const menu = document.createElement("div");
   menu.className = "post-options-menu";
   menu.setAttribute("role", "menu");
-  menu.style.cssText = "color: #000; position:absolute;top:38px;right:10px;z-index:3;min-width:120px;padding:6px;background:white;border:1px solid #d7d7d7;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.18)";
+  menu.style.cssText = "color: #000; position:absolute;top:38px;right:10px;z-index:3;min-width:120px;padding:6px;background:white;border:1px solid #d7d7d7;border-radius:var(--border-radius);box-shadow:0 6px 18px rgba(0,0,0,.18)";
   menu.style.display = "none";
 
   const actionButton = document.createElement("button");
   actionButton.type = "button";
   actionButton.setAttribute("role", "menuitem");
-  actionButton.style.cssText = "color: #000; display:block;width:100%;padding:8px 10px;border:0;border-radius:6px;background:transparent;text-align:left;cursor:pointer";
+  actionButton.style.cssText = "color: #000; display:block;width:100%;padding:8px 10px;border:0;border-radius:var(--border-radius);background:transparent;text-align:left;cursor:pointer";
 
   if (manageHref || onManage) {
     actionButton.textContent = "Manage";

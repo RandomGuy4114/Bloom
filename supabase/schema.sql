@@ -155,6 +155,27 @@ $$;
 ALTER FUNCTION "public"."create_business_community"("community_name" "text", "community_description" "text", "location_name" "text", "community_latitude" double precision, "community_longitude" double precision, "community_radius_meters" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."set_community_picture"("target_community" "uuid", "new_picture_url" "text") RETURNS void
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  if auth.uid() is null then raise exception 'Authentication required'; end if;
+  if new_picture_url is not null
+     and new_picture_url not like 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community%20Images/' || auth.uid()::text || '/%'
+     and new_picture_url not like 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community Images/' || auth.uid()::text || '/%' then
+    raise exception 'Invalid community image URL';
+  end if;
+  update public."Communities" set picture_url = new_picture_url
+  where id = target_community and user_id = auth.uid();
+  if not found then raise exception 'Community owner required'; end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."set_community_picture"("uuid", "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."delete_owned_community"("target_community" "uuid") RETURNS "text"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'pg_catalog', 'public'
@@ -830,6 +851,7 @@ CREATE TABLE IF NOT EXISTS "public"."Communities" (
     "description" "text",
     "user_id" "uuid" DEFAULT "gen_random_uuid"(),
     "banner_url" "text",
+    "picture_url" "text",
     "members" "uuid"[],
     "global" boolean DEFAULT false,
     "latitude" double precision,
@@ -838,6 +860,7 @@ CREATE TABLE IF NOT EXISTS "public"."Communities" (
     "location_label" "text",
     "business" boolean DEFAULT false NOT NULL,
     CONSTRAINT "Communities_banner_origin_check" CHECK ((("banner_url" IS NULL) OR ("banner_url" = ''::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community%20Banners/%'::"text") OR ("banner_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community Banners/%'::"text"))),
+    CONSTRAINT "Communities_picture_origin_check" CHECK ((("picture_url" IS NULL) OR ("picture_url" = ''::"text") OR ("picture_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community%20Images/%'::"text") OR ("picture_url" ~~ 'https://auilmosognuitlpoqchn.supabase.co/storage/v1/object/public/Community Images/%'::"text"))),
     CONSTRAINT "Communities_location_label_check" CHECK (("char_length"(COALESCE("location_label", ''::"text")) <= 300))
 );
 
@@ -1151,6 +1174,12 @@ GRANT ALL ON FUNCTION "public"."create_business_community"("community_name" "tex
 GRANT ALL ON FUNCTION "public"."create_business_community"("community_name" "text", "community_description" "text", "location_name" "text", "community_latitude" double precision, "community_longitude" double precision, "community_radius_meters" integer) TO "service_role";
 
 
+REVOKE ALL ON FUNCTION "public"."set_community_picture"("uuid", "text") FROM PUBLIC;
+REVOKE ALL ON FUNCTION "public"."set_community_picture"("uuid", "text") FROM "anon";
+GRANT ALL ON FUNCTION "public"."set_community_picture"("uuid", "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."set_community_picture"("uuid", "text") TO "service_role";
+
+
 
 REVOKE ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") TO "authenticated";
@@ -1340,9 +1369,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
 
 
 

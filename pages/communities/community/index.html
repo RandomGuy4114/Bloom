@@ -18,7 +18,7 @@
             <div class="topbar-action-row">
                 <button onclick="window.location.href='../../app/home/'">Home</button>
                 <button onclick="window.location.href='../../app/profile/'">Profile</button>
-                <button onclick="window.location.href='../../app/activity/'">Activity</button>
+                <button onclick="window.location.href='../../app/calendar/'">Calendar</button>
             </div>
             <div class="topbar-action-row">
                 <button onclick="window.location.href='../communities/'">Communities</button>
@@ -30,7 +30,7 @@
     <div class="sidebar">
         <button onclick="window.location.href='../../app/home/'" class="sidebarButton">Home</button>
         <button onclick="window.location.href='../../app/profile/'" class="sidebarButton">Profile</button>
-        <button onclick="window.location.href='../../app/activity/'" class="sidebarButton">Activity</button>
+        <button onclick="window.location.href='../../app/calendar/'" class="sidebarButton">Calendar</button>
         <div class="divider"></div>
         <button class="sidebarButton" onclick="window.location.href='../communities/'">Communities</button>
         <button class="sidebarButton" onclick="window.location.href='../../app/map/'">Map</button>
@@ -46,6 +46,7 @@
         <div class="feed-container">
             <div class="communities-profile" style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
                 <div id="communityBanner" class="community-banner" hidden></div>
+                <div id="communityPicture" class="community-picture community-picture--detail"></div>
                 <h1 id="comName" style="text-align: center;"></h1>
                 <span id="businessCommunityTag" class="business-community-tag" hidden>Business</span>
                 <p id="comDesc" style="text-align: center; color: grey;"></p>
