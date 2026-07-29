@@ -5,9 +5,22 @@
     <link rel="icon" type="image/png" href="/Assets/BloomLogo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bloom</title>
+    <style>
+      .root-startup {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f1f1f1;
+        color: #55614a;
+        font: 600 1rem/1.5 Arial, sans-serif;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="root-startup" role="status">Loading Bloom…</div>
+    </div>
+    <noscript>Bloom requires JavaScript to run.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

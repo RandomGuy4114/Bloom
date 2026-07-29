@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -49,6 +50,37 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - name: Wait for legacy Pages deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const headSha = context.sha;
+
+            for (let attempt = 0; attempt < 60; attempt += 1) {
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner,
+                repo,
+                head_sha: headSha,
+                per_page: 100,
+              });
+
+              const legacyRun = data.workflow_runs.find(
+                (run) => run.name === "pages-build-deployment",
+              );
+
+              if (legacyRun?.status === "completed") {
+                core.info(`Legacy Pages run finished with ${legacyRun.conclusion}.`);
+                return;
+              }
+
+              core.info("Waiting for the legacy Pages run to finish...");
+              await new Promise((resolve) => setTimeout(resolve, 5000));
+            }
+
+            core.warning("Legacy Pages run was not found or did not finish in five minutes.");
+
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
