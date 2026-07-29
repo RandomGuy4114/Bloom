@@ -7,10 +7,13 @@ import Login from './sites/auth/login'
 import Register from './sites/auth/register'
 import PagesBlogPage from './sites/public/blog'
 import PagesRoadmapPage from './sites/public/roadmap'
+import ScrollToTop from './components/ScrollToTop'
 
 function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/index.html" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -30,7 +33,8 @@ function App() {
             <a href="/">Return to Bloom</a>
           </main>
         )} />
-    </Routes>
+      </Routes>
+    </>
   )
 }
 
