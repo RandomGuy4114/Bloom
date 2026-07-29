@@ -10,6 +10,7 @@ import {
   withTimeout,
 } from "./main.js";
 import { supabase } from "./supabase.js";
+import { callRpc } from "./connection.js";
 
 // Definitions
 
@@ -53,12 +54,18 @@ function renderConnectedUsers(users) {
 }
 
 async function loadConnectedUsers() {
-  const { data, error } = await supabase.rpc("get_connect_encounters");
-  if (error) {
+  try {
+    const data = await callRpc(
+      supabase,
+      "get_connect_encounters",
+      {},
+      { retries: 2 },
+    );
+    renderConnectedUsers(data);
+  } catch (error) {
     console.error("Unable to load connected people:", error.message);
     return;
   }
-  renderConnectedUsers(data);
 }
 
 // Events

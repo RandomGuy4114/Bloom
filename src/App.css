@@ -3024,7 +3024,86 @@ body:is([data-theme-name="forest"], [data-theme-name="sunset"], [data-theme-name
     font-weight: 700;
 }
 
+.roadmap {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: auto;
+    padding-bottom: 100px;
+}
 
+.roadmap-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #555;
+}
+
+.milestone {
+    position: relative;
+    display: flex;
+    gap: 30px;
+    margin: 100px 0;
+}
+
+.dot {
+    width: 20px;
+    height: 20px;
+    background: #ccc;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.dot[data-current="true"] {
+    background: #9CB080;
+    border-radius: 50%; 
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0px #9CB080;
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(156, 176, 128, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0px rgba(156, 176, 128, 0);
+    }
+}
+
+.milestone-content {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    border-radius: 12px;
+    left: 40px;
+    width: 500px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.milestone-content.right {
+    left: 40px;
+}
+
+.milestone-content.left {
+    transform: translateX(-110%);
+}
+
+.milestone-content.left:hover {
+    transform: translateY(-5px) translateX(-110%);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.milestone-content.right:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
 
 
 

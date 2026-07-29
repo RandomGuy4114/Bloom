@@ -2,6 +2,7 @@
 
 import { applyAvatar, getCurrentUserOrRedirect, showCurrentUser, withLoadingOverlay } from "./main.js";
 import { supabase } from "./supabase.js";
+import { callRpc } from "./connection.js";
 
 // Definitions
 
@@ -80,11 +81,16 @@ await withLoadingOverlay(async () => {
   const currentUser = await getCurrentUserOrRedirect();
   if (!currentUser) return;
   await showCurrentUser(currentUser, usernameLabel);
-  const { data, error } = await supabase.rpc("get_connect_encounters");
-  if (error) {
+  try {
+    const data = await callRpc(
+      supabase,
+      "get_connect_encounters",
+      {},
+      { retries: 2 },
+    );
+    renderContacts(data);
+  } catch (error) {
     console.error("Unable to load messaging contacts:", error.message);
     showMessage("Unable to load your contacts right now.");
-    return;
   }
-  renderContacts(data);
 }, "Loading messages...");

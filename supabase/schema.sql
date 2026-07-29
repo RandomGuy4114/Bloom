@@ -1927,7 +1927,6 @@ GRANT ALL ON FUNCTION "public"."add_community_owner_membership"() TO "service_ro
 
 
 REVOKE ALL ON FUNCTION "public"."are_connect_users_linked"("first_user" "uuid", "second_user" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."are_connect_users_linked"("first_user" "uuid", "second_user" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."are_connect_users_linked"("first_user" "uuid", "second_user" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."are_connect_users_linked"("first_user" "uuid", "second_user" "uuid") TO "service_role";
 
@@ -1970,7 +1969,6 @@ GRANT ALL ON FUNCTION "public"."event_trigger_fn"() TO "service_role";
 
 
 REVOKE ALL ON FUNCTION "public"."get_connect_encounters"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."get_connect_encounters"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_connect_encounters"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_connect_encounters"() TO "service_role";
 
@@ -2085,7 +2083,6 @@ GRANT ALL ON FUNCTION "public"."set_community_privacy"("target_community" "uuid"
 
 
 REVOKE ALL ON FUNCTION "public"."set_connect_enabled"("enabled" boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."set_connect_enabled"("enabled" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_connect_enabled"("enabled" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_connect_enabled"("enabled" boolean) TO "service_role";
 
@@ -2098,7 +2095,6 @@ GRANT ALL ON FUNCTION "public"."update_business_profile"("business_name" "text",
 
 
 REVOKE ALL ON FUNCTION "public"."update_connect_location"("user_latitude" double precision, "user_longitude" double precision, "user_accuracy_meters" double precision) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."update_connect_location"("user_latitude" double precision, "user_longitude" double precision, "user_accuracy_meters" double precision) TO "anon";
 GRANT ALL ON FUNCTION "public"."update_connect_location"("user_latitude" double precision, "user_longitude" double precision, "user_accuracy_meters" double precision) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_connect_location"("user_latitude" double precision, "user_longitude" double precision, "user_accuracy_meters" double precision) TO "service_role";
 
@@ -2290,7 +2286,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
 
 
 

@@ -2,6 +2,7 @@ import PageLifecycle from "../../components/PageLifecycle"
 import InfoPageHead from "../../components/InfoPageHead"
 import BlogPost from "../../components/blog/blogPost"
 import BottomBar from "../../components/BottomBar"
+import react from "../../Assets/react.png"
 
 export const pagePath = "/pages/blog/"
 
@@ -30,7 +31,7 @@ export default function PagesBlogPage() {
                 title="Goodbye HTML, Hello React!"
                 subtitle="Hello Bloom users! I have an exciting announcement to make: Bloom is now built using React! This means that the website is now more dynamic, interactive, and user-friendly than ever before. With React, we can make a more seamless experience for our users, and making new features and updates will be much easier. I can't wait for you all to explore the new Bloom and see what we've been working on. Thank you for your continued support, and I hope you enjoy the new Bloom experience!"
                 date="July 17, 2026"
-                image="/src/Assets/react.png"
+                image={react}
             />
             <BottomBar />
         </PageLifecycle>

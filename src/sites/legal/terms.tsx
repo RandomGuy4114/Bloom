@@ -21,7 +21,7 @@ export default function PagesLegalTermsPage() {
     return (
         <PageLifecycle {...pageMetadata}>
             <>
-    <InfoPageHead title="Bloom Terms Of Service" subtitle="Last Updated: July 29, 2026"/>
+    <InfoPageHead title="The Bloom Project Terms Of Service" subtitle="Last Updated: July 29, 2026"/>
     <div className="TOC-Container">
         <h2>Table of Contents</h2>
         <ol>

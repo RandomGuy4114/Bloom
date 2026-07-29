@@ -18,6 +18,7 @@ export default function BottomBar({ mobile = false }: BottomBarProps) {
             <Link to={route("terms")}>Terms</Link>
             <Link to={route("privacy")}>Privacy</Link>
             <Link to={route("blog")}>Blog</Link>
+            <Link to={route("roadmap")}>Roadmap</Link>
             <a href="https://github.com/RandomGuy4114/Bloom/issues/new" target="_blank" rel="noopener noreferrer">Contact Us</a>
             <Link to={route("credits")}>Credits</Link>
         </footer>
