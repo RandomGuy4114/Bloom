@@ -1,5 +1,23 @@
-# Bloom
+# The Bloom Project
 Bloom is an open-source, location based social platform meant to bring communities together, by giving tools such as geofenced communities, a map to show nearby events, etc.
+
+## Project Structure
+
+The React application now lives at the repository root:
+
+- `src/` contains React components, routes, services, and categorized site pages.
+- `public/` contains assets required by the React build.
+- `legacy/` contains the preserved HTML, CSS, JavaScript, Capacitor, and previous static-site files.
+- `supabase/` contains the active database migrations, schema, and Edge Functions.
+
+Run the React application from the repository root:
+
+```bash
+npm install
+npm run dev
+```
+
+Create a production build with `npm run build`. The old site remains available as reference material under `legacy/` and is not used as the main application entry point.
 
 ## Key Features
 * **Local Communities:** Discover and join spaces entirely dedicated to your surroundings. You can only interact with what is near you.
@@ -23,23 +41,6 @@ Bloom Supporter helps fund the project and unlocks these account benefits:
 
 ### Main Usage
 Bloom is available as a website for now, mobile support does work, but there isn't a full app for mobile (Yet!) You can Acess It [here](https://trybloom.org)
-
-### Capacitor Mobile Setup
-
-Bloom includes a Capacitor-ready static build generated in the dedicated `mobile` directory. Install the project dependencies, prepare the mobile assets, and add the native platform you want to use:
-
-```bash
-npm install
-npm run build:capacitor
-npm run cap:add:ios
-npm run cap:add:android
-```
-
-After a native platform has been added, use `npm run cap:sync` whenever the website changes. Open the native projects with `npm run cap:open:ios` or `npm run cap:open:android`.
-
-The iOS build requires macOS and Xcode. Android builds require Android Studio with its supported JDK and Android SDK. Before releasing the native app, configure Supabase redirect URLs and mobile deep links for email confirmation, password recovery, and Patreon OAuth.
-
-Bloom's source code contains everything except the API. So you can help with the development of Bloom or even make your own version (note that you will have to set up your own API for this, I do not allow "Clients" for Bloom.)
 
 ### Self Hosting
 Self-hosting is highly encouraged for advanced users, and it's as easy as replacing the API that comes with Bloom with your own. (This is most easily done by using Supabase, which is the service I use for Bloom.)

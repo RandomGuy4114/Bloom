@@ -1,6 +1,29 @@
+# Dependencies
 node_modules/
+
+# Builds
 dist/
-mobile/
-.DS_Store
+dist-ssr/
+
+# Environment
+*.local
+
+# Logs
+logs/
+*.log
 npm-debug.log*
-mobile-src/
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editors and operating systems
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

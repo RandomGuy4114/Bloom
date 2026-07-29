@@ -1,0 +1,1 @@
+import "./communities/detail.js";
