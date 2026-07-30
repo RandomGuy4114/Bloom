@@ -1,3 +1,6 @@
+import { useNavigate } from "react-router-dom"
+import { prefetchRoute } from "../pageRoutes"
+
 interface AppNavigationProps {
     compactMobileHome?: boolean
     mobile?: boolean
@@ -17,11 +20,13 @@ export default function AppNavigation({
     usernameLabel = "",
     versionAsSpan = false,
 }: AppNavigationProps) {
-    const appRoot = mobile ? "/mobile/pages/app" : "/pages/app"
-    const suffix = mobile ? "/index.html" : "/"
-    const destination = (page: string) => `${appRoot}/${page}${suffix}`
+    const navigate = useNavigate()
+    const destination = (page: string) => mobile ? `/mobile/${page}` : `/${page}`
     const goTo = (page: string) => {
-        window.location.href = destination(page)
+        navigate(destination(page))
+    }
+    const preload = (page: string) => {
+        void prefetchRoute(destination(page))
     }
     const SidebarElement = sidebarAsAside ? "aside" : "div"
 
@@ -41,14 +46,14 @@ export default function AppNavigation({
                     {!compactMobileHome && showTopbarActions && (
                         <>
                             <div className="topbar-action-row">
-                                <button onClick={() => goTo("home")}>Home</button>
-                                <button onClick={() => goTo("profile")}>Profile</button>
-                                <button onClick={() => goTo("calendar")}>Calendar</button>
+                                <button onMouseEnter={() => preload("home")} onFocus={() => preload("home")} onClick={() => goTo("home")}>Home</button>
+                                <button onMouseEnter={() => preload("profile")} onFocus={() => preload("profile")} onClick={() => goTo("profile")}>Profile</button>
+                                <button onMouseEnter={() => preload("calendar")} onFocus={() => preload("calendar")} onClick={() => goTo("calendar")}>Calendar</button>
                             </div>
                             <div className="topbar-action-row">
-                                <button onClick={() => goTo("map")}>Map</button>
-                                <button onClick={() => goTo("messages")}>Direct Messages</button>
-                                <button onClick={() => goTo("settings")}>Settings</button>
+                                <button onMouseEnter={() => preload("map")} onFocus={() => preload("map")} onClick={() => goTo("map")}>Map</button>
+                                <button onMouseEnter={() => preload("messages")} onFocus={() => preload("messages")} onClick={() => goTo("messages")}>Direct Messages</button>
+                                <button onMouseEnter={() => preload("settings")} onFocus={() => preload("settings")} onClick={() => goTo("settings")}>Settings</button>
                             </div>
                         </>
                     )}
@@ -56,15 +61,15 @@ export default function AppNavigation({
             </div>
             {showSidebar && (
                 <SidebarElement className="sidebar">
-                    <button onClick={() => goTo("home")} className="sidebarButton">Home</button>
-                    <button onClick={() => goTo("profile")} className="sidebarButton">Profile</button>
-                    <button onClick={() => goTo("calendar")} className="sidebarButton">Calendar</button>
+                    <button onMouseEnter={() => preload("home")} onFocus={() => preload("home")} onClick={() => goTo("home")} className="sidebarButton">Home</button>
+                    <button onMouseEnter={() => preload("profile")} onFocus={() => preload("profile")} onClick={() => goTo("profile")} className="sidebarButton">Profile</button>
+                    <button onMouseEnter={() => preload("calendar")} onFocus={() => preload("calendar")} onClick={() => goTo("calendar")} className="sidebarButton">Calendar</button>
                     <div className="divider"></div>
-                    <button className="sidebarButton" onClick={() => goTo("map")}>Map</button>
-                    {!compactMobileHome && <button className="sidebarButton" onClick={() => goTo("messages")}>Direct Messages</button>}
+                    <button className="sidebarButton" onMouseEnter={() => preload("map")} onFocus={() => preload("map")} onClick={() => goTo("map")}>Map</button>
+                    {!compactMobileHome && <button className="sidebarButton" onMouseEnter={() => preload("messages")} onFocus={() => preload("messages")} onClick={() => goTo("messages")}>Direct Messages</button>}
                     <div className="divider"></div>
-                    <button className="sidebarButton" onClick={() => goTo("settings")}>Settings</button>
-                    <button type="button" className="sidebarButton supporter-button" onClick={() => goTo("supporter")}>Buy Bloom Supporter</button>
+                    <button className="sidebarButton" onMouseEnter={() => preload("settings")} onFocus={() => preload("settings")} onClick={() => goTo("settings")}>Settings</button>
+                    <button type="button" className="sidebarButton supporter-button" onMouseEnter={() => preload("supporter")} onFocus={() => preload("supporter")} onClick={() => goTo("supporter")}>Buy Bloom Supporter</button>
                 </SidebarElement>
             )}
         </>

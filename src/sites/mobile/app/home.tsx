@@ -1,6 +1,7 @@
 import AppNavigation from "../../../components/AppNavigation"
 import PageLifecycle from "../../../components/PageLifecycle"
 import PostFeed from "../../../components/posts/PostFeed"
+import { useNavigate } from "react-router-dom"
 
 export const pagePath = "/mobile/pages/app/home/"
 
@@ -28,6 +29,7 @@ const pageMetadata = {
 }
 
 export default function MobilePagesAppHomePage() {
+    const navigate = useNavigate()
     return (
         <PageLifecycle {...pageMetadata}>
             <>
@@ -36,7 +38,7 @@ export default function MobilePagesAppHomePage() {
         <h1>Bloom <span id="verText">ALPHA</span></h1>
         <div className="BloomConnectPill">
             <div className="BloomConnectStatusCircle" id="bloomConnectStatusCircle" aria-hidden="true"></div>
-            <button type="button" className="BloomConnectButton" onClick={() => { window.location.href = "../connect/index.html" }} aria-label="Open Connect"><i className="ri-walk-line" aria-hidden="true"></i></button>
+            <button type="button" className="BloomConnectButton" onClick={() => navigate("/mobile/connect")} aria-label="Open Connect"><i className="ri-walk-line" aria-hidden="true"></i></button>
         </div>
     </div>
     <div className="main-layout">

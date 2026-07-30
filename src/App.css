@@ -75,6 +75,64 @@ html {
     }
 }
 
+/* Route Loading */
+
+@keyframes route-enter {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes route-skeleton-pulse {
+    0%,
+    100% {
+        opacity: 0.48;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+html.route-enter #root > * {
+    animation: route-enter 180ms ease-out both;
+}
+
+.route-fallback {
+    box-sizing: border-box;
+    width: min(760px, calc(100% - 32px));
+    margin: 80px auto 24px;
+    display: grid;
+    gap: 16px;
+}
+
+.route-skeleton {
+    border-radius: var(--border-radius, 13px);
+    background: rgba(156, 176, 128, 0.22);
+    animation: route-skeleton-pulse 1.1s ease-in-out infinite;
+}
+
+.route-skeleton--title {
+    width: min(320px, 65%);
+    height: 42px;
+}
+
+.route-skeleton--card {
+    width: 100%;
+    height: 150px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.route-enter #root > *,
+    .route-skeleton {
+        animation: none;
+    }
+}
+
 /* React Root */
 
 #root {
@@ -2388,8 +2446,25 @@ body[data-theme="dark"] .profile-username {
     flex: 0 0 34px;
     width: 34px;
     height: 34px;
+    min-width: 34px;
+    max-width: 34px;
+    min-height: 34px;
+    max-height: 34px;
     margin: 0;
     padding: 0;
+    overflow: hidden;
+}
+
+.community-member-avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    margin: 0;
+    object-fit: cover;
+    object-position: center;
+    border-radius: inherit;
 }
 
 .community-members-empty {
@@ -3337,7 +3412,7 @@ body[data-theme="dark"] .popup-card {
 .landing-page #Logo {
     color: var(--landing-ink);
     font-size: clamp(3.4rem, 7vw, 6.6rem);
-    line-height: 0.95;
+    line-height: 1;
     letter-spacing: -0.06em;
     text-wrap: balance;
 }
@@ -3739,6 +3814,7 @@ body[data-theme="dark"] :is(
     .event-list,
     .info-container,
     .community,
+    .sub-community,
     .post,
     .activity-item,
     .activity-post,
@@ -5249,6 +5325,122 @@ body[data-theme="dark"] .chat-input-container .message-image-button {
     box-sizing: border-box;
 }
 
+#subComs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.sub-community {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: var(--border-radius);
+    flex-direction: column;
+    background: #edf1ec;
+    color: #26372e;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-sizing: border-box;
+    width: 400px;
+    flex-shrink: 0;
+}
+
+#subComsContainer {
+    display: flex;
+    text-align: center;
+    gap: 6px;
+    margin-top: 4px;
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+}
+
+
+.sub-community-picture {
+    display: grid;
+    place-items: center;
+    width: 50px;
+    height: 50px;
+    margin-bottom: 4px;
+    overflow: hidden;
+    border-radius: var(--border-radius);
+    background: var(--ui-accent, #71865b);
+    color: #fff;
+    font-size: 1.25rem;
+}
+
+.sub-community-picture img {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--border-radius);
+    object-fit: cover;
+}
+
+.sub-community-join-error,
+.sub-community-load-error {
+    color: #a12626;
+}
+
+.sub-community-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sub-community-actions a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 6px 12px;
+    border-radius: var(--border-radius);
+    background: var(--ui-button, #71865b);
+    color: var(--ui-button-text, #fff);
+    text-decoration: none;
+}
+
+.sub-community-form {
+    box-sizing: border-box;
+    width: min(500px, 100%);
+    display: grid;
+    gap: 12px;
+}
+
+.sub-community-form label {
+    display: grid;
+    gap: 6px;
+    text-align: left;
+}
+
+.sub-community-form :is(input, textarea) {
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.sub-community-profile {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+}
+
+.sub-community-page #communitySelect {
+    display: none;
+}
+
+.sub-community-view-button {
+    color: white;
+}
+
+
+
 @media (max-width: 760px) {
     .messages-container {
         flex-direction: column;
@@ -5461,4 +5653,369 @@ body[data-theme-name="dark"] .post-engagement button.is-liked {
 body[data-theme="dark"] :is(.post-engagement, .post-replies),
 body[data-theme-name="dark"] :is(.post-engagement, .post-replies) {
     border-color: var(--dark-border);
+}
+
+/* Unified Theme Palette */
+
+body {
+    --ui-page: #f1f1f1;
+    --ui-surface: rgba(255, 255, 255, 0.9);
+    --ui-raised: #f8faf8;
+    --ui-border: #dce3dd;
+    --ui-text: #1f2933;
+    --ui-muted: #66736b;
+    --ui-accent: #71865b;
+    --ui-hover: #e8eee7;
+    --ui-button: #71865b;
+    --ui-button-hover: #536b45;
+    --ui-button-text: #ffffff;
+    --surface-white-translucent: var(--ui-surface);
+}
+
+body[data-theme="dark"],
+body[data-theme-name="dark"] {
+    --ui-page: var(--dark-page);
+    --ui-surface: var(--dark-surface);
+    --ui-raised: var(--dark-surface-raised);
+    --ui-border: var(--dark-border);
+    --ui-text: var(--dark-text);
+    --ui-muted: var(--dark-muted);
+    --ui-accent: var(--dark-accent);
+    --ui-hover: var(--dark-hover);
+    --ui-button: var(--dark-surface-raised);
+    --ui-button-hover: var(--dark-hover);
+    --ui-button-text: var(--dark-text);
+}
+
+body:is(
+    [data-theme-name="forest"],
+    [data-theme-name="sunset"],
+    [data-theme-name="midnight"],
+    [data-theme-name="frutiger-aero"]
+) {
+    --ui-page: var(--theme-page);
+    --ui-surface: var(--theme-surface);
+    --ui-raised: var(--theme-raised);
+    --ui-border: var(--theme-border);
+    --ui-text: var(--theme-text);
+    --ui-muted: var(--theme-muted);
+    --ui-accent: var(--theme-accent);
+    --ui-hover: var(--theme-hover);
+    --ui-button: var(--theme-accent);
+    --ui-button-hover: var(--theme-hover);
+    --ui-button-text: #ffffff;
+    --surface-white-translucent: var(--theme-surface);
+}
+
+body {
+    background-color: var(--ui-page);
+    color: var(--ui-text);
+}
+
+body :is(
+    .blog-post,
+    .topbarHome,
+    .BottomSectionContent,
+    .LeftSide,
+    .TOC-Container,
+    .CalendarContainer,
+    .InfoPageHead,
+    #eventDetailsContainer,
+    .topbar,
+    .sidebar,
+    .rightBar,
+    .sidebar-profile,
+    .feed-updates,
+    .activities-profile,
+    .profile-sidebar,
+    .profile-posts,
+    .profile,
+    .settings-container,
+    .settings-card,
+    .settings-section,
+    .activity-hero,
+    .activity-panel,
+    .event-list,
+    .eventsFeedContainer,
+    .info-container,
+    .communities-profile,
+    .messages-container,
+    .contacts-container,
+    .chat-container,
+    .messages-thread,
+    .message-preview,
+    .popup-card,
+    .popup-box,
+    .account-menu,
+    .post-type-selector,
+    .milestone-content,
+    .CenterBox,
+    .creditElement,
+    #BottomBar
+) {
+    background-color: var(--ui-surface);
+    border-color: var(--ui-border);
+    color: var(--ui-text);
+}
+
+body :is(
+    .post,
+    .post-reply,
+    .activity-stat,
+    .activity-item,
+    .activity-post,
+    #nearbyActivityDiv,
+    #myActivityDiv,
+    .community,
+    .community-join-request,
+    .supporter-feature,
+    .roadmap-item,
+    .message-thread,
+    .global-search-results,
+    .post-options-menu,
+    .account-menu-item,
+    .community-banner-preview,
+    .post-image-preview,
+    .edit-profile-preview
+) {
+    background-color: var(--ui-raised);
+    border-color: var(--ui-border);
+    color: var(--ui-text);
+}
+
+body :is(input, textarea, select, .TypeInput) {
+    background-color: var(--ui-raised);
+    border-color: var(--ui-border);
+    color: var(--ui-text);
+}
+
+body :is(input, textarea, .TypeInput)::placeholder {
+    color: var(--ui-muted);
+    opacity: 0.9;
+}
+
+body :is(
+    .blog-post p,
+    .post-body,
+    .post-time,
+    .post-community-name,
+    .post-empty-message,
+    .post-reply time,
+    .settings-help,
+    .composer-help,
+    .activity-meta,
+    .profile-username,
+    .community-banner-help,
+    .connected-user-details span,
+    .roadmap-item p,
+    .message-thread p,
+    .supporter-feature p,
+    .activity-hero p,
+    .activity-stat p,
+    .activity-item p,
+    .profile-details p,
+    .BlogSubtitle
+) {
+    color: var(--ui-muted);
+}
+
+body :is(
+    .sub-community-description,
+    #subcommunityDescription,
+    #subcommunityParent,
+    .community-members-empty
+) {
+    color: var(--ui-muted);
+}
+
+body :is(a, .topbar-logo, .post-author-name, .settings-eyebrow, .community-radius-control output) {
+    color: var(--ui-accent);
+}
+
+body button {
+    background-color: var(--ui-button);
+    color: var(--ui-button-text);
+}
+
+body button:is(:hover, :focus-visible) {
+    background-color: var(--ui-button-hover);
+    color: var(--ui-button-text);
+}
+
+body .sidebar :is(.sidebarButton, .supporter-button) {
+    background-color: transparent;
+    color: var(--ui-text);
+}
+
+body .sidebar :is(.sidebarButton, .supporter-button):is(:hover, :focus-visible) {
+    background-color: color-mix(in srgb, var(--ui-accent) 14%, transparent);
+    color: var(--ui-text);
+}
+
+body :is(.post-options-button, .post-engagement button, .post-image-picker) {
+    background-color: transparent;
+    color: var(--ui-muted);
+}
+
+body :is(.post-options-button, .post-engagement button, .post-image-picker):is(:hover, :focus-visible) {
+    background-color: var(--ui-hover);
+    color: var(--ui-accent);
+}
+
+body .post-title {
+    color: var(--ui-text);
+}
+
+body :is(.divider, hr) {
+    background-color: var(--ui-border);
+    border-color: var(--ui-border);
+}
+
+body :is(.pfp-frame, .profile-pfp) {
+    background-color: var(--ui-raised);
+    border-color: var(--ui-border);
+}
+
+body :is(.community, .activity-post):is(:hover, :focus-within) {
+    background-color: var(--ui-hover);
+}
+
+body .sub-community {
+    background-color: var(--ui-raised);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text);
+}
+
+body .sub-community-picture {
+    background-color: var(--ui-accent);
+    color: var(--ui-button-text);
+}
+
+body .community-members-title,
+body .community-member {
+    color: var(--ui-text);
+}
+
+body .community-member:is(:hover, :focus-visible) {
+    background-color: var(--ui-hover);
+    color: var(--ui-text);
+}
+
+body .sub-community-page .popup-card {
+    background-color: var(--ui-surface);
+    border-color: var(--ui-border);
+    color: var(--ui-text);
+}
+
+body .sub-community-page .popup-close {
+    background-color: transparent;
+    color: var(--ui-text);
+}
+
+body .sub-community-page .popup-close:is(:hover, :focus-visible) {
+    background-color: var(--ui-hover);
+    color: var(--ui-text);
+}
+
+body .BusinessBubble {
+    background-color: color-mix(in srgb, var(--ui-accent) 18%, transparent);
+    border-color: var(--ui-accent);
+    color: var(--ui-text);
+}
+
+body:is(
+    [data-theme="dark"],
+    [data-theme-name="dark"],
+    [data-theme-name="forest"],
+    [data-theme-name="sunset"],
+    [data-theme-name="midnight"],
+    [data-theme-name="frutiger-aero"]
+).landing-page {
+    --landing-ink: var(--ui-text);
+    --landing-muted: var(--ui-muted);
+    --landing-accent: var(--ui-accent);
+    --landing-accent-dark: var(--ui-button-hover);
+    --landing-soft: var(--ui-surface);
+    background: var(--ui-page);
+    color: var(--ui-text);
+}
+
+body:is(
+    [data-theme="dark"],
+    [data-theme-name="dark"],
+    [data-theme-name="forest"],
+    [data-theme-name="sunset"],
+    [data-theme-name="midnight"],
+    [data-theme-name="frutiger-aero"]
+).landing-page :is(#Divider, .LeftSide, .landing-info, .BottomSectionContent, #BottomBar) {
+    background-color: var(--ui-surface);
+    background-image: none;
+    border-color: var(--ui-border);
+    color: var(--ui-text);
+}
+
+body:is(
+    [data-theme="dark"],
+    [data-theme-name="dark"],
+    [data-theme-name="forest"],
+    [data-theme-name="sunset"],
+    [data-theme-name="midnight"],
+    [data-theme-name="frutiger-aero"]
+).business-page {
+    --business-ink: var(--ui-text);
+    --business-muted: var(--ui-muted);
+    --business-accent: var(--ui-accent);
+    --business-accent-dark: var(--ui-button-hover);
+    --business-soft: var(--ui-surface);
+    --business-border: var(--ui-border);
+    background: var(--ui-page);
+    color: var(--ui-text);
+}
+
+body:is(
+    [data-theme="dark"],
+    [data-theme-name="dark"],
+    [data-theme-name="forest"],
+    [data-theme-name="sunset"],
+    [data-theme-name="midnight"],
+    [data-theme-name="frutiger-aero"]
+).business-page :is(.business-preview, .business-feature-grid article, .business-secondary-action) {
+    background-color: var(--ui-surface);
+    border-color: var(--ui-border);
+    color: var(--ui-text);
+}
+
+body .route-skeleton {
+    background: color-mix(in srgb, var(--ui-accent) 24%, var(--ui-raised));
+}
+
+body .sub-community-actions :is(a, button) {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 92px;
+    min-height: 40px;
+    margin: 0;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: var(--border-radius);
+    background-color: var(--ui-button);
+    color: var(--ui-button-text);
+    font: inherit;
+    line-height: 1;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body .sub-community-actions :is(a, button):is(:hover, :focus-visible) {
+    background-color: var(--ui-button-hover);
+    color: var(--ui-button-text);
+}
+
+body .sub-community-actions button:disabled {
+    cursor: default;
+    opacity: 0.75;
 }

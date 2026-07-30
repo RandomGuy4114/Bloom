@@ -1,4 +1,5 @@
 import PageLifecycle from "../../../components/PageLifecycle"
+import { useNavigate } from "react-router-dom"
 
 export const pagePath = "/mobile/pages/auth/confirm/"
 
@@ -21,6 +22,7 @@ const pageMetadata = {
 }
 
 export default function MobilePagesAuthConfirmPage() {
+    const navigate = useNavigate()
     return (
         <PageLifecycle {...pageMetadata}>
             <>
@@ -28,7 +30,7 @@ export default function MobilePagesAuthConfirmPage() {
         <div className="LeftSide">
             <h1 id="Logo">Email Confirmed</h1>
             <p id="Subtitle">Your email has been confirmed.</p>
-            <button id="GetStartedButton" onClick={() => { window.location.href = "../login/index.html" }}>Continue To Login</button>
+            <button id="GetStartedButton" onClick={() => navigate("/mobile/login")}>Continue To Login</button>
         </div>
         <div className="RightSide">
             <img src="../../../Assets/MainImage.webp" alt="Bloom Image" id="MainImage" />

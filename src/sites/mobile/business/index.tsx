@@ -1,4 +1,5 @@
 import PageLifecycle from "../../../components/PageLifecycle"
+import { useNavigate } from "react-router-dom"
 
 export const pagePath = "/mobile/pages/business/"
 
@@ -16,6 +17,7 @@ const pageMetadata = {
 }
 
 export default function MobilePagesBusinessPage() {
+    const navigate = useNavigate()
     return (
         <PageLifecycle {...pageMetadata}>
             <>
@@ -24,7 +26,7 @@ export default function MobilePagesBusinessPage() {
                 <div className="LeftSide">
                     <h1 id="Logo">Bloom For Business</h1>
                     <p id="Subtitle">Connect your business to Bloom.</p>
-                    <button type="button" id="GetStartedButton" onClick={() => { window.location.href = "../auth/business/index.html" }}>Get Started</button>
+                    <button type="button" id="GetStartedButton" onClick={() => navigate("/mobile/business-register")}>Get Started</button>
                     <p className="landing-attribution">An open-source project by FormalBlaze</p>
                 </div>
                 <div className="RightSide">

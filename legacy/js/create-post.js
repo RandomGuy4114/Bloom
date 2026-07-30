@@ -27,6 +27,7 @@ const allowedPostImageTypes = new Set(["image/jpeg", "image/png", "image/webp", 
 let currentUser;
 let joinedCommunities = [];
 let postableCommunityIds = new Set();
+let postableSubcommunityIds = new Set();
 let selectedPostType = "post";
 let currentUserIsSupporter = false;
 
@@ -41,6 +42,7 @@ function setComposerDisabled(disabled) {
 async function populateCommunitySelect() {
   communitySelect.replaceChildren();
   postableCommunityIds = new Set();
+  postableSubcommunityIds = new Set();
 
   if (!joinedCommunities.length) {
     const option = new Option("Join a community to post", "");
@@ -49,16 +51,25 @@ async function populateCommunitySelect() {
     return;
   }
 
-  const { data: communities, error } = await supabase
-    .from("Communities")
-    .select("id, name, global")
-    .in("id", joinedCommunities);
+  const [{ data: communities, error }, { data: subcommunities, error: subcommunitiesError }] = await Promise.all([
+    supabase
+      .from("Communities")
+      .select("id, name, global")
+      .in("id", joinedCommunities),
+    supabase
+      .from("sub_communities")
+      .select("id, title, community_parent_uid")
+      .contains("members", [currentUser.id])
+      .in("community_parent_uid", joinedCommunities),
+  ]);
 
   if (error) throw error;
+  if (subcommunitiesError) throw subcommunitiesError;
 
   const isAdmin = currentUser?.app_metadata?.role === "admin";
   const postableCommunities = (communities ?? []).filter(({ global }) => !global || isAdmin);
   postableCommunityIds = new Set(postableCommunities.map(({ id }) => id));
+  postableSubcommunityIds = new Set((subcommunities ?? []).map(({ id }) => String(id)));
 
   if (!postableCommunities.length) {
     communitySelect.appendChild(new Option("Only administrators can post in global communities", ""));
@@ -66,11 +77,18 @@ async function populateCommunitySelect() {
     return;
   }
 
-  communitySelect.replaceChildren(...postableCommunities.map(({ id, name }) => {
+  const communityOptions = postableCommunities.map(({ id, name }) => {
     const option = new Option(name, id);
     option.dataset.i18nIgnore = "true";
     return option;
-  }));
+  });
+  const subcommunityOptions = (subcommunities ?? []).map(({ id, title, community_parent_uid }) => {
+    const option = new Option(`${title} (sub-community)`, community_parent_uid);
+    option.dataset.i18nIgnore = "true";
+    option.dataset.subcommunityId = String(id);
+    return option;
+  });
+  communitySelect.replaceChildren(...communityOptions, ...subcommunityOptions);
   setComposerDisabled(false);
 }
 
@@ -94,6 +112,7 @@ async function createPost() {
   const title = titleInput.value.trim();
   const body = postInput.value.trim();
   const selectedCommunity = communitySelect.value;
+  const selectedSubcommunity = communitySelect.selectedOptions[0]?.dataset.subcommunityId ?? "";
   const imageFiles = [...(postImageInput.files ?? [])];
   const imageLimit = currentUserIsSupporter ? 5 : 1;
   const maximumImageSize = (currentUserIsSupporter ? 25 : 10) * 1024 * 1024;
@@ -101,6 +120,7 @@ async function createPost() {
   if (!title) return alert("Please add a post title before posting.");
   if (!body) return alert("Please write something before posting.");
   if (!selectedCommunity) return alert("Please choose a community to post to.");
+  if (selectedSubcommunity && !postableSubcommunityIds.has(selectedSubcommunity)) return alert("You must join this sub-community before posting.");
   if (!postableCommunityIds.has(selectedCommunity)) return alert("Only administrators can create posts in global communities.");
   if (imageFiles.length > imageLimit) return alert(`You can upload up to ${imageLimit} image${imageLimit === 1 ? "" : "s"} per post.`);
   if (imageFiles.some(({ type }) => !allowedPostImageTypes.has(type))) return alert("Choose a JPEG, PNG, WebP, or GIF image.");
@@ -117,6 +137,7 @@ async function createPost() {
     formData.append("title", title);
     formData.append("body", body);
     formData.append("community", selectedCommunity);
+    if (selectedSubcommunity) formData.append("subcommunity", selectedSubcommunity);
     formData.append("postType", selectedPostType);
     imageFiles.forEach((file) => formData.append("images", file));
     const { error } = await supabase.functions.invoke("create-post", { body: formData });

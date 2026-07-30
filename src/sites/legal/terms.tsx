@@ -21,7 +21,7 @@ export default function PagesLegalTermsPage() {
     return (
         <PageLifecycle {...pageMetadata}>
             <>
-    <InfoPageHead title="The Bloom Project Terms Of Service" subtitle="Last Updated: July 29, 2026"/>
+    <InfoPageHead title="The Bloom Project™ Terms Of Service" subtitle="Last Updated: July 30, 2026"/>
     <div className="TOC-Container">
         <h2>Table of Contents</h2>
         <ol>
@@ -34,6 +34,7 @@ export default function PagesLegalTermsPage() {
             <li><a href="#localCom">Local Communities</a></li>
             <li><a href="#privacy">Privacy</a></li>
             <li><a href="#availability">Availability</a></li>
+            <li><a href="#vpns">VPNs and Location Spoofing</a></li>
             <li><a href="#termination">Termination</a></li>
             <li><a href="#changes">Changes to These Terms</a></li>
             <li><a href="#contact">Contact</a></li>
@@ -112,17 +113,21 @@ export default function PagesLegalTermsPage() {
         <p>While reasonable efforts are made to keep the service available, uninterrupted operation is not guaranteed.</p>
     </div>
     <div className="TOC-Container">
-        <h2 id="termination">10. Termination</h2>
+        <h2 id="vpns">10. VPNs and Location Spoofing</h2>
+        <p>Using a VPN or other means to spoof your location may violate these Terms and result in account suspension or termination.</p>
+    </div>
+    <div className="TOC-Container">
+        <h2 id="termination">11. Termination</h2>
         <p>Bloom may suspend or terminate accounts that violate these Terms or pose a risk to the platform or its users.</p>
         <p>Users may request deletion of their account, subject to applicable legal requirements and technical limitations.</p>
     </div>
     <div className="TOC-Container">
-        <h2 id="changes">11. Changes to These Terms</h2>
+        <h2 id="changes">12. Changes to These Terms</h2>
         <p>These Terms may be updated from time to time.</p>
         <p>Continued use of Bloom after updated Terms become effective constitutes acceptance of the revised Terms.</p>
     </div>
     <div className="TOC-Container">
-        <h2 id="contact">12. Contact</h2>
+        <h2 id="contact">13. Contact</h2>
         <p>Questions regarding these Terms may be directed through the official Bloom GitHub repository or other official contact channels.</p>
         <p>Thank you for helping build a stronger local community through Bloom.</p>
     </div>

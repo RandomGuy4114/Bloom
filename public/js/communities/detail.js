@@ -625,7 +625,7 @@ async function loadCommunity() {
       .select("name, description, user_id, banner_url, picture_url, members, global, business, private, location_label, latitude, longitude, radius_meters")
       .eq("id", communityID)
       .single(),
-    supabase.from("Posts").select("*").eq("community", communityID).order("created_at", { ascending: false }),
+    supabase.from("Posts").select("*").eq("community", communityID).is("subcommunity", null).order("created_at", { ascending: false }),
   ]);
 
   if (communityError) {

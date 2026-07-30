@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react"
 import AppNavigation from "../../../components/AppNavigation"
 import PageLifecycle from "../../../components/PageLifecycle"
+import SubCommunityList from "../../../components/SubCommunityList"
 
 export const pagePath = "/mobile/pages/communities/community/"
 
@@ -28,6 +29,8 @@ const pageMetadata = {
 }
 
 export default function MobilePagesCommunitiesCommunityPage() {
+    const communityId = new URLSearchParams(window.location.search).get("communityID")
+
     return (
         <PageLifecycle {...pageMetadata}>
             <>
@@ -51,6 +54,7 @@ export default function MobilePagesCommunitiesCommunityPage() {
                 </div>
 
             </div>
+            <SubCommunityList communityId={communityId} />
             <div className="feed-updates">
                 <input type="search" id="searchPostInput" aria-label="Search posts" placeholder="Search posts" style={{ "width": "90%", "marginBottom": "10px" } as CSSProperties} />
                 <div className="posts-container" id="com-posts"></div>

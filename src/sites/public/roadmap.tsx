@@ -27,14 +27,14 @@ const roadmap = [
     },
     {
         "title": "Mobile App Development",
-        "date": "2026-08 - 2026-12",
+        "date": "2026-08 - 2026-08-15",
         "description": "Adding new features based on user feedback and improving existing functionalities.",
         "current": false,
         "alignment": "left"
     },
     {
         "title": "Alpha Feedback Wave",
-        "date": "2026-12 - 2027-01",
+        "date": "2026-08-15 - 2026-09-01",
         "description": "Gathering user feedback to refine the platform and prioritize new features.",
         "current": false,
         "alignment": "left"

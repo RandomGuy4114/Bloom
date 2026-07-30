@@ -1,22 +1,28 @@
-import type { ComponentType } from "react"
+import { lazy, type ComponentType, type LazyExoticComponent } from "react"
 
 interface PageModule {
     default: ComponentType
-    pagePath: string
 }
 
 interface PageComponentDefinition {
-    Component: ComponentType
+    Component: LazyExoticComponent<ComponentType>
     pagePath: string
+    preload: () => Promise<PageModule>
 }
 
 export interface PageRouteDefinition extends PageComponentDefinition {
     path: string
 }
 
-const pageModules = import.meta.glob("./sites/**/*.tsx", {
-    eager: true,
-}) as Record<string, Partial<PageModule>>
+const pageModules = import.meta.glob([
+    "./sites/**/*.tsx",
+    "!./sites/public/landing.tsx",
+    "!./sites/auth/login.tsx",
+    "!./sites/auth/register.tsx",
+]) as Record<
+    string,
+    () => Promise<PageModule>
+>
 
 function normalizedPath(path: string) {
     const withoutIndex = path.replace(/\/index\.html$/i, "/")
@@ -24,12 +30,33 @@ function normalizedPath(path: string) {
     return withLeadingSlash !== "/" ? withLeadingSlash.replace(/\/+$/, "/") : "/"
 }
 
+function modulePagePath(modulePath: string) {
+    const relativePath = modulePath
+        .replace(/^\.\/sites\//, "")
+        .replace(/\.tsx$/, "")
+
+    if (relativePath === "mobile/public/index") return "/mobile/"
+    if (relativePath.startsWith("mobile/public/")) {
+        return `/mobile/pages/${relativePath.replace("mobile/public/", "").replace("legacy-", "")}/`
+    }
+    if (relativePath.startsWith("mobile/")) {
+        return `/mobile/pages/${relativePath.replace("mobile/", "").replace(/\/index$/, "")}/`
+    }
+    if (relativePath.startsWith("public/")) {
+        return `/pages/${relativePath.replace("public/", "").replace("legacy-", "")}/`
+    }
+    return `/pages/${relativePath.replace(/\/index$/, "")}/`
+}
+
 const routeMap = new Map<string, PageComponentDefinition>()
 
-for (const pageModule of Object.values(pageModules)) {
-    if (!pageModule.pagePath || !pageModule.default) continue
-    const pagePath = normalizedPath(pageModule.pagePath)
-    const definition = { Component: pageModule.default, pagePath }
+for (const [modulePath, preload] of Object.entries(pageModules)) {
+    const pagePath = normalizedPath(modulePagePath(modulePath))
+    const definition = {
+        Component: lazy(preload),
+        pagePath,
+        preload,
+    }
     routeMap.set(pagePath, definition)
     routeMap.set(pagePath.replace(/\/$/, ""), definition)
     routeMap.set(pagePath.replace(/\/$/, "/index.html"), definition)
@@ -37,6 +64,7 @@ for (const pageModule of Object.values(pageModules)) {
 
 const aliases: Record<string, string> = {
     "/activity": "/pages/app/activity/",
+    "/blog": "/pages/blog/",
     "/business": "/pages/business/",
     "/business-dashboard": "/pages/business/dashboard/",
     "/business-home": "/pages/business/home/",
@@ -46,6 +74,7 @@ const aliases: Record<string, string> = {
     "/calendar": "/pages/app/calendar/",
     "/communities": "/pages/communities/communities/",
     "/community": "/pages/communities/community/",
+    "/sub-community": "/pages/communities/sub-community/",
     "/confirm": "/pages/auth/confirm/",
     "/connect": "/pages/app/connect/",
     "/create-post": "/pages/app/create-post/",
@@ -60,6 +89,7 @@ const aliases: Record<string, string> = {
     "/privacy": "/pages/legal/privacy/",
     "/profile": "/pages/app/profile/",
     "/reset-password": "/pages/auth/reset-password/",
+    "/roadmap": "/pages/roadmap/",
     "/settings": "/pages/app/settings/",
     "/supporter": "/pages/app/supporter/",
     "/terms": "/pages/legal/terms/",
@@ -74,6 +104,7 @@ const aliases: Record<string, string> = {
     "/mobile/calendar": "/mobile/pages/app/calendar/",
     "/mobile/communities": "/mobile/pages/communities/communities/",
     "/mobile/community": "/mobile/pages/communities/community/",
+    "/mobile/sub-community": "/mobile/pages/communities/sub-community/",
     "/mobile/confirm": "/mobile/pages/auth/confirm/",
     "/mobile/connect": "/mobile/pages/app/connect/",
     "/mobile/create-post": "/mobile/pages/app/create-post/",
@@ -100,7 +131,14 @@ for (const [alias, target] of Object.entries(aliases)) {
     if (definition) routeMap.set(alias, definition)
 }
 
-export const siteRoutes: PageRouteDefinition[] = [...routeMap.entries()].map(([path, definition]) => ({
-    ...definition,
-    path,
-}))
+export function prefetchRoute(path: string) {
+    const normalized = path.length > 1 ? path.replace(/\/+$/, "") : path
+    return routeMap.get(normalized)?.preload()
+}
+
+export const siteRoutes: PageRouteDefinition[] = [...routeMap.entries()].map(
+    ([path, definition]) => ({
+        ...definition,
+        path,
+    }),
+)

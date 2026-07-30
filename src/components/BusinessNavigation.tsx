@@ -1,4 +1,22 @@
+import { useLocation, useNavigate } from "react-router-dom"
+import { prefetchRoute } from "../pageRoutes"
+
 export default function BusinessNavigation() {
+    const navigate = useNavigate()
+    const { pathname } = useLocation()
+    const mobilePrefix = pathname.startsWith("/mobile/") ? "/mobile" : ""
+    const routes = {
+        businessHome: `${mobilePrefix}/business-home`,
+        businessProfile: `${mobilePrefix}/business-profile`,
+        businessSettings: `${mobilePrefix}/business-settings`,
+        businessDashboard: `${mobilePrefix}/business-dashboard`,
+    }
+    const routeButton = (route: keyof typeof routes) => ({
+        onClick: () => navigate(routes[route]),
+        onMouseEnter: () => void prefetchRoute(routes[route]),
+        onFocus: () => void prefetchRoute(routes[route]),
+    })
+
     return (
         <>
             <header className="topbar">
@@ -9,21 +27,21 @@ export default function BusinessNavigation() {
                 </nav>
                 <div className="topbar-actions" aria-label="Mobile navigation">
                     <div className="topbar-action-row">
-                        <button type="button" data-business-route="businessHome">Business Home</button>
-                        <button type="button" data-business-route="businessProfile">Business Profile</button>
+                        <button type="button" {...routeButton("businessHome")}>Business Home</button>
+                        <button type="button" {...routeButton("businessProfile")}>Business Profile</button>
                     </div>
                     <div className="topbar-action-row">
-                        <button type="button" data-business-route="businessSettings">Business Settings</button>
-                        <button type="button" data-business-route="businessDashboard">Business Dashboard</button>
+                        <button type="button" {...routeButton("businessSettings")}>Business Settings</button>
+                        <button type="button" {...routeButton("businessDashboard")}>Business Dashboard</button>
                     </div>
                 </div>
             </header>
             <aside className="sidebar" aria-label="Business navigation">
-                <button type="button" className="sidebarButton" data-business-route="businessHome">Business Home</button>
-                <button type="button" className="sidebarButton" data-business-route="businessProfile">Business Profile</button>
+                <button type="button" className="sidebarButton" {...routeButton("businessHome")}>Business Home</button>
+                <button type="button" className="sidebarButton" {...routeButton("businessProfile")}>Business Profile</button>
                 <div className="divider"></div>
-                <button type="button" className="sidebarButton" data-business-route="businessSettings">Business Settings</button>
-                <button type="button" className="sidebarButton" data-business-route="businessDashboard">Business Dashboard</button>
+                <button type="button" className="sidebarButton" {...routeButton("businessSettings")}>Business Settings</button>
+                <button type="button" className="sidebarButton" {...routeButton("businessDashboard")}>Business Dashboard</button>
             </aside>
         </>
     )

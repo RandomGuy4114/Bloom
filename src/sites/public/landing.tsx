@@ -31,7 +31,7 @@ function Landing() {
             <main>
                 <section id="Divider" aria-labelledby="Logo">
                     <div className="LeftSide">
-                        <motion.h1 animate={{ scale: [0.1, 1], y: [-20, 0] }} transition={{ease: "circInOut", duration: 1}} id="Logo" style={{ fontSize: "clamp(5rem, 10vw, 15rem)", marginTop: "100px" }}>The Bloom Project</motion.h1>
+                        <motion.h1 animate={{ scale: [0.1, 1], y: [-20, 0] }} transition={{ease: "circInOut", duration: 1}} id="Logo" style={{ fontSize: "clamp(5rem, 10vw, 15rem)", marginTop: "100px" }}>The Bloom Project™</motion.h1>
                         <motion.p animate={{ opacity: [0, 1], y: [20, 0] }} transition={{ease: "circInOut", duration: 1, delay: 1}} className="landing-attribution" id="LandingSubtitle" style={{ fontSize: "clamp(1rem, 2vw, 1.5rem)", margin: 0, opacity: 0 }}>Making local connections easier</motion.p>
 
                         <img className="Flower" src={flowerImg} alt="A beautiful flower" width="250" height="250" decoding="async"/>
