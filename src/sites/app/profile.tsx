@@ -41,6 +41,7 @@ export default function PagesAppProfilePage() {
                 <p className="profile-username"></p>
                 <div className="profile-details"></div>
                 <button type="button" id="editProfileButton" className="edit-profile-button" hidden>Edit Profile</button>
+                <button type="button" id="blockProfileButton" className="block-profile-button" hidden>Block User</button>
             </div>
 
             <div className="profile-posts">

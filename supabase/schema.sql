@@ -74,6 +74,7 @@ CREATE OR REPLACE FUNCTION "public"."are_connect_users_linked"("first_user" "uui
     auth.uid() is not null
     and auth.uid() in (first_user, second_user)
     and first_user <> second_user
+    and not public.users_are_blocked(first_user, second_user)
     and exists (
       select 1
       from public.connect_encounters encounter
@@ -110,6 +111,22 @@ $$;
 
 
 ALTER FUNCTION "public"."can_post_to_community"("target_community" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."can_post_to_subcommunity"("target_subcommunity" bigint) RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select exists (
+    select 1
+    from public.sub_communities subcommunity
+    where subcommunity.id = target_subcommunity
+      and auth.uid() = any(coalesce(subcommunity.members, '{}'::uuid[]))
+  );
+$$;
+
+
+ALTER FUNCTION "public"."can_post_to_subcommunity"("target_subcommunity" bigint) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) RETURNS double precision
@@ -197,6 +214,77 @@ $$;
 ALTER FUNCTION "public"."create_business_community"("community_name" "text", "community_description" "text", "location_name" "text", "community_latitude" double precision, "community_longitude" double precision, "community_radius_meters" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."create_subcommunity"("parent_community" "uuid", "subcommunity_title" "text", "subcommunity_description" "text" DEFAULT ''::"text") RETURNS bigint
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  active_user uuid := auth.uid();
+  created_id bigint;
+  is_parent_owner boolean := false;
+begin
+  if active_user is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  if char_length(btrim(coalesce(subcommunity_title, ''))) not between 1 and 100
+    or char_length(coalesce(subcommunity_description, '')) > 1000 then
+    raise exception 'Invalid sub-community details' using errcode = '22023';
+  end if;
+
+  select community.user_id = active_user
+  into is_parent_owner
+  from public."Communities" community
+  where community.id = parent_community
+    and (
+      community.user_id = active_user
+      or active_user = any(coalesce(community.members, '{}'::uuid[]))
+    );
+
+  if not found then
+    raise exception 'Parent community membership required' using errcode = '42501';
+  end if;
+
+  if not is_parent_owner then
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended(parent_community::text || active_user::text, 0)
+    );
+
+    if exists (
+      select 1
+      from public.sub_communities subcommunity
+      where subcommunity.community_parent_uid = parent_community
+        and subcommunity.owner_id = active_user
+    ) then
+      raise exception 'You can create only one sub-community in this community'
+        using errcode = '23505';
+    end if;
+  end if;
+
+  insert into public.sub_communities (
+    title,
+    description,
+    community_parent_uid,
+    owner_id,
+    members
+  )
+  values (
+    btrim(subcommunity_title),
+    btrim(coalesce(subcommunity_description, '')),
+    parent_community,
+    active_user,
+    array[active_user]
+  )
+  returning id into created_id;
+
+  return created_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."create_subcommunity"("parent_community" "uuid", "subcommunity_title" "text", "subcommunity_description" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."delete_owned_community"("target_community" "uuid") RETURNS "text"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'pg_catalog', 'public'
@@ -234,6 +322,23 @@ $$;
 ALTER FUNCTION "public"."delete_owned_community"("target_community" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."delete_subcommunity"("target_subcommunity" bigint) RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  if not public.is_subcommunity_manager(target_subcommunity) then
+    raise exception 'Sub-community owner access required' using errcode = '42501';
+  end if;
+
+  delete from public.sub_communities where id = target_subcommunity;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."delete_subcommunity"("target_subcommunity" bigint) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."event_trigger_fn"() RETURNS "event_trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -264,6 +369,10 @@ CREATE OR REPLACE FUNCTION "public"."get_connect_encounters"() RETURNS TABLE("us
   end
   where auth.uid() is not null
     and auth.uid() in (encounter.first_user_id, encounter.second_user_id)
+    and not public.users_are_blocked(
+      encounter.first_user_id,
+      encounter.second_user_id
+    )
   order by encounter.notified_at desc;
 $$;
 
@@ -287,7 +396,8 @@ CREATE TABLE IF NOT EXISTS "public"."Posts" (
     "img_link" "text",
     "location" "text",
     "img_links" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
-    "date" "date"
+    "date" "date",
+    "subcommunity" bigint
 );
 
 
@@ -522,6 +632,27 @@ $$;
 
 
 ALTER FUNCTION "public"."handle_new_user_fn"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" bigint) RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select exists (
+    select 1
+    from public.sub_communities subcommunity
+    join public."Communities" parent
+      on parent.id = subcommunity.community_parent_uid
+    where subcommunity.id = target_subcommunity
+      and (
+        subcommunity.owner_id = auth.uid()
+        or parent.user_id = auth.uid()
+      )
+  );
+$$;
+
+
+ALTER FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" bigint) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."is_username_available"("requested_username" "text") RETURNS boolean
@@ -1026,13 +1157,25 @@ CREATE OR REPLACE FUNCTION "public"."set_connect_enabled"("enabled" boolean) RET
     AS $$
 declare
   active_user uuid := auth.uid();
+  requested_state boolean := coalesce(enabled, false);
 begin
-  if active_user is null then raise exception 'Authentication required'; end if;
-  update public.profiles set connect_enabled = enabled where id = active_user;
-  if not enabled then
+  if active_user is null then
+    raise exception 'Authentication required' using errcode = '28000';
+  end if;
+
+  update public.profiles
+  set connect_enabled = requested_state
+  where id = active_user;
+
+  if not found then
+    raise exception 'Profile not found' using errcode = 'P0002';
+  end if;
+
+  if not requested_state then
     delete from public.connect_locations where user_id = active_user;
   end if;
-  return enabled;
+
+  return requested_state;
 end;
 $$;
 
@@ -1089,11 +1232,24 @@ declare
   pair_first uuid;
   pair_second uuid;
 begin
-  if active_user is null then raise exception 'Authentication required'; end if;
-  if user_latitude not between -90 and 90
+  if active_user is null then
+    raise exception 'Authentication required' using errcode = '28000';
+  end if;
+
+  if user_latitude is null
+     or user_longitude is null
+     or user_latitude::text in ('NaN', 'Infinity', '-Infinity')
+     or user_longitude::text in ('NaN', 'Infinity', '-Infinity')
+     or user_latitude not between -90 and 90
      or user_longitude not between -180 and 180
-     or (user_accuracy_meters is not null and user_accuracy_meters not between 0 and 10000) then
-    raise exception 'Invalid location';
+     or (
+       user_accuracy_meters is not null
+       and (
+         user_accuracy_meters::text in ('NaN', 'Infinity', '-Infinity')
+         or user_accuracy_meters not between 0 and 10000
+       )
+     ) then
+    raise exception 'Invalid location' using errcode = '22023';
   end if;
 
   if not exists (
@@ -1106,8 +1262,23 @@ begin
     return;
   end if;
 
-  insert into public.connect_locations (user_id, latitude, longitude, accuracy_meters, updated_at)
-  values (active_user, user_latitude, user_longitude, user_accuracy_meters, now())
+  delete from public.connect_locations
+  where updated_at < now() - interval '15 minutes';
+
+  insert into public.connect_locations (
+    user_id,
+    latitude,
+    longitude,
+    accuracy_meters,
+    updated_at
+  )
+  values (
+    active_user,
+    user_latitude,
+    user_longitude,
+    user_accuracy_meters,
+    now()
+  )
   on conflict (user_id) do update set
     latitude = excluded.latitude,
     longitude = excluded.longitude,
@@ -1117,8 +1288,10 @@ begin
   select candidate.user_id
   into nearby_user
   from public.connect_locations candidate
-  join public.profiles candidate_profile on candidate_profile.id = candidate.user_id
-  join public.profiles active_profile on active_profile.id = active_user
+  join public.profiles candidate_profile
+    on candidate_profile.id = candidate.user_id
+  join public.profiles active_profile
+    on active_profile.id = active_user
   where candidate.user_id <> active_user
     and candidate_profile.connect_enabled is true
     and candidate.updated_at > now() - interval '5 minutes'
@@ -1155,7 +1328,11 @@ begin
   pair_first := least(active_user, nearby_user);
   pair_second := greatest(active_user, nearby_user);
 
-  insert into public.connect_encounters (first_user_id, second_user_id, notified_at)
+  insert into public.connect_encounters (
+    first_user_id,
+    second_user_id,
+    notified_at
+  )
   values (pair_first, pair_second, now())
   on conflict (first_user_id, second_user_id) do update
     set notified_at = excluded.notified_at
@@ -1176,6 +1353,56 @@ $$;
 
 
 ALTER FUNCTION "public"."update_connect_location"("user_latitude" double precision, "user_longitude" double precision, "user_accuracy_meters" double precision) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_subcommunity"("target_subcommunity" bigint, "subcommunity_title" "text", "subcommunity_description" "text" DEFAULT ''::"text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+begin
+  if not public.is_subcommunity_manager(target_subcommunity) then
+    raise exception 'Sub-community owner access required' using errcode = '42501';
+  end if;
+
+  if char_length(btrim(coalesce(subcommunity_title, ''))) not between 1 and 100
+    or char_length(coalesce(subcommunity_description, '')) > 1000 then
+    raise exception 'Invalid sub-community details' using errcode = '22023';
+  end if;
+
+  update public.sub_communities
+  set
+    title = btrim(subcommunity_title),
+    description = btrim(coalesce(subcommunity_description, ''))
+  where id = target_subcommunity;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."update_subcommunity"("target_subcommunity" bigint, "subcommunity_title" "text", "subcommunity_description" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."users_are_blocked"("first_user" "uuid", "second_user" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select
+    first_user is not null
+    and second_user is not null
+    and exists (
+      select 1
+      from public.user_blocks block
+      where (
+        block.blocker_id = first_user
+        and block.blocked_id = second_user
+      ) or (
+        block.blocker_id = second_user
+        and block.blocked_id = first_user
+      )
+    );
+$$;
+
+
+ALTER FUNCTION "public"."users_are_blocked"("first_user" "uuid", "second_user" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."validate_post_image_entitlements"() RETURNS "trigger"
@@ -1405,6 +1632,7 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "business_supporter" boolean DEFAULT false,
     "business_supporter_verified_at" timestamp with time zone,
     "connect_enabled" boolean DEFAULT false NOT NULL,
+    "blocked_uuids" "uuid"[],
     CONSTRAINT "profiles_bio_length_check" CHECK (("char_length"(COALESCE("bio", ''::"text")) <=
 CASE
     WHEN "supporter" THEN 1500
@@ -1421,6 +1649,42 @@ ALTER TABLE "public"."profiles" OWNER TO "postgres";
 
 COMMENT ON COLUMN "public"."profiles"."patreon_user_id" IS 'Patreon identity linked through the server-side OAuth callback. Unique to one Bloom account.';
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."sub_communities" (
+    "id" bigint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "title" "text",
+    "description" "text",
+    "community_parent_uid" "uuid",
+    "members" "uuid"[],
+    "owner_id" "uuid"
+);
+
+
+ALTER TABLE "public"."sub_communities" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."sub_communities" ALTER COLUMN "id" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "public"."sub_communities_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."user_blocks" (
+    "blocker_id" "uuid" NOT NULL,
+    "blocked_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "user_blocks_different_users" CHECK (("blocker_id" <> "blocked_id"))
+);
+
+
+ALTER TABLE "public"."user_blocks" OWNER TO "postgres";
 
 
 ALTER TABLE ONLY "public"."Communities"
@@ -1508,11 +1772,34 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE "public"."sub_communities"
+    ADD CONSTRAINT "sub_communities_content_check" CHECK (((("char_length"("btrim"(COALESCE("title", ''::"text"))) >= 1) AND ("char_length"("btrim"(COALESCE("title", ''::"text"))) <= 100)) AND ("char_length"(COALESCE("description", ''::"text")) <= 1000))) NOT VALID;
+
+
+
+ALTER TABLE ONLY "public"."sub_communities"
+    ADD CONSTRAINT "sub_communities_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."user_blocks"
+    ADD CONSTRAINT "user_blocks_pkey" PRIMARY KEY ("blocker_id", "blocked_id");
+
+
+
 CREATE INDEX "Communities_members_search_idx" ON "public"."Communities" USING "gin" ("members");
 
 
 
 CREATE UNIQUE INDEX "PostReports_post_reporter_key" ON "public"."PostReports" USING "btree" ("post_id", "reporter_id");
+
+
+
+CREATE INDEX "connect_encounters_notified_at_idx" ON "public"."connect_encounters" USING "btree" ("notified_at" DESC);
+
+
+
+CREATE INDEX "connect_locations_updated_at_idx" ON "public"."connect_locations" USING "btree" ("updated_at");
 
 
 
@@ -1536,7 +1823,15 @@ CREATE INDEX "post_replies_post_created_idx" ON "public"."post_replies" USING "b
 
 
 
+CREATE INDEX "posts_subcommunity_created_idx" ON "public"."Posts" USING "btree" ("subcommunity", "created_at" DESC) WHERE ("subcommunity" IS NOT NULL);
+
+
+
 CREATE UNIQUE INDEX "profiles_patreon_user_id_key" ON "public"."profiles" USING "btree" ("patreon_user_id") WHERE ("patreon_user_id" IS NOT NULL);
+
+
+
+CREATE INDEX "user_blocks_blocked_id_idx" ON "public"."user_blocks" USING "btree" ("blocked_id", "blocker_id");
 
 
 
@@ -1559,6 +1854,11 @@ ALTER TABLE ONLY "public"."PostReports"
 
 ALTER TABLE ONLY "public"."PostReports"
     ADD CONSTRAINT "PostReports_reporter_id_fkey" FOREIGN KEY ("reporter_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."Posts"
+    ADD CONSTRAINT "Posts_subcommunity_fkey" FOREIGN KEY ("subcommunity") REFERENCES "public"."sub_communities"("id") ON DELETE CASCADE;
 
 
 
@@ -1622,6 +1922,21 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."sub_communities"
+    ADD CONSTRAINT "sub_communities_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."user_blocks"
+    ADD CONSTRAINT "user_blocks_blocked_id_fkey" FOREIGN KEY ("blocked_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."user_blocks"
+    ADD CONSTRAINT "user_blocks_blocker_id_fkey" FOREIGN KEY ("blocker_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
 CREATE POLICY "Authenticated users can create permitted posts" ON "public"."Posts" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_post_to_community"("community")));
 
 
@@ -1641,6 +1956,14 @@ CREATE POLICY "Authenticated users read post likes" ON "public"."post_likes" FOR
 
 
 CREATE POLICY "Authenticated users read post replies" ON "public"."post_replies" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "Blocked users cannot read direct messages" ON "public"."direct_messages" AS RESTRICTIVE FOR SELECT TO "authenticated" USING ((NOT "public"."users_are_blocked"("sender_id", "recipient_id")));
+
+
+
+CREATE POLICY "Blocked users cannot send direct messages" ON "public"."direct_messages" AS RESTRICTIVE FOR INSERT TO "authenticated" WITH CHECK ((NOT "public"."users_are_blocked"("sender_id", "recipient_id")));
 
 
 
@@ -1679,6 +2002,12 @@ CREATE POLICY "Owners can edit community details" ON "public"."Communities" FOR 
 
 
 
+CREATE POLICY "Parent members can read sub-communities" ON "public"."sub_communities" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."Communities" "parent"
+  WHERE (("parent"."id" = "sub_communities"."community_parent_uid") AND (("parent"."user_id" = "auth"."uid"()) OR ("auth"."uid"() = ANY (COALESCE("parent"."members", '{}'::"uuid"[]))))))));
+
+
+
 CREATE POLICY "Participants read direct messages" ON "public"."direct_messages" FOR SELECT TO "authenticated" USING ((("auth"."uid"() = "sender_id") OR ("auth"."uid"() = "recipient_id")));
 
 
@@ -1687,6 +2016,14 @@ ALTER TABLE "public"."PostReports" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."Posts" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "Sub-community posting requires membership" ON "public"."Posts" AS RESTRICTIVE FOR INSERT TO "authenticated" WITH CHECK ((("subcommunity" IS NULL) OR "public"."can_post_to_subcommunity"("subcommunity")));
+
+
+
+CREATE POLICY "Sub-community posts require membership" ON "public"."Posts" AS RESTRICTIVE FOR SELECT TO "authenticated" USING ((("subcommunity" IS NULL) OR "public"."can_post_to_subcommunity"("subcommunity") OR "public"."is_subcommunity_manager"("subcommunity")));
+
 
 
 CREATE POLICY "Users can create their own local community" ON "public"."Communities" FOR INSERT TO "authenticated" WITH CHECK ((("auth"."uid"() = "user_id") AND ("global" IS NOT TRUE) AND ("business" IS NOT TRUE) AND (("members" IS NULL) OR ("members" <@ ARRAY["auth"."uid"()])) AND (("radius_meters" >= 100) AND ("radius_meters" <=
@@ -1758,6 +2095,12 @@ ALTER TABLE "public"."post_replies" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."sub_communities" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."user_blocks" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -1939,6 +2282,12 @@ GRANT ALL ON FUNCTION "public"."can_post_to_community"("target_community" "uuid"
 
 
 
+GRANT ALL ON FUNCTION "public"."can_post_to_subcommunity"("target_subcommunity" bigint) TO "anon";
+GRANT ALL ON FUNCTION "public"."can_post_to_subcommunity"("target_subcommunity" bigint) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_post_to_subcommunity"("target_subcommunity" bigint) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "anon";
 GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "service_role";
@@ -1956,9 +2305,21 @@ GRANT ALL ON FUNCTION "public"."create_business_community"("community_name" "tex
 
 
 
+REVOKE ALL ON FUNCTION "public"."create_subcommunity"("parent_community" "uuid", "subcommunity_title" "text", "subcommunity_description" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_subcommunity"("parent_community" "uuid", "subcommunity_title" "text", "subcommunity_description" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_subcommunity"("parent_community" "uuid", "subcommunity_title" "text", "subcommunity_description" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."delete_owned_community"("target_community" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."delete_subcommunity"("target_subcommunity" bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."delete_subcommunity"("target_subcommunity" bigint) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."delete_subcommunity"("target_subcommunity" bigint) TO "service_role";
 
 
 
@@ -1977,6 +2338,10 @@ GRANT ALL ON FUNCTION "public"."get_connect_encounters"() TO "service_role";
 GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Posts" TO "anon";
 GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."Posts" TO "authenticated";
 GRANT ALL ON TABLE "public"."Posts" TO "service_role";
+
+
+
+GRANT SELECT("subcommunity") ON TABLE "public"."Posts" TO "authenticated";
 
 
 
@@ -2020,6 +2385,12 @@ GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."handle_new_user_fn"() TO "anon";
 GRANT ALL ON FUNCTION "public"."handle_new_user_fn"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_new_user_fn"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" bigint) TO "anon";
+GRANT ALL ON FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" bigint) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" bigint) TO "service_role";
 
 
 
@@ -2097,6 +2468,18 @@ GRANT ALL ON FUNCTION "public"."update_business_profile"("business_name" "text",
 REVOKE ALL ON FUNCTION "public"."update_connect_location"("user_latitude" double precision, "user_longitude" double precision, "user_accuracy_meters" double precision) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."update_connect_location"("user_latitude" double precision, "user_longitude" double precision, "user_accuracy_meters" double precision) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_connect_location"("user_latitude" double precision, "user_longitude" double precision, "user_accuracy_meters" double precision) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."update_subcommunity"("target_subcommunity" bigint, "subcommunity_title" "text", "subcommunity_description" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."update_subcommunity"("target_subcommunity" bigint, "subcommunity_title" "text", "subcommunity_description" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_subcommunity"("target_subcommunity" bigint, "subcommunity_title" "text", "subcommunity_description" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."users_are_blocked"("first_user" "uuid", "second_user" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."users_are_blocked"("first_user" "uuid", "second_user" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."users_are_blocked"("first_user" "uuid", "second_user" "uuid") TO "service_role";
 
 
 
@@ -2256,6 +2639,22 @@ GRANT UPDATE("Theme") ON TABLE "public"."profiles" TO "authenticated";
 
 
 
+GRANT SELECT,REFERENCES,TRIGGER,MAINTAIN ON TABLE "public"."sub_communities" TO "anon";
+GRANT SELECT,REFERENCES,TRIGGER,MAINTAIN ON TABLE "public"."sub_communities" TO "authenticated";
+GRANT ALL ON TABLE "public"."sub_communities" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."sub_communities_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."sub_communities_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."sub_communities_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."user_blocks" TO "service_role";
+
+
+
 
 
 
@@ -2286,6 +2685,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
 
 
 

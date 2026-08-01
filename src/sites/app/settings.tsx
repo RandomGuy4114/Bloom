@@ -78,6 +78,11 @@ export default function PagesAppSettingsPage() {
                         <button id="deleteAccountButton" className="danger-action">Delete Account</button>
                     </div>
                 </section>
+                <section className="settings-card">
+                    <h2>Achievements</h2>
+                    <p>View your achievements and progress.</p>
+                    <button id="viewAchievementsButton">View Achievements</button>
+                </section>
             </div>
         </div>
     </div>

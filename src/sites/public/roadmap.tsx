@@ -22,14 +22,14 @@ const roadmap = [
         "title": "Alpha Release",
         "date": "2026-07-15 - 2026-08-01",
         "description": "Initial release of Bloom with core features for connecting with local communities.",
-        "current": true,
+        "current": false,
         "alignment": "left"
     },
     {
         "title": "Mobile App Development",
         "date": "2026-08 - 2026-08-15",
         "description": "Adding new features based on user feedback and improving existing functionalities.",
-        "current": false,
+        "current": true,
         "alignment": "left"
     },
     {
@@ -76,11 +76,11 @@ export default function PagesRoadmapPage() {
                 title="Bloom Roadmap"
                 subtitle="A look at what we're working on and what's coming next."
             />
-            <div className="roadmap">
-                <div className="roadmap-line"></div>
+            <main className="roadmap" aria-label="Bloom development timeline">
+                <div className="roadmap-line" aria-hidden="true"></div>
                 {roadmap.map((item, index) => (
                     <div className="milestone" key={index}>
-                        <div className="dot" data-current={item.current}></div>
+                        <div className="dot" data-current={item.current} aria-hidden="true"></div>
                         <div className={`milestone-content ${item.alignment === 'right' ? 'right' : 'left'}`}>
                             <h3 className="milestone-title">{item.title} </h3>
                             <p className="milestone-date">{item.date}</p>
@@ -88,7 +88,7 @@ export default function PagesRoadmapPage() {
                         </div>
                     </div>
                 ))}
-            </div>
+            </main>
             <BottomBar />
         </PageLifecycle>
     )

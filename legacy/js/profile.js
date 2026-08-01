@@ -16,6 +16,7 @@ import {
   showCurrentUser,
   withLoadingOverlay,
 } from "./main.js";
+import { t } from "./i18n.js";
 
 // Definitions
 
@@ -28,10 +29,15 @@ const profileDetails = document.querySelector(".profile-details");
 const postsContainer = document.querySelector(".posts-container");
 const editProfileButton = document.getElementById("editProfileButton");
 const requestedUserId = getQueryParameter("uid");
+const blockProfileButton = document.getElementById("blockProfileButton");
 
 let currentUser;
 let activeUserId;
 let currentProfile;
+let blockState = {
+  blocked: false,
+  interactionBlocked: false,
+};
 
 // Components
 
@@ -42,6 +48,7 @@ function renderProfile(profile) {
     profileDetails.replaceChildren();
     applyAvatar(profilePicture, null);
     editProfileButton.hidden = true;
+    blockProfileButton.hidden = true;
     return;
   }
 
@@ -71,6 +78,72 @@ function renderProfile(profile) {
     profileDetails.appendChild(bio);
   }
   editProfileButton.hidden = activeUserId !== currentUser.id;
+  blockProfileButton.hidden = activeUserId === currentUser.id;
+  blockProfileButton.textContent = blockState.blocked
+    ? t("Unblock User")
+    : t("Block User");
+  blockProfileButton.setAttribute("aria-pressed", String(blockState.blocked));
+}
+
+async function getBlockStatus() {
+  if (activeUserId === currentUser.id) {
+    return { blocked: false, interaction_blocked: false };
+  }
+
+  const { data, error } = await supabase.functions.invoke("block-user", {
+    body: {
+      action: "status",
+      target_user: activeUserId,
+    },
+  });
+
+  if (error) {
+    console.error("Unable to load block status:", error.message);
+    return { blocked: false, interaction_blocked: false };
+  }
+
+  return data ?? { blocked: false, interaction_blocked: false };
+}
+
+async function toggleProfileBlock() {
+  if (!currentUser || activeUserId === currentUser.id) return;
+
+  const action = blockState.blocked ? "unblock" : "block";
+  const confirmation = blockState.blocked
+    ? t("Unblock this user?")
+    : t("Block this user? They will no longer be able to contact you.");
+  if (!confirm(confirmation)) return;
+
+  await withLoadingOverlay(async () => {
+    const { data, error } = await supabase.functions.invoke("block-user", {
+      body: {
+        action,
+        target_user: activeUserId,
+      },
+    });
+
+    if (error) {
+      console.error(`Unable to ${action} user:`, error.message);
+      alert(
+        action === "block"
+          ? t("Unable to block this user.")
+          : t("Unable to unblock this user."),
+      );
+      return;
+    }
+
+    blockState = {
+      blocked: data?.blocked === true,
+      interactionBlocked: data?.interaction_blocked === true,
+    };
+    renderProfile(currentProfile);
+
+    if (blockState.blocked) {
+      renderEmptyState(postsContainer, t("You blocked this user."));
+    } else {
+      window.location.reload();
+    }
+  }, action === "block" ? t("Blocking user…") : t("Unblocking user…"));
 }
 
 function createEditProfileForm() {
@@ -239,18 +312,33 @@ async function loadProfile() {
   }
 
   activeUserId = requestedUserId || currentUser.id;
-  const [profile, { data: viewerProfile, error: viewerProfileError }] = await Promise.all([
+  const [profile, { data: viewerProfile, error: viewerProfileError }, status] = await Promise.all([
     getUserProfile(activeUserId),
     supabase
       .from("profiles")
       .select("joined_communities")
       .eq("id", currentUser.id)
       .single(),
+    getBlockStatus(),
     showCurrentUser(currentUser, usernameLabel),
   ]);
 
+  blockState = {
+    blocked: status?.blocked === true,
+    interactionBlocked: status?.interaction_blocked === true,
+  };
   currentProfile = profile;
   renderProfile(profile);
+
+  if (blockState.interactionBlocked) {
+    renderEmptyState(
+      postsContainer,
+      blockState.blocked
+        ? t("You blocked this user.")
+        : t("This profile is unavailable."),
+    );
+    return;
+  }
 
   if (viewerProfileError) {
     console.error("Error fetching joined communities:", viewerProfileError.message);
@@ -303,6 +391,7 @@ async function loadProfile() {
 // Events
 
 editProfileButton.addEventListener("click", openEditProfilePopup);
+blockProfileButton.addEventListener("click", toggleProfileBlock);
 
 // Initialization
 
