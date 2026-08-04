@@ -1,3 +1,4 @@
+import { useState } from "react";
 import AppNavigation from "../../components/AppNavigation"
 import PageLifecycle from "../../components/PageLifecycle"
 
@@ -31,14 +32,16 @@ const pageMetadata = {
 }
 
 export default function PagesAppMapPage() {
+    const [eventCreatorVisible, setEventCreatorVisible] = useState(false);
     return (
         <PageLifecycle {...pageMetadata}>
             <>
     <AppNavigation />
     <div className="main-layout">
          <div id="map"></div>
-         <div id="event-list" className="event-list"></div>
+         <div id="event-list" className="event-list" style={{display: eventCreatorVisible ? "block" : "none"}}></div>
     </div>
+    <button className="openEventComposer" data-active={eventCreatorVisible} onClick={() => setEventCreatorVisible(!eventCreatorVisible)}>+</button>
 
     
     

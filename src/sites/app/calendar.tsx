@@ -30,25 +30,38 @@ export default function PagesAppCalendarPage() {
         <PageLifecycle {...pageMetadata}>
             <>
     <AppNavigation />
-    <main className="main-layout" aria-label="Calendar">
+    <main className="main-layout calendar-layout" aria-label="Calendar">
         <div className="CalendarContainer" id="calendar-container">
             <div className="month" id="monthYearContainer">
-                <ul>
-                    <button id="prev" type="button" aria-label="Previous month">&#10094;</button>
-                    <button id="next" type="button" aria-label="Next month">&#10095;</button>
-                    <li id="monthYear" aria-live="polite"></li>
-                </ul>
+                <div className="calendar-toolbar-nav">
+                    <button id="prev" className="calendar-nav-button" type="button" aria-label="Previous month">&#10094;</button>
+                    <button id="next" className="calendar-nav-button" type="button" aria-label="Next month">&#10095;</button>
+                </div>
+                <h2 id="monthYear" className="calendar-title" aria-live="polite"></h2>
+                <div className="calendar-toolbar-actions">
+                    <button type="button" className="calendar-view-button is-active" aria-pressed="true">Month</button>
+                </div>
             </div>
             <ul className="weekdays" id="weekdaysContainer">
             </ul>
             <ul className="days" id="daysContainer">
-                
+
             </ul>
         </div>
-        <div id="eventDetailsContainer">
-        
-        </div>
+        <aside className="calendar-sidebar">
+            <div className="calendar-sidebar-section">
+                <h3>Upcoming</h3>
+                <ul id="calendarUpcomingList" className="calendar-upcoming-list"></ul>
+            </div>
+            <div className="calendar-sidebar-section">
+                <h3>Legend</h3>
+                <ul id="calendarLegendList" className="calendar-legend-list"></ul>
+            </div>
+        </aside>
     </main>
+    <div id="eventDetailsContainer">
+
+    </div>
 
             </>
         </PageLifecycle>

@@ -30,6 +30,10 @@ const postsContainer = document.querySelector(".posts-container");
 const editProfileButton = document.getElementById("editProfileButton");
 const requestedUserId = getQueryParameter("uid");
 const blockProfileButton = document.getElementById("blockProfileButton");
+const profileCommunitiesCount = document.getElementById("profileCommunitiesCount");
+const profilePostsCount = document.getElementById("profilePostsCount");
+const profileRepliesCount = document.getElementById("profileRepliesCount");
+const profileStreakCount = document.getElementById("profileStreakCount");
 
 let currentUser;
 let activeUserId;
@@ -305,6 +309,50 @@ function openEditProfilePopup() {
 
 // Data
 
+function computeDayStreak(postDates) {
+  const uniqueDays = [...new Set(postDates.map((date) => {
+    const created = new Date(date);
+    return new Date(created.getFullYear(), created.getMonth(), created.getDate()).getTime();
+  }))].sort((a, b) => b - a);
+
+  if (uniqueDays.length === 0) return 0;
+
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+
+  if (uniqueDays[0] !== startOfToday && uniqueDays[0] !== startOfToday - oneDayMs) {
+    return 0;
+  }
+
+  let streak = 1;
+  for (let i = 1; i < uniqueDays.length; i++) {
+    if (uniqueDays[i - 1] - uniqueDays[i] === oneDayMs) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+async function loadProfileStats(userId) {
+  const [communities, posts, replies] = await Promise.all([
+    supabase.from("Communities").select("id", { count: "exact", head: true }).contains("members", [userId]),
+    supabase.from("Posts").select("id, created_at").eq("user_id", userId),
+    supabase.from("post_replies").select("id", { count: "exact", head: true }).eq("user_id", userId),
+  ]);
+
+  if (communities.error) console.error("Error fetching community count:", communities.error.message);
+  if (posts.error) console.error("Error fetching post count:", posts.error.message);
+  if (replies.error) console.error("Error fetching reply count:", replies.error.message);
+
+  if (profileCommunitiesCount) profileCommunitiesCount.textContent = String(communities.count ?? 0);
+  if (profilePostsCount) profilePostsCount.textContent = String(posts.data?.length ?? 0);
+  if (profileRepliesCount) profileRepliesCount.textContent = String(replies.count ?? 0);
+  if (profileStreakCount) profileStreakCount.textContent = String(computeDayStreak((posts.data ?? []).map((post) => post.created_at)));
+}
+
 async function loadProfile() {
   currentUser = await getCurrentUserOrRedirect();
   if (!currentUser) {
@@ -321,6 +369,7 @@ async function loadProfile() {
       .single(),
     getBlockStatus(),
     showCurrentUser(currentUser, usernameLabel),
+    loadProfileStats(activeUserId),
   ]);
 
   blockState = {

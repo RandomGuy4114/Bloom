@@ -1064,9 +1064,10 @@ export async function showCurrentUser(user, element, profileHref = PAGE_URLS.pro
   if (user.id === 'd026f563-e776-4a67-9fd2-10eef3ec60f1') {
       element.appendChild(createSupporterBadge({ compact: false }, "Owner", "#FFD700"));
   }
-  const avatar = element.closest(".topbar")?.querySelector(".pfp-frame");
+  const avatar = element.closest("#currentUserNav")?.querySelector(".pfp-frame");
   applyAvatar(avatar, profile?.avatar_url, "Profile picture");
   attachAccountMenu(avatar, profileHref);
+  return profile;
 }
 
 function attachAccountMenu(avatar, profileHref = PAGE_URLS.profile) {

@@ -380,52 +380,55 @@ async function createCommunity({ name, description, radiusMeters, imageFile, isP
 communitiesSearchInput?.addEventListener("input", renderCommunities);
 myCommunitiesSearchInput?.addEventListener("input", renderMyCommunities);
 
-createCommunityButton?.addEventListener("click", () => {
-  if (!userLocation) {
-    alert("Location access is required to create a community.");
-    return;
-  }
-
-  const form = createCommunityForm();
-  const { closePopup } = createPopupShell("Create Community", form);
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const name = form.querySelector("#communityName").value.trim();
-    const description = form.querySelector("#communityDescription").value.trim();
-    const radiusMeters = Number.parseInt(form.querySelector("#communityLocation").value, 10);
-    const imageFile = form.querySelector("#communityImage").files?.[0] ?? null;
-    const isPrivate = form.querySelector("#communityPrivate").checked;
-
-    if (!name || !description) {
-      alert("Please fill in both the community name and description.");
-      return;
-    }
-    if (imageFile && (!allowedCommunityImageTypes.has(imageFile.type) || imageFile.size > maximumCommunityImageSize)) {
-      alert("Choose a JPEG, PNG, or WebP community image that is 5 MB or smaller.");
+if (createCommunityButton && !createCommunityButton.dataset.clickBound) {
+  createCommunityButton.dataset.clickBound = "true";
+  createCommunityButton.addEventListener("click", () => {
+    if (!userLocation) {
+      alert("Location access is required to create a community.");
       return;
     }
 
-    await withLoadingOverlay(async () => {
-      const { error } = await createCommunity({
-        name,
-        description,
-        radiusMeters,
-        imageFile,
-        isPrivate,
-      });
-      if (error) {
-        console.error("Error creating community:", error.message);
-        alert("Failed to create community. Please try again.");
+    const form = createCommunityForm();
+    const { closePopup } = createPopupShell("Create Community", form);
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const name = form.querySelector("#communityName").value.trim();
+      const description = form.querySelector("#communityDescription").value.trim();
+      const radiusMeters = Number.parseInt(form.querySelector("#communityLocation").value, 10);
+      const imageFile = form.querySelector("#communityImage").files?.[0] ?? null;
+      const isPrivate = form.querySelector("#communityPrivate").checked;
+
+      if (!name || !description) {
+        alert("Please fill in both the community name and description.");
+        return;
+      }
+      if (imageFile && (!allowedCommunityImageTypes.has(imageFile.type) || imageFile.size > maximumCommunityImageSize)) {
+        alert("Choose a JPEG, PNG, or WebP community image that is 5 MB or smaller.");
         return;
       }
 
-      await closePopup();
-      alert("Community created successfully!");
-      await loadCommunities();
-    }, "Creating community...");
+      await withLoadingOverlay(async () => {
+        const { error } = await createCommunity({
+          name,
+          description,
+          radiusMeters,
+          imageFile,
+          isPrivate,
+        });
+        if (error) {
+          console.error("Error creating community:", error.message);
+          alert("Failed to create community. Please try again.");
+          return;
+        }
+
+        await closePopup();
+        alert("Community created successfully!");
+        await loadCommunities();
+      }, "Creating community...");
+    });
   });
-});
+}
 
 // Initialization
 

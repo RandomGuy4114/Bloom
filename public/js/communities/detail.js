@@ -33,6 +33,7 @@ const usernameLabel = document.getElementById("username-label");
 const postsContainer = document.getElementById("com-posts");
 const communityNameElement = document.getElementById("comName");
 const communityDescriptionElement = document.getElementById("comDesc");
+const communityMetaElement = document.getElementById("comMemb");
 const joinCommunityButton = document.getElementById("joinCommunityButton");
 const searchPostInput = document.getElementById("searchPostInput");
 const communityMembersContainer = document.getElementById("communityMembersContainer");
@@ -97,6 +98,8 @@ function renderCommunityPosts() {
 }
 
 async function renderCommunityMembers(memberIds = []) {
+  if (!communityMembersContainer) return;
+
   const uniqueMemberIds = [...new Set(memberIds.filter(Boolean))];
   const profiles = await Promise.all(uniqueMemberIds.map(async (memberId) => ({
     memberId,
@@ -205,6 +208,14 @@ function renderCommunityIdentity() {
   }
   communityDescriptionElement.dataset.i18nIgnore = "true";
   communityDescriptionElement.textContent = communityDetails?.description || "";
+  if (communityMetaElement) {
+    const memberCount = communityDetails?.members?.length ?? 0;
+    const memberLabel = `${memberCount} ${memberCount === 1 ? "member" : "members"}`;
+    communityMetaElement.dataset.i18nIgnore = "true";
+    communityMetaElement.textContent = communityDetails?.location_label
+      ? `${memberLabel} · ${communityDetails.location_label}`
+      : memberLabel;
+  }
   businessCommunityTag.hidden = communityDetails?.business !== true;
   editCommunityButton.hidden = communityDetails?.user_id !== user?.id;
   manageJoinRequestsButton.hidden = !(

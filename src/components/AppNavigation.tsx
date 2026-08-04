@@ -33,15 +33,6 @@ export default function AppNavigation({
     return (
         <>
             <div className="topbar">
-                {!compactMobileHome && (
-                    <h1 className="topbar-logo">
-                        Bloom {versionAsSpan ? <span id="verText">ALPHA</span> : <p id="verText">ALPHA</p>}
-                    </h1>
-                )}
-                <nav style={{ display: "flex", alignItems: "center" }}>
-                    <p id="username-label" style={{ margin: "10px" }}>{usernameLabel}</p>
-                    <div className="pfp-frame"></div>
-                </nav>
                 <div className="topbar-actions" aria-label="Mobile navigation">
                     {!compactMobileHome && showTopbarActions && (
                         <>
@@ -58,9 +49,16 @@ export default function AppNavigation({
                         </>
                     )}
                 </div>
+                <nav id="currentUserNav" style={{ display: "flex", alignItems: "center", marginLeft: "auto" }}>
+                    <p id="username-label" style={{ margin: "10px" }}>{usernameLabel}</p>
+                    <div className="pfp-frame"></div>
+                </nav>
             </div>
             {showSidebar && (
                 <SidebarElement className="sidebar">
+                    <h1 className="topbar-logo">
+                        Bloom {versionAsSpan ? <span id="verText">ALPHA</span> : <p id="verText">ALPHA</p>}
+                    </h1>
                     <button onMouseEnter={() => preload("home")} onFocus={() => preload("home")} onClick={() => goTo("home")} className="sidebarButton">Home</button>
                     <button onMouseEnter={() => preload("profile")} onFocus={() => preload("profile")} onClick={() => goTo("profile")} className="sidebarButton">Profile</button>
                     <button onMouseEnter={() => preload("calendar")} onFocus={() => preload("calendar")} onClick={() => goTo("calendar")} className="sidebarButton">Calendar</button>

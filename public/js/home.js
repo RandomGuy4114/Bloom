@@ -26,6 +26,8 @@ const bloomConnectStatusCircle = document.getElementById("bloomConnectStatusCirc
 const desktopHomeTabs = [...document.querySelectorAll("[data-home-tab]")];
 const desktopHomePanels = [...document.querySelectorAll("[data-home-panel]")];
 const KonamiCode = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
+const Greeting = document.getElementById("Greeting");
+const Status = document.getElementById("Status");
 
 let currentUser;
 let konamiIndex = 0;
@@ -266,6 +268,22 @@ desktopHomeTabs.forEach((tab, index) => {
   });
 });
 
+function greet(username) {
+  const now = new Date();
+  const hour = now.getHours();
+  let greetingText = "Hello";
+
+  if (hour < 12) {
+    greetingText = "Good morning";
+  } else if (hour < 18) {
+    greetingText = "Good afternoon";
+  } else {
+    greetingText = "Good evening";
+  }
+
+  Greeting.textContent = `${greetingText}, ${username || "Bloom user"}! 👋`;
+}
+
 // Initialization
 
 await withLoadingOverlay(async () => {
@@ -277,10 +295,12 @@ await withLoadingOverlay(async () => {
     );
     if (!currentUser) return;
 
+    const profile = await showCurrentUser(currentUser, usernameLabel);
+
     await withTimeout(Promise.all([
-      showCurrentUser(currentUser, usernameLabel),
       loadJoinedCommunities(),
-      checkFirstTimeUser(),
+      checkFirstTimeUser(currentUser.username),
+      greet(profile?.display_name || profile?.username || "Bloom user"),
     ]), 25000, "Feed loading took too long.");
   } catch (error) {
     console.error("Unable to finish loading the feed:", error.message);
