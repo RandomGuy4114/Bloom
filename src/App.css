@@ -1830,8 +1830,10 @@ body[data-theme="dark"] .message-preview {
     flex: 1;
 }
 
-body.home-page,
-body.community-page {
+body.home-page:not([data-theme-name]),
+body.community-page:not([data-theme-name]),
+body.home-page[data-theme-name="light"],
+body.community-page[data-theme-name="light"] {
     background-color: #ffffff;
 }
 
