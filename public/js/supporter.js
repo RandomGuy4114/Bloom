@@ -1,11 +1,11 @@
 // Dependencies
 
-import { supabase } from "./supabase.js";
+import { supabase } from "./supabase.js?v=msgbwtsa";
 import {
   getCurrentUserOrRedirect,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js";
+} from "./main.js?v=msgbwtsa";
 
 // Definitions
 

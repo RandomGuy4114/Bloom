@@ -1,7 +1,7 @@
 // Dependencies
 
-import { supabase } from "./supabase.js";
-import { callRpc, retryConnection } from "./connection.js";
+import { supabase } from "./supabase.js?v=msgbwtsa";
+import { callRpc, retryConnection } from "./connection.js?v=msgbwtsa";
 
 // Definitions
 

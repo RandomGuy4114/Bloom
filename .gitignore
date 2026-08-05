@@ -5,6 +5,9 @@ node_modules/
 dist/
 dist-ssr/
 
+# Generated at build time by scripts/sync-legacy.mjs
+src/generated/
+
 # Environment
 *.local
 

@@ -1,9 +1,9 @@
 // Dependencies
 
-import { initializeBusinessNavigation, requireBusinessAccount } from "./business-common.js";
-import { applyTheme, getAvailableThemes, PAGE_URLS, withLoadingOverlay } from "./main.js";
-import { getLanguage, setLanguage } from "./i18n.js";
-import { supabase } from "./supabase.js";
+import { initializeBusinessNavigation, requireBusinessAccount } from "./business-common.js?v=msgbwtsa";
+import { applyTheme, getAvailableThemes, PAGE_URLS, withLoadingOverlay } from "./main.js?v=msgbwtsa";
+import { getLanguage, setLanguage } from "./i18n.js?v=msgbwtsa";
+import { supabase } from "./supabase.js?v=msgbwtsa";
 
 // Definitions
 

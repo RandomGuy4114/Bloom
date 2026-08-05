@@ -1,6 +1,6 @@
 // Dependencies
 
-import { supabase } from "./supabase.js";
+import { supabase } from "./supabase.js?v=msgbwtsa";
 import {
   applyAvatar,
   clearUserProfileCache,
@@ -15,8 +15,8 @@ import {
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js";
-import { t } from "./i18n.js";
+} from "./main.js?v=msgbwtsa";
+import { t } from "./i18n.js?v=msgbwtsa";
 
 // Definitions
 
