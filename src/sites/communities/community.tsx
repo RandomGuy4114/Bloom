@@ -103,6 +103,14 @@ export default function PagesCommunitiesCommunityPage() {
                   <p id="comDesc" />
                 </div>
 
+                <div className="community-sidebar-card">
+                  <h3>Community Members</h3>
+                  <div
+                    id="communityMembersContainer"
+                    className="community-members-list"
+                  />
+                </div>
+
                 <SubCommunityList communityId={communityId} />
               </aside>
             </div>

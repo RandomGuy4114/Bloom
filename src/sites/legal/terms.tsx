@@ -21,7 +21,7 @@ export default function PagesLegalTermsPage() {
     return (
         <PageLifecycle {...pageMetadata}>
             <>
-    <InfoPageHead title="The Bloom Project™ Terms Of Service" subtitle="Last Updated: July 30, 2026"/>
+    <InfoPageHead title="The Bloom Project™ Terms Of Service" subtitle="Last Updated: August 5, 2026"/>
     <div className="TOC-Container">
         <h2>Table of Contents</h2>
         <ol>
@@ -71,6 +71,7 @@ export default function PagesLegalTermsPage() {
             <li>Spam communities or users.</li>
             <li>Circumvent security features or abuse bugs.</li>
             <li>Use automated systems to overload the service.</li>
+            <li>Post Suggestive, explicit, or inappropriate content in any way.</li>
         </ul>
         <p>Bloom may suspend or remove accounts that violate these rules.</p>
     </div>

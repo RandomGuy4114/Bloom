@@ -2,6 +2,9 @@ import AppNavigation from "../../components/AppNavigation"
 import PageLifecycle from "../../components/PageLifecycle"
 import PostComposer from "../../components/posts/PostComposer"
 import PostFeed from "../../components/posts/PostFeed"
+import WarningPopup from "../../components/warningPopup"
+import React from "react"
+import { supabase } from "../../lib/supabase"
 
 export const pagePath = "/pages/app/home/"
 
@@ -37,6 +40,46 @@ const pageMetadata = {
 }
 
 export default function PagesAppHomePage() {
+    const [warningMessage, setWarningMessage] = React.useState<string | null>(null)
+
+    React.useEffect(() => {
+        let cancelled = false
+
+        async function loadWarning() {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user || cancelled) return
+
+            const { data, error } = await supabase
+                .from("profiles")
+                .select("warning")
+                .eq("id", user.id)
+                .single()
+
+            if (error) {
+                console.error("Error fetching user warning:", error.message)
+                return
+            }
+            if (!cancelled && data?.warning) {
+                setWarningMessage(data.warning)
+            }
+        }
+
+        void loadWarning()
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
+    async function dismissWarning() {
+        setWarningMessage(null)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { error } = await supabase.from("profiles").update({ warning: null }).eq("id", user.id)
+        if (error) {
+            console.error("Error clearing user warning:", error.message)
+        }
+    }
+
     return (
         <PageLifecycle {...pageMetadata}>
             <>
@@ -77,6 +120,7 @@ export default function PagesAppHomePage() {
                 </div>
             </section>
         </div>
+        <WarningPopup visible={warningMessage !== null} message={warningMessage ?? ""} onClose={() => { void dismissWarning() }} />
     </div>
 
             </>

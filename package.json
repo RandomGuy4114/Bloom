@@ -17,11 +17,13 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@remixicon/react": "^4.9.0",
     "@supabase/supabase-js": "^2.110.7",
     "motion": "^12.42.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
+    "remixicon": "^4.9.1",
     "supabase": "^2.110.0"
   },
   "devDependencies": {
