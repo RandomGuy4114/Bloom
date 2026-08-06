@@ -1,7 +1,7 @@
 // Dependencies
 
-import { supabase } from "../supabase.js?v=msggo3il";
-import { t } from "../i18n.js?v=msggo3il";
+import { supabase } from "../supabase.js?v=mshhy216";
+import { t } from "../i18n.js?v=mshhy216";
 import {
   createPopupShell,
   filterBySearch,
@@ -16,7 +16,7 @@ import {
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
-} from "../main.js?v=msggo3il";
+} from "../main.js?v=mshhy216";
 
 // Definitions
 
