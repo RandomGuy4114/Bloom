@@ -1838,7 +1838,7 @@ body.community-page[data-theme-name="light"] {
 }
 
 .home-page .main-layout,
-.app-page .main-layout {
+.app-page .main-layout, .mod-portal {
     width: calc(100% - var(--sidebar-width));
     margin-left: var(--sidebar-width);
     margin-right: 0;
@@ -1854,6 +1854,16 @@ body.community-page[data-theme-name="light"] {
     padding-top: 0;
     padding-left: 0;
     padding-right: 0;
+}
+
+
+.moderation-portal-container {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
 }
 
 .sub-community-page .main-layout {

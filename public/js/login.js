@@ -1,12 +1,12 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msgbwtsa";
-import { PAGE_URLS, withLoadingOverlay, withTimeout } from "./main.js?v=msgbwtsa";
+import { supabase } from "./supabase.js?v=msggo3il";
+import { PAGE_URLS, withLoadingOverlay, withTimeout } from "./main.js?v=msggo3il";
 import {
   clearPendingAccountLanguage,
   getLanguage,
   hasPendingAccountLanguage,
-} from "./i18n.js?v=msgbwtsa";
+} from "./i18n.js?v=msggo3il";
 
 // Definitions
 

@@ -206,7 +206,6 @@ export default function AppNavigation({
                     <button onMouseEnter={() => preload("calendar")} onFocus={() => preload("calendar")} onClick={() => goTo("calendar")} className="sidebarButton">Calendar</button>
                     <div className="divider"></div>
                     <button className="sidebarButton" onMouseEnter={() => preload("map")} onFocus={() => preload("map")} onClick={() => goTo("map")}>Map</button>
-                    {!compactMobileHome && <button className="sidebarButton" onMouseEnter={() => preload("messages")} onFocus={() => preload("messages")} onClick={() => goTo("messages")}>Direct Messages</button>}
                     <div className="divider"></div>
                     <button className="sidebarButton" onMouseEnter={() => preload("settings")} onFocus={() => preload("settings")} onClick={() => goTo("settings")}>Settings</button>
                     <button type="button" className="sidebarButton supporter-button" onMouseEnter={() => preload("supporter")} onFocus={() => preload("supporter")} onClick={() => goTo("supporter")}>Buy Bloom Supporter</button>

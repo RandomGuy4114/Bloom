@@ -1,7 +1,7 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msgbwtsa";
-import { PAGE_URLS, withLoadingOverlay } from "./main.js?v=msgbwtsa";
+import { supabase } from "./supabase.js?v=msggo3il";
+import { PAGE_URLS, withLoadingOverlay } from "./main.js?v=msggo3il";
 
 // Definitions
 

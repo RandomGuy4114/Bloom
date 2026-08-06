@@ -1,8 +1,8 @@
 // Dependencies
 
-import { applyAvatar, getCurrentUserOrRedirect, showCurrentUser, withLoadingOverlay } from "./main.js?v=msgbwtsa";
-import { supabase } from "./supabase.js?v=msgbwtsa";
-import { callRpc } from "./connection.js?v=msgbwtsa";
+import { applyAvatar, getCurrentUserOrRedirect, showCurrentUser, withLoadingOverlay } from "./main.js?v=msggo3il";
+import { supabase } from "./supabase.js?v=msggo3il";
+import { callRpc } from "./connection.js?v=msggo3il";
 
 // Definitions
 

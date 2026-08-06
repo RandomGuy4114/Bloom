@@ -1,1 +1,1 @@
-await import("../../js/sub-community.js?v=msgbwtsa");
+await import("../../js/sub-community.js?v=msggo3il");

@@ -8,10 +8,10 @@ import {
   PAGE_URLS,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msgbwtsa";
-import { getLanguage, setLanguage } from "./i18n.js?v=msgbwtsa";
-import { supabase } from "./supabase.js?v=msgbwtsa";
-import { setConnectEnabled } from "./connect.js?v=msgbwtsa";
+} from "./main.js?v=msggo3il";
+import { getLanguage, setLanguage } from "./i18n.js?v=msggo3il";
+import { supabase } from "./supabase.js?v=msggo3il";
+import { setConnectEnabled } from "./connect.js?v=msggo3il";
 
 // Definitions
 

@@ -7,7 +7,7 @@ import {
   PAGE_URLS,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msgbwtsa";
+} from "./main.js?v=msggo3il";
 
 // Definitions
 
