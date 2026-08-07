@@ -1,5 +1,5 @@
 import PageLifecycle from "../../components/PageLifecycle"
-import { useNavigate } from "react-router-dom"
+import { useRouter } from "next/navigation"
 
 export const pagePath = "/pages/auth/confirm/"
 
@@ -22,7 +22,7 @@ const pageMetadata = {
 }
 
 export default function PagesAuthConfirmPage() {
-    const navigate = useNavigate()
+    const router = useRouter()
     return (
         <PageLifecycle {...pageMetadata}>
             <>
@@ -30,7 +30,7 @@ export default function PagesAuthConfirmPage() {
         <div className="LeftSide">
             <h1 id="Logo">Email Confirmed</h1>
             <p id="Subtitle">Your email has been confirmed.</p>
-            <button id="GetStartedButton" onClick={() => navigate("/login")}>Continue To Login</button>
+            <button id="GetStartedButton" onClick={() => router.push("/login")}>Continue To Login</button>
         </div>
         <div className="RightSide">
             <img src="../../../Assets/MainImage.webp" alt="Bloom Image" id="MainImage" />

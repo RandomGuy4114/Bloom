@@ -4,8 +4,9 @@ import flowerImg from "../../Assets/Flower.png"
 import mapImg from "../../Assets/MapImg.png"
 import siteShowcaseImg from "../../Assets/SiteShowcase.png"
 import BottomBar from "../../components/BottomBar"
-import { useNavigate } from "react-router-dom"
+import { useRouter } from "next/navigation"
 import PageLifecycle from "../../components/PageLifecycle"
+import { Analytics } from "@vercel/analytics/next"
 
 const pageMetadata = {
     bodyClass: "landing-page",
@@ -20,12 +21,12 @@ const pageMetadata = {
 
 
 function Landing() {
-    const navigate = useNavigate()
+    const router = useRouter()
     return (
         <PageLifecycle {...pageMetadata}>
             <div className="topbarHome">
-                <button type="button" id="loginButton" aria-label="Login" onClick={() => navigate("/login")} data-i18n-ignore="true">Login</button>
-                <button type="button" id="registerButton" aria-label="Register" onClick={() => navigate("/register")} data-i18n-ignore="true">Register</button>
+                <button type="button" id="loginButton" aria-label="Login" onClick={() => router.push("/login")} data-i18n-ignore="true">Login</button>
+                <button type="button" id="registerButton" aria-label="Register" onClick={() => router.push("/register")} data-i18n-ignore="true">Register</button>
                 <button type="button" id="languageButton" aria-label="Cambiar idioma" data-i18n-ignore="true">Cambiar idioma</button>
             </div>
             <main>
@@ -34,10 +35,10 @@ function Landing() {
                         <motion.h1 animate={{ scale: [0.1, 1], y: [-20, 0] }} transition={{ease: "circInOut", duration: 1}} id="Logo" style={{ fontSize: "clamp(5rem, 10vw, 15rem)", marginTop: "100px" }}>The Bloom Project™</motion.h1>
                         <motion.p animate={{ opacity: [0, 1], y: [20, 0] }} transition={{ease: "circInOut", duration: 1, delay: 1}} className="landing-attribution" id="LandingSubtitle" style={{ fontSize: "clamp(1rem, 2vw, 1.5rem)", margin: 0, opacity: 0 }}>Making local connections easier</motion.p>
 
-                        <img className="Flower" src={flowerImg} alt="A beautiful flower" width="250" height="250" decoding="async"/>
-                        <img className="FlowerTop" src={flowerImg} alt="A beautiful flower" width="250" height="250" decoding="async"/>
-                        <img className="FlowerBg1" src={flowerImg} alt="A beautiful flower" width="250" height="250" decoding="async"/>
-                        <img className="FlowerBg2" src={flowerImg} alt="A beautiful flower" width="250" height="250" decoding="async"/>
+                        <img className="Flower" src={flowerImg.src} alt="A beautiful flower" width="250" height="250" decoding="async"/>
+                        <img className="FlowerTop" src={flowerImg.src} alt="A beautiful flower" width="250" height="250" decoding="async"/>
+                        <img className="FlowerBg1" src={flowerImg.src} alt="A beautiful flower" width="250" height="250" decoding="async"/>
+                        <img className="FlowerBg2" src={flowerImg.src} alt="A beautiful flower" width="250" height="250" decoding="async"/>
                         
                         <div className="BottomSection">
                             <div className="BottomSectionContent">
@@ -52,13 +53,14 @@ function Landing() {
                                 <h2 className="InfoSectionTitle">Support Bloom</h2>
                                 <p className="landing-copy">If you enjoy using Bloom, consider supporting the project. Your contributions help keep Bloom free and open source for everyone.</p>
                             </div>
-                            <img className="ImageFrame" src={mapImg} alt="A map of the local area" width="100%" height="100%" style={{ objectFit: "cover" }} decoding="async" />
-                            <img className="ImageFrame2" src={siteShowcaseImg} alt="The Bloom Homepage" width="100%" height="100%" style={{ objectFit: "cover" }} decoding="async" />
+                            <img className="ImageFrame" src={mapImg.src} alt="A map of the local area" width="100%" height="100%" style={{ objectFit: "cover" }} decoding="async" />
+                            <img className="ImageFrame2" src={siteShowcaseImg.src} alt="The Bloom Homepage" width="100%" height="100%" style={{ objectFit: "cover" }} decoding="async" />
                         </div>
                     </div>
                 </section>
                 <BottomBar />
             </main>
+        <Analytics />
         </PageLifecycle>
     )
 }

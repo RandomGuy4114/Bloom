@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react"
+import { type CSSProperties, useEffect, useState } from "react"
 import AppNavigation from "../../../components/AppNavigation"
 import PageLifecycle from "../../../components/PageLifecycle"
 import SubCommunityList from "../../../components/SubCommunityList"
@@ -29,7 +29,11 @@ const pageMetadata = {
 }
 
 export default function MobilePagesCommunitiesCommunityPage() {
-    const communityId = new URLSearchParams(window.location.search).get("communityID")
+    const [communityId, setCommunityId] = useState<string | null>(null)
+
+    useEffect(() => {
+        setCommunityId(new URLSearchParams(window.location.search).get("communityID"))
+    }, [])
 
     return (
         <PageLifecycle {...pageMetadata}>

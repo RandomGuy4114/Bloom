@@ -1,7 +1,7 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msi8tx73";
-import { getLanguage, setLanguage, t } from "./i18n.js?v=msi8tx73";
+import { supabase } from "./supabase.js?v=msj2vxku";
+import { getLanguage, setLanguage, t } from "./i18n.js?v=msj2vxku";
 
 // Definitions
 
@@ -63,7 +63,7 @@ export async function getCurrentUserOrRedirect(redirectUrl = PAGE_URLS.login) {
   }
   applyTheme(profile?.Theme, profile?.supporter === true);
   initializeGlobalSearch();
-  import("./connect.js?v=msi8tx73")
+  import("./connect.js?v=msj2vxku")
     .then(({ restoreConnect }) => restoreConnect(user))
     .catch((error) => console.error("Unable to restore Connect:", error.message));
 

@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase/client"
 import "../../App.css"
 
@@ -17,7 +18,7 @@ function yearsAgo(years: number) {
 }
 
 function Register() {
-    const navigate = useNavigate()
+    const router = useRouter()
     const [username, setUsername] = useState("")
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
@@ -119,7 +120,7 @@ function Register() {
             }
 
             window.alert("Account created successfully! Please check your email to confirm your account.")
-            navigate("/", { replace: true })
+            router.replace("/")
         } catch (error) {
             console.error("Registration request failed:", error)
             setMessage("Unable to reach Bloom. Check your connection and try again.")
@@ -204,8 +205,8 @@ function Register() {
                             required
                         />
                         <span>
-                            I agree to the <Link to="/terms">Terms of Service</Link> and{" "}
-                            <Link to="/privacy">Privacy Policy</Link>.
+                            I agree to the <Link href="/terms">Terms of Service</Link> and{" "}
+                            <Link href="/privacy">Privacy Policy</Link>.
                         </span>
                     </label>
 
@@ -264,7 +265,7 @@ try {
 
 
                 <p style={{ fontSize: 15, color: "grey" }}>
-                    Already have an account? <Link to="/login">Log in</Link>
+                    Already have an account? <Link href="/login">Log in</Link>
                 </p>
             </div>
 

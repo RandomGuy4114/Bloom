@@ -1,8 +1,10 @@
+"use client"
+
 import { useLayoutEffect } from "react"
-import { useLocation } from "react-router-dom"
+import { usePathname } from "next/navigation"
 
 export default function RouteTransition() {
-    const { pathname } = useLocation()
+    const pathname = usePathname()
 
     useLayoutEffect(() => {
         const root = document.documentElement

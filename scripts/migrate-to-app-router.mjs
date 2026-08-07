@@ -14,6 +14,35 @@ const overrides = {
     "auth/callback.tsx": "/callback",
 }
 
+// Routes with a hand-written page.tsx (server data-fetching) — the codemod
+// still regenerates their page-client.tsx from src/sites, but never touches
+// page.tsx itself.
+const dynamicRoutes = new Set([
+    "/pages/communities/community/",
+    "/pages/communities/sub-community/",
+])
+
+const siteUrl = "https://www.trybloom.org"
+
+const seoMetadata = {
+    "/": {
+        title: "The Bloom Project™ — Making local connections easier",
+        description: "Bloom helps you discover local communities, events, and businesses near you, and makes it easy to connect with the people around you.",
+    },
+    "/login": {
+        title: "Login",
+        description: "Log in to Bloom to connect with local communities, events, and businesses near you.",
+    },
+    "/register": {
+        title: "Register",
+        description: "Create a Bloom account to start connecting with local communities, events, and businesses near you.",
+    },
+    "/pages/legal/community-guidelines/": {
+        title: "Community Guidelines",
+        description: "Read The Bloom Project's community guidelines.",
+    },
+}
+
 async function tsxFiles(dir) {
     const out = []
     for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -69,14 +98,74 @@ for (const file of files) {
 
     const fromDir = dirname(file)
     let transformed = rewriteImports(source, fromDir)
-    transformed = transformed.replace(/^export default function (\w+)/m, "export default function Page")
-    if (!transformed.startsWith('"use client"')) {
-        transformed = `"use client"\n\n${transformed}`
-    }
 
+    let seo = seoMetadata[routePath]
+    if (!seo) {
+        const metadataBlock = source.match(/const pageMetadata = \{([\s\S]*?)\n\}/)?.[1] ?? ""
+        const titleMatch = metadataBlock.match(/["']?title["']?\s*:\s*"([^"]*)"/)
+        if (titleMatch) {
+            seo = {
+                title: titleMatch[1],
+                description: "Bloom helps you discover local communities, events, and businesses near you, and makes it easy to connect with the people around you.",
+            }
+        }
+    }
     const outFile = targetFile(routePath)
     await mkdir(dirname(outFile), { recursive: true })
-    await writeFile(outFile, transformed)
+    const isDynamic = dynamicRoutes.has(routePath)
+
+    if (isDynamic) {
+        transformed = transformed.replace(/^export default function (\w+)/m, "export default function PageClient")
+        if (!transformed.startsWith('"use client"')) {
+            transformed = `"use client"\n\n${transformed}`
+        }
+        const clientFile = resolve(dirname(outFile), "page-client.tsx")
+        await writeFile(clientFile, transformed)
+        routeMap.push({ file: relPath, routePath, outFile: relative(projectRoot, clientFile), note: "page.tsx hand-maintained" })
+        continue
+    }
+
+    if (seo) {
+        transformed = transformed.replace(/^export default function (\w+)/m, "export default function PageClient")
+        if (!transformed.startsWith('"use client"')) {
+            transformed = `"use client"\n\n${transformed}`
+        }
+        const clientFile = resolve(dirname(outFile), "page-client.tsx")
+        await writeFile(clientFile, transformed)
+
+        const normalizedPath = routePath === "/" ? "/" : `/${routeSegmentsFromPath(routePath).join("/")}/`
+        const canonical = `${siteUrl}${normalizedPath}`
+        const serverWrapper = `import type { Metadata } from "next"
+import PageClient from "./page-client"
+
+export const metadata: Metadata = {
+    title: ${JSON.stringify(seo.title)},
+    description: ${JSON.stringify(seo.description)},
+    alternates: { canonical: ${JSON.stringify(canonical)} },
+    openGraph: {
+        title: ${JSON.stringify(seo.title)},
+        description: ${JSON.stringify(seo.description)},
+        url: ${JSON.stringify(canonical)},
+    },
+    twitter: {
+        title: ${JSON.stringify(seo.title)},
+        description: ${JSON.stringify(seo.description)},
+    },
+}
+
+export default function Page() {
+    return <PageClient />
+}
+`
+        await writeFile(outFile, serverWrapper)
+    } else {
+        transformed = transformed.replace(/^export default function (\w+)/m, "export default function Page")
+        if (!transformed.startsWith('"use client"')) {
+            transformed = `"use client"\n\n${transformed}`
+        }
+        await writeFile(outFile, transformed)
+    }
+
     routeMap.push({ file: relPath, routePath, outFile: relative(projectRoot, outFile) })
 }
 

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import AppNavigation from "../../components/AppNavigation";
 import PageLifecycle from "../../components/PageLifecycle";
 import PostComposer from "../../components/posts/PostComposer";
@@ -29,10 +30,23 @@ const pageMetadata = {
   title: "Bloom - Community",
 };
 
-export default function PagesCommunitiesCommunityPage() {
-  const communityId = new URLSearchParams(window.location.search).get(
-    "communityID",
-  );
+interface InitialCommunity {
+  name: string | null;
+  description: string | null;
+}
+
+interface PagesCommunitiesCommunityPageProps {
+  initialCommunity?: InitialCommunity | null;
+}
+
+export default function PagesCommunitiesCommunityPage({
+  initialCommunity = null,
+}: PagesCommunitiesCommunityPageProps) {
+  const [communityId, setCommunityId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCommunityId(new URLSearchParams(window.location.search).get("communityID"));
+  }, []);
 
   return (
     <PageLifecycle {...pageMetadata}>
@@ -55,7 +69,7 @@ export default function PagesCommunitiesCommunityPage() {
                 />
                 <div className="community-header-text">
                   <div className="community-title-row">
-                    <h1 id="comName" />
+                    <h1 id="comName" data-i18n-ignore="true">{initialCommunity?.name ?? ""}</h1>
                     <span
                       id="businessCommunityTag"
                       className="business-community-tag"
@@ -100,7 +114,7 @@ export default function PagesCommunitiesCommunityPage() {
               <aside className="community-sidebar">
                 <div className="community-sidebar-card">
                   <h3>About</h3>
-                  <p id="comDesc" />
+                  <p id="comDesc" data-i18n-ignore="true">{initialCommunity?.description ?? ""}</p>
                 </div>
 
                 <div className="community-sidebar-card">

@@ -1,9 +1,8 @@
-import { useLocation, useNavigate } from "react-router-dom"
-import { prefetchRoute } from "../pageRoutes"
+import { usePathname, useRouter } from "next/navigation"
 
 export default function BusinessNavigation() {
-    const navigate = useNavigate()
-    const { pathname } = useLocation()
+    const router = useRouter()
+    const pathname = usePathname()
     const mobilePrefix = pathname.startsWith("/mobile/") ? "/mobile" : ""
     const routes = {
         businessHome: `${mobilePrefix}/business-home`,
@@ -12,9 +11,9 @@ export default function BusinessNavigation() {
         businessDashboard: `${mobilePrefix}/business-dashboard`,
     }
     const routeButton = (route: keyof typeof routes) => ({
-        onClick: () => navigate(routes[route]),
-        onMouseEnter: () => void prefetchRoute(routes[route]),
-        onFocus: () => void prefetchRoute(routes[route]),
+        onClick: () => router.push(routes[route]),
+        onMouseEnter: () => router.prefetch(routes[route]),
+        onFocus: () => router.prefetch(routes[route]),
     })
 
     return (

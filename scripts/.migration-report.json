@@ -132,12 +132,14 @@
   {
     "file": "communities/community.tsx",
     "routePath": "/pages/communities/community/",
-    "outFile": "app/pages/communities/community/page.tsx"
+    "outFile": "app/pages/communities/community/page-client.tsx",
+    "note": "page.tsx hand-maintained"
   },
   {
     "file": "communities/sub-community.tsx",
     "routePath": "/pages/communities/sub-community/",
-    "outFile": "app/pages/communities/sub-community/page.tsx"
+    "outFile": "app/pages/communities/sub-community/page-client.tsx",
+    "note": "page.tsx hand-maintained"
   },
   {
     "file": "legal/communityGuidelines.tsx",

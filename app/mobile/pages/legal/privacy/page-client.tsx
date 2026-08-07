@@ -1,0 +1,169 @@
+"use client"
+
+import type { CSSProperties } from "react"
+import PageLifecycle from "@/components/PageLifecycle"
+
+export const pagePath = "/mobile/pages/legal/privacy/"
+
+const pageMetadata = {
+    "bodyClass": "",
+    "language": "en",
+    "links": [
+        "../../../css/styles.css"
+    ],
+    "pagePath": "/mobile/pages/legal/privacy/",
+    "redirect": null,
+    "scripts": [],
+    "styles": [],
+    "title": "Bloom - Privacy Policy"
+}
+
+export default function PageClient() {
+    return (
+        <PageLifecycle {...pageMetadata}>
+            <>
+
+    <h1 style={{ "textAlign": "center" } as CSSProperties}>Bloom Privacy Policy</h1>
+    <p style={{ "textAlign": "center" } as CSSProperties}>Last Updated: July 12, 2026</p>
+
+    <div className="TOC-Container">
+        <h2>Table of Contents</h2>
+        <ol>
+            <li><a href="#information">Information We Collect</a></li>
+            <li><a href="#community">Community Information</a></li>
+            <li><a href="#location">Location Information</a></li>
+            <li><a href="#usage">How We Use Your Information</a></li>
+            <li><a href="#sharing">Information We Share</a></li>
+            <li><a href="#cookies">Cookies & Local Storage</a></li>
+            <li><a href="#security">Data Security</a></li>
+            <li><a href="#deletion">Account Deletion</a></li>
+            <li><a href="#children">Children's Privacy</a></li>
+            <li><a href="#changes">Changes to This Policy</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ol>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="information">1. Information We Collect</h2>
+
+        <p>When you create an account, Bloom may collect:</p>
+
+        <ul>
+            <li>Email address</li>
+            <li>Username</li>
+            <li>Password (securely managed through our authentication provider)</li>
+            <li>Profile information you choose to provide, such as your bio or profile picture</li>
+        </ul>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="community">2. Community Information</h2>
+
+        <p>Bloom stores information necessary to operate communities, including:</p>
+
+        <ul>
+            <li>Communities you create</li>
+            <li>Communities you join</li>
+            <li>Posts and comments you publish</li>
+            <li>Events and other content you choose to share</li>
+        </ul>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="location">3. Location Information</h2>
+
+        <p>Bloom uses location information to support location-based features such as discovering or joining nearby communities.</p>
+
+        <p>Bloom only uses your live location on features such as Bloom Connect.</p>
+
+        <p>Location is only accessed when required for features that use it and only with your permission.</p>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="usage">4. How We Use Your Information</h2>
+
+        <p>Your information is used to:</p>
+
+        <ul>
+            <li>Create and manage your account</li>
+            <li>Display your profile</li>
+            <li>Show content from communities you join</li>
+            <li>Operate location-based community features</li>
+            <li>Improve Bloom and its features</li>
+            <li>Protect the platform against abuse and spam</li>
+        </ul>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="sharing">5. Information We Share</h2>
+
+        <p>Bloom does not sell your personal information.</p>
+
+        <p>Some profile information, posts, comments, and community activity may be visible to other users depending on your privacy settings and the communities you participate in.</p>
+
+        <p>Bloom sends user-submitted text and images to Sightengine for automated content moderation. This may include usernames, display names, bios, post content, post images, profile pictures, community images, and community banners. Sightengine processes this content to identify potentially unsafe or prohibited material.</p>
+
+        <p>Bloom may disclose information if required by applicable law.</p>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="cookies">6. Cookies & Local Storage</h2>
+
+        <p>Bloom may use cookies or browser storage to:</p>
+
+        <ul>
+            <li>Keep you signed in</li>
+            <li>Remember your preferences</li>
+            <li>Improve your experience</li>
+        </ul>
+
+        <p>These technologies are not used to sell your personal information.</p>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="security">7. Data Security</h2>
+
+        <p>Bloom takes reasonable measures to protect your information from unauthorized access, loss, or misuse.</p>
+
+        <p>However, no online service can guarantee absolute security.</p>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="deletion">8. Account Deletion</h2>
+
+        <p>You may request deletion of your account.</p>
+
+        <p>When an account is deleted, Bloom will remove or anonymize personal information where reasonably possible, subject to legal obligations and technical limitations.</p>
+
+        <p>Some public content may remain if necessary to preserve community discussions.</p>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="children">9. Children's Privacy</h2>
+
+        <p>Bloom is not intended for individuals below the minimum age required by applicable law to use online services without appropriate permission.</p>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="changes">10. Changes to This Policy</h2>
+
+        <p>This Privacy Policy may be updated from time to time.</p>
+
+        <p>The "Last Updated" date at the top of this page reflects the latest version.</p>
+
+        <p>Your continued use of Bloom after changes take effect constitutes acceptance of the updated Privacy Policy.</p>
+    </div>
+
+    <div className="TOC-Container">
+        <h2 id="contact">11. Contact</h2>
+
+        <p>If you have questions about this Privacy Policy, please contact the Bloom project through its official GitHub repository or other official contact channels.</p>
+
+        <p>Thank you for helping us build a safe and community-focused platform.</p>
+    </div>
+
+
+            </>
+        </PageLifecycle>
+    )
+}

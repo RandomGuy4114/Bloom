@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import { supabase } from "../../lib/supabase/client"
 import PageLifecycle from "../../components/PageLifecycle"
@@ -45,7 +46,7 @@ function suggestUsername(user: User) {
 type Phase = "loading" | "needs-profile" | "error"
 
 export default function PagesAuthCallbackPage() {
-    const navigate = useNavigate()
+    const router = useRouter()
     const [phase, setPhase] = useState<Phase>("loading")
     const [error, setError] = useState("")
     const [user, setUser] = useState<User | null>(null)
@@ -105,7 +106,7 @@ export default function PagesAuthCallbackPage() {
                 return
             }
 
-            navigate(profile.isBusiness === true ? "/business-home" : "/home", { replace: true })
+            router.replace(profile.isBusiness === true ? "/business-home" : "/home")
         }
 
         completeSignIn()
@@ -113,7 +114,7 @@ export default function PagesAuthCallbackPage() {
         return () => {
             cancelled = true
         }
-    }, [navigate])
+    }, [router])
 
     async function handleCompleteProfile(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -189,7 +190,7 @@ export default function PagesAuthCallbackPage() {
                 },
             })
 
-            navigate("/home", { replace: true })
+            router.replace("/home")
         } catch (error) {
             console.error("Unable to finish creating your account:", error)
             setFormMessage("Unable to reach Bloom. Check your connection and try again.")
@@ -206,7 +207,7 @@ export default function PagesAuthCallbackPage() {
                         <h1 style={{ textAlign: "center", marginBottom: 0 }}>Sign-in failed</h1>
                         <p className="auth-intro">{error}</p>
                         <p style={{ fontSize: 15, color: "grey", textAlign: "center" }}>
-                            <Link to="/login">Back to log in</Link>
+                            <Link href="/login">Back to log in</Link>
                         </p>
                     </>
                 )}
@@ -265,8 +266,8 @@ export default function PagesAuthCallbackPage() {
                                     required
                                 />
                                 <span>
-                                    I agree to the <Link to="/terms">Terms of Service</Link> and{" "}
-                                    <Link to="/privacy">Privacy Policy</Link>.
+                                    I agree to the <Link href="/terms">Terms of Service</Link> and{" "}
+                                    <Link href="/privacy">Privacy Policy</Link>.
                                 </span>
                             </label>
 

@@ -1,10 +1,11 @@
 import { type FormEvent, useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase/client"
 import "../../App.css"
 
 function Login() {
-    const navigate = useNavigate()
+    const router = useRouter()
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [message, setMessage] = useState("")
@@ -51,7 +52,7 @@ function Login() {
                 console.error("Unable to determine account type:", profileError.message)
             }
 
-            navigate(profile?.isBusiness === true ? "/business-home" : "/home", { replace: true })
+            router.replace(profile?.isBusiness === true ? "/business-home" : "/home")
         } catch (error) {
             console.error("Sign-in request failed:", error)
             setMessage("Unable to reach Bloom. Check your connection and try again.")
@@ -177,7 +178,7 @@ function Login() {
                 </button>
 
                 <p style={{ fontSize: 15, color: "grey" }}>
-                    Don&apos;t have an account? <Link to="/register">Sign up</Link>
+                    Don&apos;t have an account? <Link href="/register">Sign up</Link>
                 </p>
             </div>
 

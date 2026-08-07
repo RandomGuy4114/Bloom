@@ -4,6 +4,11 @@ import PostFeed from "../../components/posts/PostFeed";
 
 export const pagePath = "/pages/communities/sub-community/";
 
+interface InitialSubcommunity {
+  title: string | null;
+  description: string | null;
+}
+
 const pageMetadata = {
   bodyClass: "app-page community-page sub-community-page",
   language: "en",
@@ -18,7 +23,9 @@ const pageMetadata = {
   title: "Bloom - Sub-Community",
 };
 
-export default function SubCommunityPage() {
+export default function SubCommunityPage({
+  initialSubcommunity = null,
+}: { initialSubcommunity?: InitialSubcommunity | null }) {
   return (
     <PageLifecycle {...pageMetadata}>
       <AppNavigation usernameLabel="Sub-Community" />
@@ -32,8 +39,8 @@ export default function SubCommunityPage() {
         <div className="feed-container">
           <section className="communities-profile sub-community-profile">
             <div id="subcommunityInitial" className="sub-community-picture" />
-            <h1 id="subcommunityName">Loading…</h1>
-            <p id="subcommunityDescription" />
+            <h1 id="subcommunityName">{initialSubcommunity?.title || "Loading..."}</h1>
+            <p id="subcommunityDescription">{initialSubcommunity?.description || "Loading..."}</p>
             <p id="subcommunityParent" className="post-community-name" />
             <div className="community-page-actions">
               <button id="joinSubcommunityButton" type="button" hidden>

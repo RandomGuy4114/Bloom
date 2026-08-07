@@ -1,7 +1,7 @@
 // Dependencies
 
-import { supabase } from "../supabase.js?v=msi8tx73";
-import { t } from "../i18n.js?v=msi8tx73";
+import { supabase } from "../supabase.js?v=msj2vxku";
+import { t } from "../i18n.js?v=msj2vxku";
 import {
   applyAvatar,
   createPopupShell,
@@ -25,7 +25,7 @@ import {
   setCommunityPrivacy,
   showCurrentUser,
   withLoadingOverlay,
-} from "../main.js?v=msi8tx73";
+} from "../main.js?v=msj2vxku";
 
 // Definitions
 

@@ -1,5 +1,5 @@
 import { type FormEvent, type ReactNode, useState } from "react"
-import { Link } from "react-router-dom"
+import Link from "next/link"
 import SupporterBadge from "../SupporterBadge"
 
 export type PostKind = "post" | "activity" | "event"
@@ -148,7 +148,7 @@ export default function Post({ post, canManage = false, manageHref, onReport, on
             {menuOpen && (
                 <div className="post-options-menu" role="menu">
                     {canManage && manageHref
-                        ? <Link role="menuitem" to={manageHref}>{actionLabel}</Link>
+                        ? <Link role="menuitem" href={manageHref}>{actionLabel}</Link>
                         : <button type="button" role="menuitem" onClick={handleAction}>{actionLabel}</button>}
                 </div>
             )}
@@ -156,7 +156,7 @@ export default function Post({ post, canManage = false, manageHref, onReport, on
             {(post.author || post.communityName) && (
                 <header className="post-author-header">
                     {post.author && (
-                        <Link className="post-author-link" to={post.author.id ? `/profile?uid=${encodeURIComponent(post.author.id)}` : "#"}>
+                        <Link className="post-author-link" href={post.author.id ? `/profile?uid=${encodeURIComponent(post.author.id)}` : "#"}>
                             <span className="pfp-frame post-author-avatar">
                                 {post.author.avatarUrl && <img src={post.author.avatarUrl} alt="Post author profile picture" loading="lazy" />}
                             </span>
@@ -198,7 +198,7 @@ export default function Post({ post, canManage = false, manageHref, onReport, on
                     <div className="post-reply-list" aria-live="polite">
                         {replies.length ? replies.map((reply) => (
                             <article className="post-reply" key={reply.id}>
-                                <Link className="post-reply-author" to={reply.author.id ? `/profile?uid=${encodeURIComponent(reply.author.id)}` : "#"}>
+                                <Link className="post-reply-author" href={reply.author.id ? `/profile?uid=${encodeURIComponent(reply.author.id)}` : "#"}>
                                     <strong>{reply.author.name}</strong>
                                     {reply.author.supporter && <SupporterBadge />}
                                 </Link>

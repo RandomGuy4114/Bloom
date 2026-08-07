@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { prefetchRoute } from "../pageRoutes"
+import { useRouter } from "next/navigation"
 import { RiNotification3Fill, RiNotification3Line } from "@remixicon/react"
 import { motion } from "motion/react"
 import { supabase } from "../lib/supabase/client"
@@ -36,13 +35,13 @@ export default function AppNavigation({
     usernameLabel = "",
     versionAsSpan = false,
 }: AppNavigationProps) {
-    const navigate = useNavigate()
+    const router = useRouter()
     const destination = (page: string) => mobile ? `/mobile/${page}` : `/${page}`
     const goTo = (page: string) => {
-        navigate(destination(page))
+        router.push(destination(page))
     }
     const preload = (page: string) => {
-        void prefetchRoute(destination(page))
+        router.prefetch(destination(page))
     }
     const SidebarElement = sidebarAsAside ? "aside" : "div"
 
