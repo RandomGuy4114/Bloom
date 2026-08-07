@@ -66,6 +66,14 @@ export default function PagesCreditsPage() {
         </div>
         <div className="creditElement">
             <div className="creditElementInner">
+                <h3>Juan Jose</h3>
+                <p>Doing absolutely nothing</p>
+            </div>
+            <p>I coded this</p>
+            <p>Developer Note: He did nothing.</p>
+        </div>
+        <div className="creditElement">
+            <div className="creditElementInner">
                 <h3>Roy Ronza</h3>
                 <p>Helping In General</p>
             </div>
