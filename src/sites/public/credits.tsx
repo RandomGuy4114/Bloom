@@ -4,7 +4,6 @@ import InfoPageHead from "../../components/InfoPageHead"
 import BottomBar from "../../components/BottomBar"
 
 
-
 export const pagePath = "/pages/credits/"
 
 const pageMetadata = {
