@@ -9,6 +9,8 @@ import Register from './sites/auth/register'
 import ScrollToTop from './components/ScrollToTop'
 import RouteFallback from './components/RouteFallback'
 import RouteTransition from './components/RouteTransition'
+import PagesAuthCallbackPage from './sites/auth/callback'
+import PagesLegalCommunityGuidelinesPage from './sites/legal/communityGuidelines'
 
 function App() {
   return (
@@ -23,6 +25,10 @@ function App() {
           <Route path="/login/" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/register/" element={<Register />} />
+          <Route path="/callback" element={<PagesAuthCallbackPage />} />
+          <Route path="/callback/" element={<PagesAuthCallbackPage />} />
+          <Route path="/pages/legal/community-guidelines/" element={<PagesLegalCommunityGuidelinesPage />} />
+          <Route path="/pages/legal/community-guidelines" element={<PagesLegalCommunityGuidelinesPage />} />
           {siteRoutes.map(({ Component, pagePath, path }) => (
             <Route key={path} path={path} element={<Component key={pagePath} />} />
           ))}

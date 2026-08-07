@@ -4,7 +4,7 @@ import PostComposer from "../../components/posts/PostComposer"
 import PostFeed from "../../components/posts/PostFeed"
 import WarningPopup from "../../components/warningPopup"
 import React from "react"
-import { supabase } from "../../lib/supabase"
+import { supabase } from "../../lib/supabase/client"
 
 export const pagePath = "/pages/app/home/"
 

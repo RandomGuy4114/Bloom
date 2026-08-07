@@ -1,0 +1,337 @@
+[
+  {
+    "file": "app/activity.tsx",
+    "routePath": "/pages/app/activity/",
+    "outFile": "app/pages/app/activity/page.tsx"
+  },
+  {
+    "file": "app/calendar.tsx",
+    "routePath": "/pages/app/calendar/",
+    "outFile": "app/pages/app/calendar/page.tsx"
+  },
+  {
+    "file": "app/connect.tsx",
+    "routePath": "/pages/app/connect/",
+    "outFile": "app/pages/app/connect/page.tsx"
+  },
+  {
+    "file": "app/create-post.tsx",
+    "routePath": "/pages/app/create-post/",
+    "outFile": "app/pages/app/create-post/page.tsx"
+  },
+  {
+    "file": "app/early-access.tsx",
+    "routePath": "/pages/app/early-access/",
+    "outFile": "app/pages/app/early-access/page.tsx"
+  },
+  {
+    "file": "app/edit-post.tsx",
+    "routePath": "/pages/app/edit-post/",
+    "outFile": "app/pages/app/edit-post/page.tsx"
+  },
+  {
+    "file": "app/home.tsx",
+    "routePath": "/pages/app/home/",
+    "outFile": "app/pages/app/home/page.tsx"
+  },
+  {
+    "file": "app/map.tsx",
+    "routePath": "/pages/app/map/",
+    "outFile": "app/pages/app/map/page.tsx"
+  },
+  {
+    "file": "app/post.tsx",
+    "routePath": "/pages/app/post/",
+    "outFile": "app/pages/app/post/page.tsx"
+  },
+  {
+    "file": "app/profile.tsx",
+    "routePath": "/pages/app/profile/",
+    "outFile": "app/pages/app/profile/page.tsx"
+  },
+  {
+    "file": "app/settings.tsx",
+    "routePath": "/pages/app/settings/",
+    "outFile": "app/pages/app/settings/page.tsx"
+  },
+  {
+    "file": "app/supporter.tsx",
+    "routePath": "/pages/app/supporter/",
+    "outFile": "app/pages/app/supporter/page.tsx"
+  },
+  {
+    "file": "auth/business.tsx",
+    "routePath": "/pages/auth/business/",
+    "outFile": "app/pages/auth/business/page.tsx"
+  },
+  {
+    "file": "auth/callback.tsx",
+    "routePath": "/callback",
+    "outFile": "app/callback/page.tsx"
+  },
+  {
+    "file": "auth/confirm.tsx",
+    "routePath": "/pages/auth/confirm/",
+    "outFile": "app/pages/auth/confirm/page.tsx"
+  },
+  {
+    "file": "auth/legacy-login.tsx",
+    "routePath": "/pages/auth/login/",
+    "outFile": "app/pages/auth/login/page.tsx"
+  },
+  {
+    "file": "auth/legacy-register.tsx",
+    "routePath": "/pages/auth/register/",
+    "outFile": "app/pages/auth/register/page.tsx"
+  },
+  {
+    "file": "auth/login.tsx",
+    "routePath": "/login",
+    "outFile": "app/login/page.tsx"
+  },
+  {
+    "file": "auth/register.tsx",
+    "routePath": "/register",
+    "outFile": "app/register/page.tsx"
+  },
+  {
+    "file": "auth/reset-password.tsx",
+    "routePath": "/pages/auth/reset-password/",
+    "outFile": "app/pages/auth/reset-password/page.tsx"
+  },
+  {
+    "file": "business/dashboard.tsx",
+    "routePath": "/pages/business/dashboard/",
+    "outFile": "app/pages/business/dashboard/page.tsx"
+  },
+  {
+    "file": "business/home.tsx",
+    "routePath": "/pages/business/home/",
+    "outFile": "app/pages/business/home/page.tsx"
+  },
+  {
+    "file": "business/index.tsx",
+    "routePath": "/pages/business/",
+    "outFile": "app/pages/business/page.tsx"
+  },
+  {
+    "file": "business/profile.tsx",
+    "routePath": "/pages/business/profile/",
+    "outFile": "app/pages/business/profile/page.tsx"
+  },
+  {
+    "file": "business/settings.tsx",
+    "routePath": "/pages/business/settings/",
+    "outFile": "app/pages/business/settings/page.tsx"
+  },
+  {
+    "file": "communities/communities.tsx",
+    "routePath": "/pages/communities/communities/",
+    "outFile": "app/pages/communities/communities/page.tsx"
+  },
+  {
+    "file": "communities/community.tsx",
+    "routePath": "/pages/communities/community/",
+    "outFile": "app/pages/communities/community/page.tsx"
+  },
+  {
+    "file": "communities/sub-community.tsx",
+    "routePath": "/pages/communities/sub-community/",
+    "outFile": "app/pages/communities/sub-community/page.tsx"
+  },
+  {
+    "file": "legal/communityGuidelines.tsx",
+    "routePath": "/pages/legal/community-guidelines/",
+    "outFile": "app/pages/legal/community-guidelines/page.tsx"
+  },
+  {
+    "file": "legal/privacy.tsx",
+    "routePath": "/pages/legal/privacy/",
+    "outFile": "app/pages/legal/privacy/page.tsx"
+  },
+  {
+    "file": "legal/terms.tsx",
+    "routePath": "/pages/legal/terms/",
+    "outFile": "app/pages/legal/terms/page.tsx"
+  },
+  {
+    "file": "mobile/app/activity.tsx",
+    "routePath": "/mobile/pages/app/activity/",
+    "outFile": "app/mobile/pages/app/activity/page.tsx"
+  },
+  {
+    "file": "mobile/app/calendar.tsx",
+    "routePath": "/mobile/pages/app/calendar/",
+    "outFile": "app/mobile/pages/app/calendar/page.tsx"
+  },
+  {
+    "file": "mobile/app/connect.tsx",
+    "routePath": "/mobile/pages/app/connect/",
+    "outFile": "app/mobile/pages/app/connect/page.tsx"
+  },
+  {
+    "file": "mobile/app/create-post.tsx",
+    "routePath": "/mobile/pages/app/create-post/",
+    "outFile": "app/mobile/pages/app/create-post/page.tsx"
+  },
+  {
+    "file": "mobile/app/early-access.tsx",
+    "routePath": "/mobile/pages/app/early-access/",
+    "outFile": "app/mobile/pages/app/early-access/page.tsx"
+  },
+  {
+    "file": "mobile/app/edit-post.tsx",
+    "routePath": "/mobile/pages/app/edit-post/",
+    "outFile": "app/mobile/pages/app/edit-post/page.tsx"
+  },
+  {
+    "file": "mobile/app/home.tsx",
+    "routePath": "/mobile/pages/app/home/",
+    "outFile": "app/mobile/pages/app/home/page.tsx"
+  },
+  {
+    "file": "mobile/app/map.tsx",
+    "routePath": "/mobile/pages/app/map/",
+    "outFile": "app/mobile/pages/app/map/page.tsx"
+  },
+  {
+    "file": "mobile/app/messages.tsx",
+    "routePath": "/mobile/pages/app/messages/",
+    "outFile": "app/mobile/pages/app/messages/page.tsx"
+  },
+  {
+    "file": "mobile/app/post.tsx",
+    "routePath": "/mobile/pages/app/post/",
+    "outFile": "app/mobile/pages/app/post/page.tsx"
+  },
+  {
+    "file": "mobile/app/profile.tsx",
+    "routePath": "/mobile/pages/app/profile/",
+    "outFile": "app/mobile/pages/app/profile/page.tsx"
+  },
+  {
+    "file": "mobile/app/settings.tsx",
+    "routePath": "/mobile/pages/app/settings/",
+    "outFile": "app/mobile/pages/app/settings/page.tsx"
+  },
+  {
+    "file": "mobile/app/supporter.tsx",
+    "routePath": "/mobile/pages/app/supporter/",
+    "outFile": "app/mobile/pages/app/supporter/page.tsx"
+  },
+  {
+    "file": "mobile/auth/business.tsx",
+    "routePath": "/mobile/pages/auth/business/",
+    "outFile": "app/mobile/pages/auth/business/page.tsx"
+  },
+  {
+    "file": "mobile/auth/confirm.tsx",
+    "routePath": "/mobile/pages/auth/confirm/",
+    "outFile": "app/mobile/pages/auth/confirm/page.tsx"
+  },
+  {
+    "file": "mobile/auth/login.tsx",
+    "routePath": "/mobile/pages/auth/login/",
+    "outFile": "app/mobile/pages/auth/login/page.tsx"
+  },
+  {
+    "file": "mobile/auth/register.tsx",
+    "routePath": "/mobile/pages/auth/register/",
+    "outFile": "app/mobile/pages/auth/register/page.tsx"
+  },
+  {
+    "file": "mobile/auth/reset-password.tsx",
+    "routePath": "/mobile/pages/auth/reset-password/",
+    "outFile": "app/mobile/pages/auth/reset-password/page.tsx"
+  },
+  {
+    "file": "mobile/business/dashboard.tsx",
+    "routePath": "/mobile/pages/business/dashboard/",
+    "outFile": "app/mobile/pages/business/dashboard/page.tsx"
+  },
+  {
+    "file": "mobile/business/home.tsx",
+    "routePath": "/mobile/pages/business/home/",
+    "outFile": "app/mobile/pages/business/home/page.tsx"
+  },
+  {
+    "file": "mobile/business/index.tsx",
+    "routePath": "/mobile/pages/business/",
+    "outFile": "app/mobile/pages/business/page.tsx"
+  },
+  {
+    "file": "mobile/business/profile.tsx",
+    "routePath": "/mobile/pages/business/profile/",
+    "outFile": "app/mobile/pages/business/profile/page.tsx"
+  },
+  {
+    "file": "mobile/business/settings.tsx",
+    "routePath": "/mobile/pages/business/settings/",
+    "outFile": "app/mobile/pages/business/settings/page.tsx"
+  },
+  {
+    "file": "mobile/communities/communities.tsx",
+    "routePath": "/mobile/pages/communities/communities/",
+    "outFile": "app/mobile/pages/communities/communities/page.tsx"
+  },
+  {
+    "file": "mobile/communities/community.tsx",
+    "routePath": "/mobile/pages/communities/community/",
+    "outFile": "app/mobile/pages/communities/community/page.tsx"
+  },
+  {
+    "file": "mobile/communities/sub-community.tsx",
+    "routePath": "/mobile/pages/communities/sub-community/",
+    "outFile": "app/mobile/pages/communities/sub-community/page.tsx"
+  },
+  {
+    "file": "mobile/legal/privacy.tsx",
+    "routePath": "/mobile/pages/legal/privacy/",
+    "outFile": "app/mobile/pages/legal/privacy/page.tsx"
+  },
+  {
+    "file": "mobile/legal/terms.tsx",
+    "routePath": "/mobile/pages/legal/terms/",
+    "outFile": "app/mobile/pages/legal/terms/page.tsx"
+  },
+  {
+    "file": "mobile/public/credits.tsx",
+    "routePath": "/mobile/pages/credits/",
+    "outFile": "app/mobile/pages/credits/page.tsx"
+  },
+  {
+    "file": "mobile/public/index.tsx",
+    "routePath": "/mobile/",
+    "outFile": "app/mobile/page.tsx"
+  },
+  {
+    "file": "mobile/public/landing.tsx",
+    "routePath": "/mobile/pages/landing/",
+    "outFile": "app/mobile/pages/landing/page.tsx"
+  },
+  {
+    "file": "public/blog.tsx",
+    "routePath": "/pages/blog/",
+    "outFile": "app/pages/blog/page.tsx"
+  },
+  {
+    "file": "public/credits.tsx",
+    "routePath": "/pages/credits/",
+    "outFile": "app/pages/credits/page.tsx"
+  },
+  {
+    "file": "public/landing.tsx",
+    "routePath": "/",
+    "outFile": "app/page.tsx"
+  },
+  {
+    "file": "public/legacy-landing.tsx",
+    "routePath": "/pages/landing/",
+    "outFile": "app/pages/landing/page.tsx"
+  },
+  {
+    "file": "public/roadmap.tsx",
+    "routePath": "/pages/roadmap/",
+    "outFile": "app/pages/roadmap/page.tsx"
+  }
+]
