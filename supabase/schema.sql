@@ -655,6 +655,47 @@ $$;
 ALTER FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" bigint) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  v_username text := nullif(trim(requested_username), '');
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if v_username is null or char_length(v_username) < 3 or char_length(v_username) > 30
+     or v_username !~ '^[A-Za-z0-9_]+$' then
+    raise exception 'Invalid username';
+  end if;
+
+  if requested_birthday is null then
+    raise exception 'Invalid birthday';
+  end if;
+
+  if not public.is_username_available(v_username) then
+    raise exception 'Username already exists';
+  end if;
+
+  update public.profiles
+  set username = v_username,
+      display_name = v_username,
+      birthday = requested_birthday
+  where id = auth.uid()
+    and username is null;
+
+  if not found then
+    raise exception 'Profile already set up';
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."is_username_available"("requested_username" "text") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -1605,7 +1646,7 @@ ALTER TABLE "public"."post_replies" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "id" "uuid" NOT NULL,
-    "username" "text" NOT NULL,
+    "username" "text",
     "display_name" "text",
     "bio" "text",
     "avatar_url" "text",
@@ -2392,6 +2433,11 @@ GRANT ALL ON FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" b
 GRANT ALL ON FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" bigint) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" bigint) TO "service_role";
 
+
+
+GRANT ALL ON FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") TO "service_role";
 
 
 REVOKE ALL ON FUNCTION "public"."is_username_available"("requested_username" "text") FROM PUBLIC;

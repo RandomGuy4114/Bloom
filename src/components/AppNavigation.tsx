@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { prefetchRoute } from "../pageRoutes"
 import { RiNotification3Fill, RiNotification3Line } from "@remixicon/react"
 import { motion } from "motion/react"
-import { supabase } from "../lib/supabase"
+import { supabase } from "../lib/supabase/client"
 
 interface AppNavigationProps {
     compactMobileHome?: boolean

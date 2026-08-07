@@ -5,7 +5,7 @@ import {
   FunctionsRelayError,
 } from "@supabase/supabase-js";
 
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase/client";
 import SubCommunity from "./SubCommunity";
 
 interface SubCommunityRecord {

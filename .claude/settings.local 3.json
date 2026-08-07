@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(xcodebuild -version)",
+      "Bash(xcrun simctl *)",
+      "Bash(ls \"/Users/liammacgregor/Library/CloudStorage/ProtonDrive-liammacgregoraguayo@proton.me-folder/Bloom/apps/mobile\" 2>&1 | head -5)",
+      "Bash(npx pod-install *)",
+      "Bash(node --print \"require.resolve\\('expo/package.json'\\)\")",
+      "Bash(npm install *)",
+      "Bash(xcode-select -p)",
+      "Read(//private/tmp/**)",
+      "Bash(xcodebuild -workspace ios/mobile.xcworkspace -scheme mobile -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,id=5956894B-0C06-4BC3-98E9-1220E169FBC5' -derivedDataPath ios/build build)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(sudo xcode-select -s /Applications/Xcode.app/Contents/Developer)",
+      "Bash(grep -rlE 'bash -l -c \\\\\\\\\"[^\"]*\\\\$\\(PODS_TARGET_SRCROOT|PODS_ROOT|SRCROOT\\)[^\"]*\\\\\\\\\"' node_modules --include=\"*.podspec\" --include=\"*.rb\")",
+      "Bash(python3 -)",
+      "Bash(grep -n '`\\\\\\\\\"\\\\$NODE_BINARY\\\\\\\\\"' '/Users/liammacgregor/Documents/Documents - Larp Machine V2/Bloom/apps/mobile/ios/mobile.xcodeproj/project.pbxproj')",
+      "Bash(grep -v \"^\\\\.$\")",
+      "Bash(node scripts/sync-legacy.mjs)",
+      "Bash(git worktree *)",
+      "Bash(npx eslint *)",
+      "Bash(tee /private/tmp/claude-501/scratch_refactor/tsc_out2.txt)",
+      "Bash(git status *)",
+      "Bash(grep -rhoP \"\\(?<![a-zA-Z_$.]\\)t\\\\\\('\\\\K[^']+\" src/app src/components)",
+      "Bash(node -e ' *)",
+      "Bash(echo \"TSC_EXIT=$?\")",
+      "Bash(npm run *)",
+      "Bash(node --check legacy/js/calendar.js)",
+      "Bash(node --check legacy/js/profile.js)",
+      "Bash(node --check legacy/js/communities/detail.js)",
+      "Bash(grep -n \"body.home-page,$\" src/App.css)",
+      "Bash(python3 -c ' *)",
+      "Bash(npx supabase *)",
+      "Bash(git checkout *)",
+      "Bash(npm ci *)",
+      "Bash(gh auth *)",
+      "Bash(gh run *)"
+    ]
+  }
+}

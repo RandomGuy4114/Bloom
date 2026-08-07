@@ -1,4 +1,4 @@
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 
@@ -18,13 +18,17 @@ function showStartupError(error: unknown) {
 }
 
 try {
-  createRoot(rootElement, {
-    onUncaughtError: showStartupError,
-  }).render(
+  const app = (
     <BrowserRouter>
       <App />
-    </BrowserRouter>,
+    </BrowserRouter>
   );
+
+  if (rootElement.dataset.prerendered === "true") {
+    hydrateRoot(rootElement, app, { onUncaughtError: showStartupError });
+  } else {
+    createRoot(rootElement, { onUncaughtError: showStartupError }).render(app);
+  }
 } catch (error) {
   showStartupError(error);
 }
