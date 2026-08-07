@@ -62,6 +62,21 @@ export default function MobilePagesCreditsPage() {
             </div>
             <p className="CreditMessage">Martin is one of my close friends, and he one day decided to help with the marketing efforts for Bloom.</p>
         </div>
+        <div className="creditElement">
+            <div className="creditElementInner">
+                <h3>Juan Jose</h3>
+                <p>Doing absolutely nothing</p>
+            </div>
+            <p>I coded this</p>
+            <p>Developer Note: He did nothing.</p>
+        </div>
+        <div className="creditElement">
+            <div className="creditElementInner">
+                <h3>Roy Ronza</h3>
+                <p>Helping In General</p>
+            </div>
+            <p className="CreditMessage">Roy is probably one of my best friends, and he has been a huge support throughout the development of Bloom.</p>
+        </div>
         <h2 style={{ "marginTop": "10px" } as CSSProperties}>Services</h2>
         <p>We would like to acknowledge the following services for their contributions to the development of Bloom:</p>
         <div className="creditElement">
