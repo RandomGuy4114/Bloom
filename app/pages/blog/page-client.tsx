@@ -6,6 +6,7 @@ import BlogPost from "@/components/blog/blogPost"
 import BottomBar from "@/components/BottomBar"
 import react from "@/Assets/react.png"
 import newBloom from "@/Assets/newBloom.png"
+import nextjs from "@/Assets/nextjs.jpg"
 
 export const pagePath = "/pages/blog/"
 
@@ -31,10 +32,10 @@ export default function PageClient() {
                 subtitle="Updates, news, and more from the Bloom team." 
             />
             <BlogPost
-                title="Goodbye HTML, Hello React!"
-                subtitle="Hello Bloom users! I have an exciting announcement to make: Bloom is now built using React! This means that the website is now more dynamic, interactive, and user-friendly than ever before. With React, we can make a more seamless experience for our users, and making new features and updates will be much easier. I can't wait for you all to explore the new Bloom and see what we've been working on. Thank you for your continued support, and I hope you enjoy the new Bloom experience!"
-                date="July 17, 2026"
-                image={react.src}
+                title="Goodbye Vite, Hello Next.js!"
+                subtitle="Hello Bloom Users! I am happy to say that Bloom is soon gonna turn into a dynamic website! Using Next.js, Bloom will feel a lot more like a social media platform, and less like a static website. I am very excited to share this with you all, and I hope you enjoy the new Bloom experience!"
+                date="August 7, 2026"
+                image={nextjs.src}
             />
             <BlogPost
                 title="Huge Changes Coming To Bloom!"
@@ -42,6 +43,12 @@ export default function PageClient() {
                 date="August 3, 2026"
                 image={newBloom.src}
                 
+            />
+            <BlogPost
+                title="Goodbye HTML, Hello React!"
+                subtitle="Hello Bloom users! I have an exciting announcement to make: Bloom is now built using React! This means that the website is now more dynamic, interactive, and user-friendly than ever before. With React, we can make a more seamless experience for our users, and making new features and updates will be much easier. I can't wait for you all to explore the new Bloom and see what we've been working on. Thank you for your continued support, and I hope you enjoy the new Bloom experience!"
+                date="July 17, 2026"
+                image={react.src}
             />
             <BottomBar />
         </PageLifecycle>
