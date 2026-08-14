@@ -45,6 +45,27 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE OR REPLACE FUNCTION "public"."_get_my_profile_warning"() RETURNS "text"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    AS $$
+DECLARE v text;
+BEGIN
+  -- Avoid RLS on the lookup inside the function.
+  PERFORM set_config('row_security', 'off', true);
+
+  SELECT p.warning
+  INTO v
+  FROM public.profiles p
+  WHERE p.id = auth.uid();
+
+  RETURN v;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."_get_my_profile_warning"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."add_community_owner_membership"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -143,6 +164,47 @@ $$;
 
 
 ALTER FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $_$
+declare
+  v_username text := nullif(trim(requested_username), '');
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if v_username is null or char_length(v_username) < 3 or char_length(v_username) > 30
+     or v_username !~ '^[A-Za-z0-9_]+$' then
+    raise exception 'Invalid username';
+  end if;
+
+  if requested_birthday is null then
+    raise exception 'Invalid birthday';
+  end if;
+
+  if not public.is_username_available(v_username) then
+    raise exception 'Username already exists';
+  end if;
+
+  update public.profiles
+  set username = v_username,
+      display_name = v_username,
+      birthday = requested_birthday
+  where id = auth.uid()
+    and username is null;
+
+  if not found then
+    raise exception 'Profile already set up';
+  end if;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."consume_patreon_oauth_state"("p_state_hash" "text") RETURNS "uuid"
@@ -655,47 +717,6 @@ $$;
 ALTER FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" bigint) OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") RETURNS "void"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO ''
-    AS $$
-declare
-  v_username text := nullif(trim(requested_username), '');
-begin
-  if auth.uid() is null then
-    raise exception 'Not authenticated';
-  end if;
-
-  if v_username is null or char_length(v_username) < 3 or char_length(v_username) > 30
-     or v_username !~ '^[A-Za-z0-9_]+$' then
-    raise exception 'Invalid username';
-  end if;
-
-  if requested_birthday is null then
-    raise exception 'Invalid birthday';
-  end if;
-
-  if not public.is_username_available(v_username) then
-    raise exception 'Username already exists';
-  end if;
-
-  update public.profiles
-  set username = v_username,
-      display_name = v_username,
-      birthday = requested_birthday
-  where id = auth.uid()
-    and username is null;
-
-  if not found then
-    raise exception 'Profile already set up';
-  end if;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."is_username_available"("requested_username" "text") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO ''
@@ -754,10 +775,15 @@ BEGIN
         IF "active_user" = ANY("community_record"."reqUUID") THEN
             RETURN 'already_requested';
         END IF;
-        
+
         UPDATE "public"."Communities"
         SET "reqUUID" = array_append("reqUUID", "active_user")
         WHERE "id" = "target_community";
+
+        IF "community_record"."user_id" IS NOT NULL AND "community_record"."user_id" <> "active_user" THEN
+            INSERT INTO "public"."notifications" ("user_id", "actor_id", "type", "community_id")
+            VALUES ("community_record"."user_id", "active_user", 'join_request', "target_community");
+        END IF;
 
         RETURN 'private_requested';
     END IF;
@@ -869,6 +895,46 @@ $_$;
 
 
 ALTER FUNCTION "public"."normalize_supporter_entitlements"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."notify_on_post_like"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  post_owner uuid;
+begin
+  select "user_id" into post_owner from public."Posts" where "id" = new."post_id";
+  if post_owner is not null and post_owner <> new."user_id" then
+    insert into public."notifications" ("user_id", "actor_id", "type", "post_id")
+    values (post_owner, new."user_id", 'post_like', new."post_id");
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."notify_on_post_like"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."notify_on_post_reply"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+declare
+  post_owner uuid;
+begin
+  select "user_id" into post_owner from public."Posts" where "id" = new."post_id";
+  if post_owner is not null and post_owner <> new."user_id" then
+    insert into public."notifications" ("user_id", "actor_id", "type", "post_id")
+    values (post_owner, new."user_id", 'post_reply', new."post_id");
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."notify_on_post_reply"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."process_patreon_webhook"("p_event_hash" "text", "p_event_type" "text", "p_patreon_user_id" "text", "p_membership_status" "text", "p_supporter" boolean) RETURNS "text"
@@ -1004,8 +1070,15 @@ begin
       and not (
         target_community = any(coalesce(joined_communities, '{}'::uuid[]))
       );
+
+    insert into public."notifications" ("user_id", "actor_id", "type", "community_id")
+    values (requester_id, active_user, 'join_approved', target_community);
+
     return 'approved';
   end if;
+
+  insert into public."notifications" ("user_id", "actor_id", "type", "community_id")
+  values (requester_id, active_user, 'join_denied', target_community);
 
   return 'denied';
 end;
@@ -1597,6 +1670,22 @@ CREATE TABLE IF NOT EXISTS "public"."message_public_keys" (
 ALTER TABLE "public"."message_public_keys" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."notifications" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "actor_id" "uuid",
+    "type" "text" NOT NULL,
+    "post_id" "uuid",
+    "community_id" "uuid",
+    "read" boolean DEFAULT false NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "notifications_type_check" CHECK (("type" = ANY (ARRAY['post_reply'::"text", 'post_like'::"text", 'join_request'::"text", 'join_approved'::"text", 'join_denied'::"text"])))
+);
+
+
+ALTER TABLE "public"."notifications" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."patreon_oauth_states" (
     "state_hash" "text" NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -1674,6 +1763,7 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "business_supporter_verified_at" timestamp with time zone,
     "connect_enabled" boolean DEFAULT false NOT NULL,
     "blocked_uuids" "uuid"[],
+    "warning" "text",
     CONSTRAINT "profiles_bio_length_check" CHECK (("char_length"(COALESCE("bio", ''::"text")) <=
 CASE
     WHEN "supporter" THEN 1500
@@ -1778,6 +1868,11 @@ ALTER TABLE ONLY "public"."message_public_keys"
 
 
 
+ALTER TABLE ONLY "public"."notifications"
+    ADD CONSTRAINT "notifications_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."patreon_oauth_states"
     ADD CONSTRAINT "patreon_oauth_states_pkey" PRIMARY KEY ("state_hash");
 
@@ -1848,6 +1943,14 @@ CREATE INDEX "direct_messages_participants_created_idx" ON "public"."direct_mess
 
 
 
+CREATE INDEX "notifications_user_id_created_at_idx" ON "public"."notifications" USING "btree" ("user_id", "created_at" DESC);
+
+
+
+CREATE INDEX "notifications_user_id_read_idx" ON "public"."notifications" USING "btree" ("user_id", "read");
+
+
+
 CREATE INDEX "patreon_oauth_states_expires_at_idx" ON "public"."patreon_oauth_states" USING "btree" ("expires_at");
 
 
@@ -1881,6 +1984,14 @@ CREATE OR REPLACE TRIGGER "add_community_owner_membership_trigger" BEFORE INSERT
 
 
 CREATE OR REPLACE TRIGGER "normalize_supporter_entitlements_trigger" BEFORE INSERT OR UPDATE OF "supporter", "bio", "avatar_url", "Theme" ON "public"."profiles" FOR EACH ROW EXECUTE FUNCTION "public"."normalize_supporter_entitlements"();
+
+
+
+CREATE OR REPLACE TRIGGER "post_likes_notify" AFTER INSERT ON "public"."post_likes" FOR EACH ROW EXECUTE FUNCTION "public"."notify_on_post_like"();
+
+
+
+CREATE OR REPLACE TRIGGER "post_replies_notify" AFTER INSERT ON "public"."post_replies" FOR EACH ROW EXECUTE FUNCTION "public"."notify_on_post_reply"();
 
 
 
@@ -1930,6 +2041,26 @@ ALTER TABLE ONLY "public"."direct_messages"
 
 ALTER TABLE ONLY "public"."message_public_keys"
     ADD CONSTRAINT "message_public_keys_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."notifications"
+    ADD CONSTRAINT "notifications_actor_id_fkey" FOREIGN KEY ("actor_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."notifications"
+    ADD CONSTRAINT "notifications_community_id_fkey" FOREIGN KEY ("community_id") REFERENCES "public"."Communities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."notifications"
+    ADD CONSTRAINT "notifications_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "public"."Posts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."notifications"
+    ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -2035,7 +2166,7 @@ CREATE POLICY "Enable insert for users based on user_id" ON "public"."profiles" 
 
 
 
-CREATE POLICY "Enable update for users based on user_id" ON "public"."profiles" FOR UPDATE USING ((( SELECT "auth"."uid"() AS "uid") = "id"));
+CREATE POLICY "Enable users to view their own data only" ON "public"."profiles" FOR SELECT TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "id"));
 
 
 
@@ -2059,11 +2190,15 @@ ALTER TABLE "public"."PostReports" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."Posts" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "Prevent setting warning on insert" ON "public"."profiles" AS RESTRICTIVE FOR INSERT WITH CHECK (("warning" IS NULL));
+
+
+
+CREATE POLICY "Profiles update own (warning only to null)" ON "public"."profiles" FOR UPDATE TO "authenticated" USING (("id" = "auth"."uid"())) WITH CHECK ((("id" = "auth"."uid"()) AND (("warning" = "public"."_get_my_profile_warning"()) OR ("warning" IS NULL))));
+
+
+
 CREATE POLICY "Sub-community posting requires membership" ON "public"."Posts" AS RESTRICTIVE FOR INSERT TO "authenticated" WITH CHECK ((("subcommunity" IS NULL) OR "public"."can_post_to_subcommunity"("subcommunity")));
-
-
-
-CREATE POLICY "Sub-community posts require membership" ON "public"."Posts" AS RESTRICTIVE FOR SELECT TO "authenticated" USING ((("subcommunity" IS NULL) OR "public"."can_post_to_subcommunity"("subcommunity") OR "public"."is_subcommunity_manager"("subcommunity")));
 
 
 
@@ -2077,13 +2212,11 @@ END))));
 
 
 
-CREATE POLICY "Users can read their own profile" ON "public"."profiles" FOR SELECT TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "id"));
+CREATE POLICY "Users can update their own notifications" ON "public"."notifications" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
-CREATE POLICY "Users can read visible posts" ON "public"."Posts" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
-   FROM "public"."Communities" "community"
-  WHERE (("community"."id" = "Posts"."community") AND ((COALESCE("community"."private", false) IS FALSE) OR ("community"."user_id" = "auth"."uid"()) OR ("auth"."uid"() = ANY (COALESCE("community"."members", '{}'::"uuid"[]))))))));
+CREATE POLICY "Users can view their own notifications" ON "public"."notifications" FOR SELECT TO "authenticated" USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -2121,6 +2254,9 @@ ALTER TABLE "public"."direct_messages" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."message_public_keys" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."patreon_oauth_states" ENABLE ROW LEVEL SECURITY;
@@ -2303,6 +2439,13 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."_get_my_profile_warning"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."_get_my_profile_warning"() TO "anon";
+GRANT ALL ON FUNCTION "public"."_get_my_profile_warning"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."_get_my_profile_warning"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."add_community_owner_membership"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."add_community_owner_membership"() TO "anon";
 GRANT ALL ON FUNCTION "public"."add_community_owner_membership"() TO "authenticated";
@@ -2332,6 +2475,12 @@ GRANT ALL ON FUNCTION "public"."can_post_to_subcommunity"("target_subcommunity" 
 GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "anon";
 GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") TO "service_role";
 
 
 
@@ -2435,11 +2584,6 @@ GRANT ALL ON FUNCTION "public"."is_subcommunity_manager"("target_subcommunity" b
 
 
 
-GRANT ALL ON FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_oauth_profile"("requested_username" "text", "requested_birthday" "date") TO "service_role";
-
-
 REVOKE ALL ON FUNCTION "public"."is_username_available"("requested_username" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."is_username_available"("requested_username" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."is_username_available"("requested_username" "text") TO "authenticated";
@@ -2462,6 +2606,18 @@ GRANT ALL ON FUNCTION "public"."leave_community"("target_community" "uuid") TO "
 
 REVOKE ALL ON FUNCTION "public"."normalize_supporter_entitlements"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."normalize_supporter_entitlements"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."notify_on_post_like"() TO "anon";
+GRANT ALL ON FUNCTION "public"."notify_on_post_like"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."notify_on_post_like"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."notify_on_post_reply"() TO "anon";
+GRANT ALL ON FUNCTION "public"."notify_on_post_reply"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."notify_on_post_reply"() TO "service_role";
 
 
 
@@ -2645,6 +2801,12 @@ GRANT ALL ON TABLE "public"."message_public_keys" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."notifications" TO "anon";
+GRANT ALL ON TABLE "public"."notifications" TO "authenticated";
+GRANT ALL ON TABLE "public"."notifications" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."patreon_oauth_states" TO "service_role";
 
 
@@ -2664,24 +2826,128 @@ GRANT ALL ON TABLE "public"."post_replies" TO "service_role";
 
 
 GRANT ALL ON TABLE "public"."profiles" TO "anon";
-GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."profiles" TO "authenticated";
+GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."profiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."profiles" TO "service_role";
 
 
 
-GRANT UPDATE("FirstTimeOpen") ON TABLE "public"."profiles" TO "authenticated";
+GRANT INSERT("id") ON TABLE "public"."profiles" TO "authenticated";
 
 
 
-GRANT UPDATE("Language") ON TABLE "public"."profiles" TO "authenticated";
+GRANT INSERT("username") ON TABLE "public"."profiles" TO "authenticated";
 
 
 
-GRANT UPDATE("requestedDelete") ON TABLE "public"."profiles" TO "authenticated";
+GRANT INSERT("display_name") ON TABLE "public"."profiles" TO "authenticated";
 
 
 
-GRANT UPDATE("Theme") ON TABLE "public"."profiles" TO "authenticated";
+GRANT INSERT("bio") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("avatar_url") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("created_at") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("joined_communities") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("FirstTimeOpen"),UPDATE("FirstTimeOpen") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("Language"),UPDATE("Language") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("birthday") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("requestedDelete") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("paddle_customer_id") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("supporter") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("patreon_user_id") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("patreon_membership_status") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("supporter_verified_at") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("Theme"),UPDATE("Theme") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("isBusiness") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("business_description") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("business_location") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("business_latitude") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("business_longitude") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("business_contact_email") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("business_contact_phone") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("business_website") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("business_supporter") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("business_supporter_verified_at") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("connect_enabled") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT INSERT("blocked_uuids") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT UPDATE("warning") ON TABLE "public"."profiles" TO "authenticated";
 
 
 
