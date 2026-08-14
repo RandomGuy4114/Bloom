@@ -65,6 +65,13 @@ export default function PagesCreditsPage() {
         </div>
         <div className="creditElement">
             <div className="creditElementInner">
+                <h3>Elise</h3>
+                <p>Being a great friend</p>
+            </div>
+            <p className="CreditMessage">Elise is a great friend who has supported me throughout the development of Bloom.</p>
+        </div>
+        <div className="creditElement">
+            <div className="creditElementInner">
                 <h3>Juan Jose</h3>
                 <p>Doing absolutely nothing</p>
             </div>
