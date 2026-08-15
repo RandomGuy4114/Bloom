@@ -800,9 +800,7 @@ export async function reportPost(postId) {
     }
 
     const { data: post, error: postError } = await supabase
-      .from("Posts")
-      .select("*")
-      .eq("id", postId)
+      .rpc("get_visible_posts", { post_id: postId })
       .single();
     if (postError) {
       console.error("Error loading post for report:", postError.message);

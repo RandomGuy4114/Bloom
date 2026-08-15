@@ -37,9 +37,7 @@ async function loadPost() {
     return;
   }
   const { data: post, error } = await supabase
-    .from("Posts")
-    .select("title, body, user_id")
-    .eq("id", postId)
+    .rpc("get_visible_posts", { post_id: postId })
     .single();
   if (error || !post) {
     errorMessage.textContent = "Unable to load this post.";

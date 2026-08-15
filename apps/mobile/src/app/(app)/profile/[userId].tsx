@@ -65,13 +65,12 @@ export default function ProfileScreen() {
 
       if (joinedCommunityIds.length) {
         const { data, error } = await supabase
-          .from('Posts')
-          .select('*')
-          .eq('user_id', userId)
-          .in('community', joinedCommunityIds)
-          .order('created_at', { ascending: false });
+          .rpc('get_visible_posts', { target_user: userId, community_ids: joinedCommunityIds });
         if (!error && data) {
-          setPosts(await hydratePosts(data as PostRow[], viewerId));
+          const sortedPosts = (data as PostRow[]).sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          );
+          setPosts(await hydratePosts(sortedPosts, viewerId));
         } else {
           setPosts([]);
         }

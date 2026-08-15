@@ -306,12 +306,9 @@ export async function getJoinedCommunityEvents(userId, communityIds = null) {
     return [];
   }
 
-  const { data: events, error } = await supabase
-    .from("Posts")
-    .select("id, title, body, user_id, community, post_type, location, img_link, img_links, date, created_at")
-    .in("community", ids)
-    .eq("post_type", "event")
-    .order("created_at", { ascending: false });
+  const { data: unorderedEvents, error } = await supabase
+    .rpc("get_visible_posts", { community_ids: ids, post_types: ["event"] });
+  const events = (unorderedEvents ?? []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   if (error) {
     console.error("Error loading joined-community events:", error.message);

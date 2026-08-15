@@ -1,6 +1,6 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msj2vxku";
+import { supabase } from "./supabase.js?v=msurssz8";
 import {
   createPostCard,
   filterBySearch,
@@ -14,7 +14,7 @@ import {
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msj2vxku";
+} from "./main.js?v=msurssz8";
 
 // Definitions
 
@@ -127,12 +127,9 @@ async function loadTypedPosts() {
     return;
   }
 
-  const { data: posts, error: postsError } = await supabase
-    .from("Posts")
-    .select("*")
-    .in("community", joinedCommunityIds)
-    .in("post_type", ["activity", "event"])
-    .order("created_at", { ascending: false });
+  const { data: unorderedPosts, error: postsError } = await supabase
+    .rpc("get_visible_posts", { community_ids: joinedCommunityIds, post_types: ["activity", "event"] });
+  const posts = (unorderedPosts ?? []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   if (postsError) {
     console.error("Error fetching activities and events:", postsError.message);

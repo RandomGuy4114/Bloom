@@ -150,6 +150,46 @@ $$;
 ALTER FUNCTION "public"."can_post_to_subcommunity"("target_subcommunity" bigint) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_visible_posts"("post_id" "uuid" DEFAULT NULL::"uuid", "target_user" "uuid" DEFAULT NULL::"uuid", "community_ids" "uuid"[] DEFAULT NULL::"uuid"[], "subcommunity_id" bigint DEFAULT NULL::bigint, "post_types" "text"[] DEFAULT NULL::"text"[], "top_level_only" boolean DEFAULT false) RETURNS SETOF "public"."Posts"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select post.*
+  from public."Posts" post
+  join public."Communities" community on community.id = post.community
+  where (get_visible_posts.post_id is null or post.id = get_visible_posts.post_id)
+    and (get_visible_posts.target_user is null or post.user_id = get_visible_posts.target_user)
+    and (get_visible_posts.community_ids is null or post.community = any(get_visible_posts.community_ids))
+    and (get_visible_posts.subcommunity_id is null or post.subcommunity = get_visible_posts.subcommunity_id)
+    and (get_visible_posts.post_types is null or post.post_type = any(get_visible_posts.post_types))
+    and (not get_visible_posts.top_level_only or post.subcommunity is null)
+    and (
+      coalesce(community.private, false) is false
+      or community.user_id = auth.uid()
+      or auth.uid() = any(coalesce(community.members, '{}'::uuid[]))
+    )
+    and (
+      post.subcommunity is null
+      or public.can_post_to_subcommunity(post.subcommunity)
+      or public.is_subcommunity_manager(post.subcommunity)
+    )
+$$;
+
+
+ALTER FUNCTION "public"."get_visible_posts"("post_id" "uuid", "target_user" "uuid", "community_ids" "uuid"[], "subcommunity_id" bigint, "post_types" "text"[], "top_level_only" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."can_view_post"("target_post" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  select exists (select 1 from public.get_visible_posts(post_id => target_post));
+$$;
+
+
+ALTER FUNCTION "public"."can_view_post"("target_post" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."community_distance_meters"("first_latitude" double precision, "first_longitude" double precision, "second_latitude" double precision, "second_longitude" double precision) RETURNS double precision
     LANGUAGE "sql" IMMUTABLE
     SET "search_path" TO ''
@@ -2117,9 +2157,9 @@ CREATE POLICY "Authenticated users can read communities" ON "public"."Communitie
 
 
 
-CREATE POLICY "Authenticated users can report posts" ON "public"."PostReports" FOR INSERT TO "authenticated" WITH CHECK ((("reporter_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
-   FROM "public"."Posts"
-  WHERE (("Posts"."id" = "PostReports"."post_id") AND ("Posts"."user_id" <> ( SELECT "auth"."uid"() AS "uid")))))));
+CREATE POLICY "Authenticated users can report posts" ON "public"."PostReports" FOR INSERT TO "authenticated" WITH CHECK ((("reporter_id" = "auth"."uid"()) AND "public"."can_view_post"("post_id") AND (NOT (EXISTS ( SELECT 1
+   FROM "public"."get_visible_posts"("post_id" => "PostReports"."post_id") "post"
+  WHERE ("post"."user_id" = "auth"."uid"()))))));
 
 
 
@@ -2220,15 +2260,11 @@ CREATE POLICY "Users can view their own notifications" ON "public"."notification
 
 
 
-CREATE POLICY "Users create their own post likes" ON "public"."post_likes" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
-   FROM "public"."Posts" "post"
-  WHERE ("post"."id" = "post_likes"."post_id")))));
+CREATE POLICY "Users create their own post likes" ON "public"."post_likes" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = "auth"."uid"()) AND "public"."can_view_post"("post_id")));
 
 
 
-CREATE POLICY "Users create their own post replies" ON "public"."post_replies" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
-   FROM "public"."Posts" "post"
-  WHERE ("post"."id" = "post_replies"."post_id")))));
+CREATE POLICY "Users create their own post replies" ON "public"."post_replies" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = "auth"."uid"()) AND "public"."can_view_post"("post_id")));
 
 
 
@@ -2469,6 +2505,20 @@ GRANT ALL ON FUNCTION "public"."can_post_to_community"("target_community" "uuid"
 GRANT ALL ON FUNCTION "public"."can_post_to_subcommunity"("target_subcommunity" bigint) TO "anon";
 GRANT ALL ON FUNCTION "public"."can_post_to_subcommunity"("target_subcommunity" bigint) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."can_post_to_subcommunity"("target_subcommunity" bigint) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."get_visible_posts"("post_id" "uuid", "target_user" "uuid", "community_ids" "uuid"[], "subcommunity_id" bigint, "post_types" "text"[], "top_level_only" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."get_visible_posts"("post_id" "uuid", "target_user" "uuid", "community_ids" "uuid"[], "subcommunity_id" bigint, "post_types" "text"[], "top_level_only" boolean) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_visible_posts"("post_id" "uuid", "target_user" "uuid", "community_ids" "uuid"[], "subcommunity_id" bigint, "post_types" "text"[], "top_level_only" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_visible_posts"("post_id" "uuid", "target_user" "uuid", "community_ids" "uuid"[], "subcommunity_id" bigint, "post_types" "text"[], "top_level_only" boolean) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."can_view_post"("target_post" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."can_view_post"("target_post" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."can_view_post"("target_post" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_view_post"("target_post" "uuid") TO "service_role";
 
 
 

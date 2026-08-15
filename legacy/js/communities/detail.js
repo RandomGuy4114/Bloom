@@ -630,14 +630,15 @@ async function loadCommunity() {
     return;
   }
 
-  const [{ data: community, error: communityError }, { data: posts, error: postsError }] = await Promise.all([
+  const [{ data: community, error: communityError }, { data: unorderedPosts, error: postsError }] = await Promise.all([
     supabase
       .from("Communities")
       .select("name, description, user_id, banner_url, picture_url, members, global, business, private, location_label, latitude, longitude, radius_meters")
       .eq("id", communityID)
       .single(),
-    supabase.from("Posts").select("*").eq("community", communityID).is("subcommunity", null).order("created_at", { ascending: false }),
+    supabase.rpc("get_visible_posts", { community_ids: [communityID], top_level_only: true }),
   ]);
+  const posts = (unorderedPosts ?? []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   if (communityError) {
     console.error("Error fetching community details:", communityError.message);
@@ -773,18 +774,13 @@ joinCommunityButton?.addEventListener("click", async () => {
 
 // Initialization
 
-await withLoadingOverlay(async () => {
-  user = await getCurrentUserOrRedirect();
-  if (!user) {
-    return;
-  }
+user = await getCurrentUserOrRedirect();
 
-  await Promise.all([
-    showCurrentUser(user, usernameLabel),
-    loadCommunity(),
-    getUserLocation().then((location) => {
-      userLocation = location;
-    }),
-  ]);
-  updateJoinButton();
-}, "Loading community...");
+await Promise.all([
+  showCurrentUser(user, usernameLabel),
+  loadCommunity(),
+  getUserLocation().then((location) => {
+    userLocation = location;
+  }),
+]);
+updateJoinButton();

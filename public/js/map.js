@@ -1,7 +1,7 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msj2vxku";
-import { t } from "./i18n.js?v=msj2vxku";
+import { supabase } from "./supabase.js?v=msurssz8";
+import { t } from "./i18n.js?v=msurssz8";
 import {
   canUserPostToCommunity,
   formatDateTime,
@@ -9,7 +9,7 @@ import {
   getUserLocation,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msj2vxku";
+} from "./main.js?v=msurssz8";
 
 // Definitions
 
@@ -306,12 +306,9 @@ export async function getJoinedCommunityEvents(userId, communityIds = null) {
     return [];
   }
 
-  const { data: events, error } = await supabase
-    .from("Posts")
-    .select("id, title, body, user_id, community, post_type, location, img_link, img_links, date, created_at")
-    .in("community", ids)
-    .eq("post_type", "event")
-    .order("created_at", { ascending: false });
+  const { data: unorderedEvents, error } = await supabase
+    .rpc("get_visible_posts", { community_ids: ids, post_types: ["event"] });
+  const events = (unorderedEvents ?? []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   if (error) {
     console.error("Error loading joined-community events:", error.message);

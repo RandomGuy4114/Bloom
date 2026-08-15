@@ -127,12 +127,9 @@ async function loadTypedPosts() {
     return;
   }
 
-  const { data: posts, error: postsError } = await supabase
-    .from("Posts")
-    .select("*")
-    .in("community", joinedCommunityIds)
-    .in("post_type", ["activity", "event"])
-    .order("created_at", { ascending: false });
+  const { data: unorderedPosts, error: postsError } = await supabase
+    .rpc("get_visible_posts", { community_ids: joinedCommunityIds, post_types: ["activity", "event"] });
+  const posts = (unorderedPosts ?? []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   if (postsError) {
     console.error("Error fetching activities and events:", postsError.message);

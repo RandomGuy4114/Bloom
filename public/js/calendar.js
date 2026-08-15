@@ -1,7 +1,7 @@
 // Dependencies
-import { getCommunityNameFromID, getCurrentUserOrRedirect, showCurrentUser, withLoadingOverlay } from "./main.js?v=msj2vxku";
-import { supabase } from "./supabase.js?v=msj2vxku";
-import { getLanguage, t } from "./i18n.js?v=msj2vxku";
+import { getCommunityNameFromID, getCurrentUserOrRedirect, showCurrentUser, withLoadingOverlay } from "./main.js?v=msurssz8";
+import { supabase } from "./supabase.js?v=msurssz8";
+import { getLanguage, t } from "./i18n.js?v=msurssz8";
 
 // Definitions
 const usernameLabel = document.getElementById("username-label");
@@ -115,12 +115,9 @@ async function renderCalendar(User) {
   if (joinedCommunityIds.length === 0) {
     state.events = [];
   } else {
-    const { data: posts, error: postsError } = await supabase
-      .from("Posts")
-      .select("id, title, body, created_at, post_type, img_link, img_links, location, community, date")
-      .in("community", joinedCommunityIds)
-      .order("created_at", { ascending: false })
-      .eq("post_type", "event");
+    const { data: unorderedPosts, error: postsError } = await supabase
+      .rpc("get_visible_posts", { community_ids: joinedCommunityIds, post_types: ["event"] });
+    const posts = (unorderedPosts ?? []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     if (postsError) {
       console.error("Error fetching posts:", postsError.message);

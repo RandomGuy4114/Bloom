@@ -57,9 +57,12 @@ export default function SubCommunityDetailScreen() {
         getSubCommunity(subId),
         getCommunity(id),
         isSubCommunityManager(subId),
-        supabase.from('Posts').select('*').eq('subcommunity', subId).order('created_at', { ascending: false }),
+        supabase.rpc('get_visible_posts', { subcommunity_id: subId }),
       ]);
       if (postsResult.error) throw postsResult.error;
+      postsResult.data = (postsResult.data ?? []).sort(
+        (a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
 
       setSubCommunity(subData);
       setEditTitle(subData.title);

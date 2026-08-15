@@ -154,13 +154,16 @@ export default function CommunityDetailScreen() {
       setEditDescription(communityData.description ?? '');
 
       const [postsResult, joined, subsResult] = await Promise.all([
-        supabase.from('Posts').select('*').eq('community', id).is('subcommunity', null).order('created_at', { ascending: false }),
+        supabase.rpc('get_visible_posts', { community_ids: [id], top_level_only: true }),
         getJoinedCommunityIds(viewerId),
         listSubCommunities(id),
       ]);
       if (postsResult.error) throw postsResult.error;
 
-      setPosts(await hydratePosts((postsResult.data ?? []) as PostRow[], viewerId));
+      const sortedPosts = ((postsResult.data ?? []) as PostRow[]).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      setPosts(await hydratePosts(sortedPosts, viewerId));
       setJoinedIds(joined);
       setSubCommunities(subsResult.subCommunities);
       setCanCreateSub(subsResult.canCreate);

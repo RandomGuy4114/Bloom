@@ -1,6 +1,6 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msj2vxku";
+import { supabase } from "./supabase.js?v=msurssz8";
 import {
   attachPostOptions,
   attachPostTypeBadge,
@@ -13,7 +13,7 @@ import {
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msj2vxku";
+} from "./main.js?v=msurssz8";
 
 // Definitions
 
@@ -37,9 +37,7 @@ async function loadPost() {
   }
 
   const { data: post, error } = await supabase
-    .from("Posts")
-    .select("*")
-    .eq("id", postId)
+    .rpc("get_visible_posts", { post_id: postId })
     .single();
 
   if (error) {

@@ -1,13 +1,13 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msj2vxku";
+import { supabase } from "./supabase.js?v=msurssz8";
 import {
   getCurrentUserOrRedirect,
   getQueryParameter,
   PAGE_URLS,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msj2vxku";
+} from "./main.js?v=msurssz8";
 
 // Definitions
 
@@ -37,9 +37,7 @@ async function loadPost() {
     return;
   }
   const { data: post, error } = await supabase
-    .from("Posts")
-    .select("title, body, user_id")
-    .eq("id", postId)
+    .rpc("get_visible_posts", { post_id: postId })
     .single();
   if (error || !post) {
     errorMessage.textContent = "Unable to load this post.";

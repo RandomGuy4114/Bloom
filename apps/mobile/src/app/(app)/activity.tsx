@@ -81,15 +81,13 @@ export default function ActivityScreen() {
       }
 
       const { data, error: postsError } = await supabase
-        .from('Posts')
-        .select('*')
-        .in('community', joinedCommunityIds)
-        .in('post_type', ['activity', 'event'])
-        .order('created_at', { ascending: false });
+        .rpc('get_visible_posts', { community_ids: joinedCommunityIds, post_types: ['activity', 'event'] });
 
       if (postsError) throw postsError;
 
-      const rows = (data ?? []) as PostRow[];
+      const rows = ((data ?? []) as PostRow[]).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
       const communityIds = [...new Set(rows.map((row) => row.community).filter((id): id is string => Boolean(id)))];
 
       const [hydrated, communitiesResult] = await Promise.all([

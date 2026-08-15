@@ -173,12 +173,9 @@ async function renderPosts() {
 
 async function loadPosts() {
   const { data, error } = await supabase
-    .from("Posts")
-    .select("*")
-    .eq("subcommunity", subcommunityId)
-    .order("created_at", { ascending: false });
+    .rpc("get_visible_posts", { subcommunity_id: subcommunityId });
   if (error) throw error;
-  posts = data ?? [];
+  posts = (data ?? []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   await renderPosts();
 }
 

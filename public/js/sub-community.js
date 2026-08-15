@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js?v=msj2vxku";
+import { supabase } from "./supabase.js?v=msurssz8";
 import {
   getCurrentUserOrRedirect,
   getPostImageUrls,
@@ -8,8 +8,8 @@ import {
   reportPost,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msj2vxku";
-import { t } from "./i18n.js?v=msj2vxku";
+} from "./main.js?v=msurssz8";
+import { t } from "./i18n.js?v=msurssz8";
 
 const subcommunityId = new URLSearchParams(window.location.search).get("subcommunityID");
 const usernameLabel = document.getElementById("username-label");
@@ -173,12 +173,9 @@ async function renderPosts() {
 
 async function loadPosts() {
   const { data, error } = await supabase
-    .from("Posts")
-    .select("*")
-    .eq("subcommunity", subcommunityId)
-    .order("created_at", { ascending: false });
+    .rpc("get_visible_posts", { subcommunity_id: subcommunityId });
   if (error) throw error;
-  posts = data ?? [];
+  posts = (data ?? []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   await renderPosts();
 }
 

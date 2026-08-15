@@ -103,14 +103,11 @@ export default function MapScreen() {
         return;
       }
 
-      const { data, error: postsError } = await supabase
-        .from('Posts')
-        .select('id, title, body, created_at, post_type, img_link, img_links, location, community, date')
-        .in('community', joinedCommunityIds)
-        .eq('post_type', 'event')
-        .order('created_at', { ascending: false });
+      const { data: unorderedData, error: postsError } = await supabase
+        .rpc('get_visible_posts', { community_ids: joinedCommunityIds, post_types: ['event'] });
 
       if (postsError) throw postsError;
+      const data = (unorderedData ?? []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       const rows = (data ?? []) as MapEventRow[];
       const communityIds = [...new Set(rows.map((row) => row.community).filter((id): id is string => Boolean(id)))];

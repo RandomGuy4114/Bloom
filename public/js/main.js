@@ -1,7 +1,7 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msj2vxku";
-import { getLanguage, setLanguage, t } from "./i18n.js?v=msj2vxku";
+import { supabase } from "./supabase.js?v=msurssz8";
+import { getLanguage, setLanguage, t } from "./i18n.js?v=msurssz8";
 
 // Definitions
 
@@ -63,7 +63,7 @@ export async function getCurrentUserOrRedirect(redirectUrl = PAGE_URLS.login) {
   }
   applyTheme(profile?.Theme, profile?.supporter === true);
   initializeGlobalSearch();
-  import("./connect.js?v=msj2vxku")
+  import("./connect.js?v=msurssz8")
     .then(({ restoreConnect }) => restoreConnect(user))
     .catch((error) => console.error("Unable to restore Connect:", error.message));
 
@@ -800,9 +800,7 @@ export async function reportPost(postId) {
     }
 
     const { data: post, error: postError } = await supabase
-      .from("Posts")
-      .select("*")
-      .eq("id", postId)
+      .rpc("get_visible_posts", { post_id: postId })
       .single();
     if (postError) {
       console.error("Error loading post for report:", postError.message);

@@ -1,6 +1,6 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msj2vxku";
+import { supabase } from "./supabase.js?v=msurssz8";
 import {
   applyAvatar,
   clearUserProfileCache,
@@ -15,8 +15,8 @@ import {
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msj2vxku";
-import { t } from "./i18n.js?v=msj2vxku";
+} from "./main.js?v=msurssz8";
+import { t } from "./i18n.js?v=msurssz8";
 
 // Definitions
 
@@ -339,7 +339,7 @@ function computeDayStreak(postDates) {
 async function loadProfileStats(userId) {
   const [communities, posts, replies] = await Promise.all([
     supabase.from("Communities").select("id", { count: "exact", head: true }).contains("members", [userId]),
-    supabase.from("Posts").select("id, created_at").eq("user_id", userId),
+    supabase.rpc("get_visible_posts", { target_user: userId }),
     supabase.from("post_replies").select("id", { count: "exact", head: true }).eq("user_id", userId),
   ]);
 
@@ -401,12 +401,9 @@ async function loadProfile() {
     return;
   }
 
-  const { data: posts, error: postsError } = await supabase
-    .from("Posts")
-    .select("id, title, body, created_at, post_type, img_link, img_links, location, community")
-    .eq("user_id", activeUserId)
-    .in("community", joinedCommunityIds)
-    .order("created_at", { ascending: false });
+  const { data: unorderedPosts, error: postsError } = await supabase
+    .rpc("get_visible_posts", { target_user: activeUserId, community_ids: joinedCommunityIds });
+  const posts = (unorderedPosts ?? []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   if (postsError) {
     console.error("Error fetching posts:", postsError.message);
@@ -444,4 +441,7 @@ blockProfileButton.addEventListener("click", toggleProfileBlock);
 
 // Initialization
 
-await withLoadingOverlay(loadProfile, "Loading profile...");
+loadProfile().catch((error) => {
+  console.error("Error loading profile:", error);
+  renderEmptyState(postsContainer, "Unable to load profile right now.");
+});

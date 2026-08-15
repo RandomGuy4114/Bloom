@@ -74,14 +74,13 @@ export default function CalendarScreen() {
 
       setHasJoinedCommunities(true);
       const { data, error: postsError } = await supabase
-        .from('Posts')
-        .select('id, title, body, created_at, post_type, img_link, img_links, location, community, date')
-        .in('community', joinedCommunityIds)
-        .eq('post_type', 'event')
-        .order('created_at', { ascending: false });
+        .rpc('get_visible_posts', { community_ids: joinedCommunityIds, post_types: ['event'] });
 
       if (postsError) throw postsError;
-      setEvents((data ?? []) as CalendarEventRow[]);
+      const sortedEvents = ((data ?? []) as CalendarEventRow[]).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      setEvents(sortedEvents);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t('calendarLoadFailed'));
       setEvents([]);

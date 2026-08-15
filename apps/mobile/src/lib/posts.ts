@@ -26,7 +26,7 @@ export type ReplyRow = {
 };
 
 export async function fetchPost(postId: string): Promise<PostRow> {
-  const { data, error } = await supabase.from('Posts').select('*').eq('id', postId).single();
+  const { data, error } = await supabase.rpc('get_visible_posts', { post_id: postId }).single();
   if (error) throw error;
   return data as PostRow;
 }

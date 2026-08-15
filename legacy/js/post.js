@@ -37,9 +37,7 @@ async function loadPost() {
   }
 
   const { data: post, error } = await supabase
-    .from("Posts")
-    .select("*")
-    .eq("id", postId)
+    .rpc("get_visible_posts", { post_id: postId })
     .single();
 
   if (error) {
