@@ -1,5 +1,5 @@
 import { animate } from "https://cdn.jsdelivr.net/npm/motion@latest/+esm";
-import { supabase } from "./supabase.js?v=msj2vxku";
+import { supabase } from "./supabase.js?v=msuu9c6w";
 
 const homeUrl = new URL("../pages/app/home/", import.meta.url).href;
 const { data: { session } } = await supabase.auth.getSession();
