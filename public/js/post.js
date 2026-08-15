@@ -1,6 +1,6 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msurssz8";
+import { supabase } from "./supabase.js?v=msuu9c6w";
 import {
   attachPostOptions,
   attachPostTypeBadge,
@@ -13,7 +13,7 @@ import {
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msurssz8";
+} from "./main.js?v=msuu9c6w";
 
 // Definitions
 
