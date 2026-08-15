@@ -294,7 +294,7 @@ export async function reportPost(postId: string) {
         window.alert("Unable to report this post. Please try again.")
         return
     }
-    if (isPostOwner(post, user.id)) {
+    if (isPostOwner(post as RawPost, user.id)) {
         window.alert("You cannot report your own post.")
         return
     }
