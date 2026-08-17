@@ -28,7 +28,15 @@ const pageMetadata = {
     "title": "Bloom - Profile"
 }
 
-export default function PageClient() {
+interface InitialData {
+    id: string | null
+    display_name: string | null
+    username: string | null
+    Language: string | null
+    joined_communities: string[] | null
+}
+
+export default function PageClient({ initialData }: { initialData: InitialData }) {
     return (
         <PageLifecycle {...pageMetadata}>
             <>
@@ -41,14 +49,14 @@ export default function PageClient() {
                 <div className="profile-header">
                     <div className="profile-pfp"></div>
                     <div className="profile-info">
-                        <h2 className="profile-name"></h2>
-                        <p className="profile-username"></p>
+                        <h2 className="profile-name">{initialData.display_name}</h2>
+                        <p className="profile-username">{initialData.username}</p>
                     </div>
                 </div>
                 <div className="profile-details"></div>
                 <div className="profile-status">
                     <div className="statusSection">
-                        <h2 id="profileCommunitiesCount">0</h2>
+                        <h2 id="profileCommunitiesCount">{initialData.joined_communities?.length || 0}</h2>
                         <p>Communities</p>
                     </div>
                     <div className="statusSection">
@@ -70,7 +78,13 @@ export default function PageClient() {
 
             <div className="profile-posts">
                 <h2>Posts</h2>
-                <div className="posts-container"></div>
+                <div className="posts-container">
+                    <div className="loadingSkeletonPost">
+                        <div className="loadingSkeleton"></div>
+                        <div className="loadingSkeleton" style={{width: "50%"}}></div>
+                        <div className="loadingSkeleton" style={{width: "30%"}}></div>
+                    </div>
+                </div>
             </div>
 
         </div>

@@ -39,7 +39,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body>
                 <ScrollToTop />
                 <RouteTransition />
-                {children}
+                <div id="root">
+                    {children}
+                </div>
             </body>
         </html>
     )

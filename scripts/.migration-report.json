@@ -32,7 +32,8 @@
   {
     "file": "app/home.tsx",
     "routePath": "/pages/app/home/",
-    "outFile": "app/pages/app/home/page.tsx"
+    "outFile": "app/pages/app/home/page-client.tsx",
+    "note": "page.tsx hand-maintained"
   },
   {
     "file": "app/map.tsx",
@@ -47,7 +48,8 @@
   {
     "file": "app/profile.tsx",
     "routePath": "/pages/app/profile/",
-    "outFile": "app/pages/app/profile/page.tsx"
+    "outFile": "app/pages/app/profile/page-client.tsx",
+    "note": "page.tsx hand-maintained"
   },
   {
     "file": "app/settings.tsx",

@@ -3,9 +3,11 @@ import { useRouter } from "next/navigation"
 import { RiNotification3Fill, RiNotification3Line } from "@remixicon/react"
 import { motion } from "motion/react"
 import { supabase } from "../lib/supabase/client"
+import { navigateWithViewTransition } from "../lib/view-transition"
 
 interface AppNavigationProps {
     compactMobileHome?: boolean
+    initialDisplayName?: string | null
     mobile?: boolean
     showSidebar?: boolean
     showTopbarActions?: boolean
@@ -28,6 +30,7 @@ interface NotificationRecord {
 
 export default function AppNavigation({
     compactMobileHome = false,
+    initialDisplayName = null,
     mobile = false,
     showSidebar = true,
     showTopbarActions = true,
@@ -38,7 +41,7 @@ export default function AppNavigation({
     const router = useRouter()
     const destination = (page: string) => mobile ? `/mobile/${page}` : `/${page}`
     const goTo = (page: string) => {
-        router.push(destination(page))
+        navigateWithViewTransition(router, destination(page))
     }
     const preload = (page: string) => {
         router.prefetch(destination(page))
@@ -191,7 +194,7 @@ export default function AppNavigation({
                     </motion.div>
                 </div>
                 <nav id="currentUserNav" style={{ display: "flex", alignItems: "center" }}>
-                    <p id="username-label" style={{ margin: "10px" }}>{usernameLabel}</p>
+                    <p id="username-label" style={{ margin: "10px" }}>{initialDisplayName ?? usernameLabel}</p>
                     <div className="pfp-frame"></div>
                 </nav>
             </div>

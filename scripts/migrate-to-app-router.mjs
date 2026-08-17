@@ -1,4 +1,5 @@
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises"
+import { watch } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -20,6 +21,8 @@ const overrides = {
 const dynamicRoutes = new Set([
     "/pages/communities/community/",
     "/pages/communities/sub-community/",
+    "/pages/app/home/",
+    "/pages/app/profile/",
 ])
 
 const siteUrl = "https://www.trybloom.org"
@@ -79,63 +82,64 @@ function rewriteImports(source, fromDir) {
     )
 }
 
-const files = await tsxFiles(sitesRoot)
-const routeMap = []
+async function runMigration() {
+    const files = await tsxFiles(sitesRoot)
+    const routeMap = []
 
-for (const file of files) {
-    const relPath = relative(sitesRoot, file).split("\\").join("/")
-    const source = await readFile(file, "utf8")
+    for (const file of files) {
+        const relPath = relative(sitesRoot, file).split("\\").join("/")
+        const source = await readFile(file, "utf8")
 
-    let routePath = overrides[relPath]
-    if (routePath === undefined) {
-        const match = source.match(/export const pagePath = "([^"]+)"/)
-        if (!match) {
-            console.warn(`Skipping ${relPath}: no pagePath found`)
-            continue
+        let routePath = overrides[relPath]
+        if (routePath === undefined) {
+            const match = source.match(/export const pagePath = "([^"]+)"/)
+            if (!match) {
+                console.warn(`Skipping ${relPath}: no pagePath found`)
+                continue
+            }
+            routePath = match[1]
         }
-        routePath = match[1]
-    }
 
-    const fromDir = dirname(file)
-    let transformed = rewriteImports(source, fromDir)
+        const fromDir = dirname(file)
+        let transformed = rewriteImports(source, fromDir)
 
-    let seo = seoMetadata[routePath]
-    if (!seo) {
-        const metadataBlock = source.match(/const pageMetadata = \{([\s\S]*?)\n\}/)?.[1] ?? ""
-        const titleMatch = metadataBlock.match(/["']?title["']?\s*:\s*"([^"]*)"/)
-        if (titleMatch) {
-            seo = {
-                title: titleMatch[1],
-                description: "Bloom helps you discover local communities, events, and businesses near you, and makes it easy to connect with the people around you.",
+        let seo = seoMetadata[routePath]
+        if (!seo) {
+            const metadataBlock = source.match(/const pageMetadata = \{([\s\S]*?)\n\}/)?.[1] ?? ""
+            const titleMatch = metadataBlock.match(/["']?title["']?\s*:\s*"([^"]*)"/)
+            if (titleMatch) {
+                seo = {
+                    title: titleMatch[1],
+                    description: "Bloom helps you discover local communities, events, and businesses near you, and makes it easy to connect with the people around you.",
+                }
             }
         }
-    }
-    const outFile = targetFile(routePath)
-    await mkdir(dirname(outFile), { recursive: true })
-    const isDynamic = dynamicRoutes.has(routePath)
+        const outFile = targetFile(routePath)
+        await mkdir(dirname(outFile), { recursive: true })
+        const isDynamic = dynamicRoutes.has(routePath)
 
-    if (isDynamic) {
-        transformed = transformed.replace(/^export default function (\w+)/m, "export default function PageClient")
-        if (!transformed.startsWith('"use client"')) {
-            transformed = `"use client"\n\n${transformed}`
+        if (isDynamic) {
+            transformed = transformed.replace(/^export default function (\w+)/m, "export default function PageClient")
+            if (!transformed.startsWith('"use client"')) {
+                transformed = `"use client"\n\n${transformed}`
+            }
+            const clientFile = resolve(dirname(outFile), "page-client.tsx")
+            await writeFile(clientFile, transformed)
+            routeMap.push({ file: relPath, routePath, outFile: relative(projectRoot, clientFile), note: "page.tsx hand-maintained" })
+            continue
         }
-        const clientFile = resolve(dirname(outFile), "page-client.tsx")
-        await writeFile(clientFile, transformed)
-        routeMap.push({ file: relPath, routePath, outFile: relative(projectRoot, clientFile), note: "page.tsx hand-maintained" })
-        continue
-    }
 
-    if (seo) {
-        transformed = transformed.replace(/^export default function (\w+)/m, "export default function PageClient")
-        if (!transformed.startsWith('"use client"')) {
-            transformed = `"use client"\n\n${transformed}`
-        }
-        const clientFile = resolve(dirname(outFile), "page-client.tsx")
-        await writeFile(clientFile, transformed)
+        if (seo) {
+            transformed = transformed.replace(/^export default function (\w+)/m, "export default function PageClient")
+            if (!transformed.startsWith('"use client"')) {
+                transformed = `"use client"\n\n${transformed}`
+            }
+            const clientFile = resolve(dirname(outFile), "page-client.tsx")
+            await writeFile(clientFile, transformed)
 
-        const normalizedPath = routePath === "/" ? "/" : `/${routeSegmentsFromPath(routePath).join("/")}/`
-        const canonical = `${siteUrl}${normalizedPath}`
-        const serverWrapper = `import type { Metadata } from "next"
+            const normalizedPath = routePath === "/" ? "/" : `/${routeSegmentsFromPath(routePath).join("/")}/`
+            const canonical = `${siteUrl}${normalizedPath}`
+            const serverWrapper = `import type { Metadata } from "next"
 import PageClient from "./page-client"
 
 export const metadata: Metadata = {
@@ -157,21 +161,36 @@ export default function Page() {
     return <PageClient />
 }
 `
-        await writeFile(outFile, serverWrapper)
-    } else {
-        transformed = transformed.replace(/^export default function (\w+)/m, "export default function Page")
-        if (!transformed.startsWith('"use client"')) {
-            transformed = `"use client"\n\n${transformed}`
+            await writeFile(outFile, serverWrapper)
+        } else {
+            transformed = transformed.replace(/^export default function (\w+)/m, "export default function Page")
+            if (!transformed.startsWith('"use client"')) {
+                transformed = `"use client"\n\n${transformed}`
+            }
+            await writeFile(outFile, transformed)
         }
-        await writeFile(outFile, transformed)
+
+        routeMap.push({ file: relPath, routePath, outFile: relative(projectRoot, outFile) })
     }
 
-    routeMap.push({ file: relPath, routePath, outFile: relative(projectRoot, outFile) })
+    await writeFile(
+        resolve(projectRoot, "scripts/.migration-report.json"),
+        JSON.stringify(routeMap, null, 2),
+    )
+
+    console.log(`Migrated ${routeMap.length} pages.`)
 }
 
-await writeFile(
-    resolve(projectRoot, "scripts/.migration-report.json"),
-    JSON.stringify(routeMap, null, 2),
-)
+await runMigration()
 
-console.log(`Migrated ${routeMap.length} pages.`)
+if (process.argv.includes("--watch")) {
+    console.log(`Watching ${relative(projectRoot, sitesRoot)} for changes...`)
+    let pending = null
+    watch(sitesRoot, { recursive: true }, (_event, filename) => {
+        if (!filename || !filename.endsWith(".tsx")) return
+        clearTimeout(pending)
+        pending = setTimeout(() => {
+            runMigration().catch((error) => console.error("Migration failed:", error))
+        }, 150)
+    })
+}

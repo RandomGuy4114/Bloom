@@ -109,7 +109,12 @@ export default function PageClient({
                     placeholder="Search posts"
                     style={{ width: "100%", marginBottom: "10px" }}
                   />
-                  <div className="posts-container" id="com-posts" />
+                  <div className="posts-container" id="com-posts" >
+                      <div className="loadingSkeletonPost">
+                          <div className="loadingSkeleton"></div>
+                          <div className="loadingSkeleton" style={{width: "60%"}}></div>
+                      </div>
+                  </div>
                 </div>
               </div>
 

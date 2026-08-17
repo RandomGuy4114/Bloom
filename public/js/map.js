@@ -1,7 +1,7 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msurssz8";
-import { t } from "./i18n.js?v=msurssz8";
+import { supabase } from "./supabase.js?v=msx4sye2";
+import { t } from "./i18n.js?v=msx4sye2";
 import {
   canUserPostToCommunity,
   formatDateTime,
@@ -9,7 +9,7 @@ import {
   getUserLocation,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msurssz8";
+} from "./main.js?v=msx4sye2";
 
 // Definitions
 

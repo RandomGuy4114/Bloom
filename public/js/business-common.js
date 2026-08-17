@@ -1,7 +1,7 @@
 // Dependencies
 
-import { getCurrentUserOrRedirect, PAGE_URLS, showCurrentUser } from "./main.js?v=msj2vxku";
-import { supabase } from "./supabase.js?v=msj2vxku";
+import { getCurrentUserOrRedirect, PAGE_URLS, showCurrentUser } from "./main.js?v=msx4sye2";
+import { supabase } from "./supabase.js?v=msx4sye2";
 
 // Definitions
 

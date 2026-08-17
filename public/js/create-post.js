@@ -1,6 +1,6 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msj2vxku";
+import { supabase } from "./supabase.js?v=msx4sye2";
 import {
   canUserPostToCommunity,
   getCurrentUserOrRedirect,
@@ -8,7 +8,7 @@ import {
   showCurrentUser,
   withLoadingOverlay,
   withTimeout,
-} from "./main.js?v=msj2vxku";
+} from "./main.js?v=msx4sye2";
 
 // Definitions
 
@@ -182,11 +182,11 @@ postImageInput.addEventListener("change", () => {
 
 // Initialization
 
-await withLoadingOverlay(async () => {
+await (async () => {
   currentUser = await withTimeout(getCurrentUserOrRedirect(), 15000, "Authentication took too long.");
   if (!currentUser) return;
   await withTimeout(Promise.all([
     showCurrentUser(currentUser, usernameLabel),
     loadComposer(),
   ]), 25000, "Post creator took too long to load.");
-}, "Loading post creator...");
+})();

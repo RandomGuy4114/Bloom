@@ -6,9 +6,9 @@ import {
   PAGE_URLS,
   renderEmptyState,
   withLoadingOverlay,
-} from "./main.js?v=msj2vxku";
-import { initializeBusinessNavigation, requireBusinessAccount } from "./business-common.js?v=msj2vxku";
-import { supabase } from "./supabase.js?v=msj2vxku";
+} from "./main.js?v=msx4sye2";
+import { initializeBusinessNavigation, requireBusinessAccount } from "./business-common.js?v=msx4sye2";
+import { supabase } from "./supabase.js?v=msx4sye2";
 
 // Definitions
 

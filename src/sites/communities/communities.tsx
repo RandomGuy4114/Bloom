@@ -43,7 +43,8 @@ export default function PagesCommunitiesCommunitiesPage() {
             <div className="feed-updates">
                 <h1>Communities</h1>
                 <input type="search" id="communitiesSearchInput" aria-label="Search communities" placeholder="Search communities" style={{ "width": "90%", "marginBottom": "10px" } as CSSProperties} />
-                <div className="posts-container" id="communities-container"></div>
+                <div className="posts-container" id="communities-container">
+                </div>
             </div>
         </div>
     </div>

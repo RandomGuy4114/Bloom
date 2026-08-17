@@ -432,7 +432,7 @@ if (createCommunityButton && !createCommunityButton.dataset.clickBound) {
 
 // Initialization
 
-await withLoadingOverlay(async () => {
+await (async () => {
   user = await getCurrentUserOrRedirect();
   if (!user) {
     return;
@@ -446,4 +446,4 @@ await withLoadingOverlay(async () => {
   userLocation = location;
   userIsSupporter = profile?.supporter === true;
   await loadCommunities();
-}, "Loading communities...");
+})();

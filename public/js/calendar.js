@@ -1,7 +1,7 @@
 // Dependencies
-import { getCommunityNameFromID, getCurrentUserOrRedirect, showCurrentUser, withLoadingOverlay } from "./main.js?v=msurssz8";
-import { supabase } from "./supabase.js?v=msurssz8";
-import { getLanguage, t } from "./i18n.js?v=msurssz8";
+import { getCommunityNameFromID, getCurrentUserOrRedirect, showCurrentUser, withLoadingOverlay } from "./main.js?v=msx4sye2";
+import { supabase } from "./supabase.js?v=msx4sye2";
+import { getLanguage, t } from "./i18n.js?v=msx4sye2";
 
 // Definitions
 const usernameLabel = document.getElementById("username-label");

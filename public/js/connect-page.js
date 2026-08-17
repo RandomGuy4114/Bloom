@@ -8,9 +8,9 @@ import {
   showCurrentUser,
   withLoadingOverlay,
   withTimeout,
-} from "./main.js?v=msj2vxku";
-import { supabase } from "./supabase.js?v=msj2vxku";
-import { callRpc } from "./connection.js?v=msj2vxku";
+} from "./main.js?v=msx4sye2";
+import { supabase } from "./supabase.js?v=msx4sye2";
+import { callRpc } from "./connection.js?v=msx4sye2";
 
 // Definitions
 

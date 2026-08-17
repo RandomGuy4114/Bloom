@@ -1,6 +1,7 @@
 import { type FormEvent, type ReactNode, useState } from "react"
 import Link from "next/link"
 import SupporterBadge from "../SupporterBadge"
+import { motion } from "motion/react"
 
 export type PostKind = "post" | "activity" | "event"
 
@@ -218,5 +219,5 @@ export default function Post({ post, canManage = false, manageHref, onReport, on
 }
 
 export function PostList({ posts, ...postProps }: { posts: PostData[] } & Omit<PostProps, "post">) {
-    return <>{posts.map((post) => <Post key={post.id} post={post} {...postProps} />)}</>
+    return <>{posts.map((post) => <motion.div key={post.id}><Post key={post.id} post={post} {...postProps} /></motion.div>)}</>
 }

@@ -1,4 +1,5 @@
 import { usePathname, useRouter } from "next/navigation"
+import { navigateWithViewTransition } from "../lib/view-transition"
 
 export default function BusinessNavigation() {
     const router = useRouter()
@@ -11,7 +12,7 @@ export default function BusinessNavigation() {
         businessDashboard: `${mobilePrefix}/business-dashboard`,
     }
     const routeButton = (route: keyof typeof routes) => ({
-        onClick: () => router.push(routes[route]),
+        onClick: () => navigateWithViewTransition(router, routes[route]),
         onMouseEnter: () => router.prefetch(routes[route]),
         onFocus: () => router.prefetch(routes[route]),
     })
