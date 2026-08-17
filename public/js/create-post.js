@@ -1,6 +1,6 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msx5mblu";
+import { supabase } from "./supabase.js?v=msx5ymzr";
 import {
   canUserPostToCommunity,
   getCurrentUserOrRedirect,
@@ -8,7 +8,7 @@ import {
   showCurrentUser,
   withLoadingOverlay,
   withTimeout,
-} from "./main.js?v=msx5mblu";
+} from "./main.js?v=msx5ymzr";
 
 // Definitions
 

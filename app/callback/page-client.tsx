@@ -18,7 +18,9 @@ const pageMetadata = {
     ],
     "pagePath": "/pages/auth/callback/",
     "redirect": null,
-    "scripts": [],
+    "scripts": [
+        { "source": "../../../js/i18n.js", "type": "module" }
+    ],
     "styles": [],
     "title": "Bloom - Logging In"
 }

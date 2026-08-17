@@ -13,7 +13,9 @@ const pageMetadata = {
     ],
     "pagePath": "/pages/business/",
     "redirect": null,
-    "scripts": [],
+    "scripts": [
+        { "source": "../../../js/i18n.js", "type": "module" }
+    ],
     "styles": [],
     "title": "Bloom - Business"
 }

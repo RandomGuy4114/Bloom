@@ -1,1 +1,1 @@
-import "./communities/detail.js?v=msx5mblu";
+import "./communities/detail.js?v=msx5ymzr";

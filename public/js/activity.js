@@ -1,6 +1,6 @@
 // Dependencies
 
-import { supabase } from "./supabase.js?v=msx5mblu";
+import { supabase } from "./supabase.js?v=msx5ymzr";
 import {
   createPostCard,
   filterBySearch,
@@ -14,7 +14,7 @@ import {
   renderEmptyState,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msx5mblu";
+} from "./main.js?v=msx5ymzr";
 
 // Definitions
 

@@ -17,7 +17,9 @@ const pageMetadata = {
     ],
     "pagePath": "/pages/blog/",
     "redirect": null,
-    "scripts": [],
+    "scripts": [
+        { "source": "../../../js/i18n.js", "type": "module" }
+    ],
     "styles": [],
     "title": "Bloom - Blog"
 }

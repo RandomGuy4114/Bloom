@@ -14,7 +14,9 @@ const pageMetadata = {
     ],
     "pagePath": "/mobile/pages/credits/",
     "redirect": null,
-    "scripts": [],
+    "scripts": [
+        { "source": "../../../js/i18n.js", "type": "module" }
+    ],
     "styles": [],
     "title": "Bloom - Credits"
 }

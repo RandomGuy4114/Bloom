@@ -13,7 +13,9 @@ const pageMetadata = {
     ],
     "pagePath": "/mobile/pages/legal/privacy/",
     "redirect": null,
-    "scripts": [],
+    "scripts": [
+        { "source": "../../../../js/i18n.js", "type": "module" }
+    ],
     "styles": [],
     "title": "Bloom - Privacy Policy"
 }

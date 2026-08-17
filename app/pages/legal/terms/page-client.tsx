@@ -14,7 +14,9 @@ const pageMetadata = {
     ],
     "pagePath": "/pages/legal/terms/",
     "redirect": null,
-    "scripts": [],
+    "scripts": [
+        { "source": "../../../js/i18n.js", "type": "module" }
+    ],
     "styles": [],
     "title": "Bloom - Terms of Service"
 }

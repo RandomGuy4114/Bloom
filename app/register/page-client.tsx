@@ -1,10 +1,26 @@
 "use client"
 
-import { type FormEvent, useEffect, useState } from "react"
+import { type FormEvent, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
+import PageLifecycle from "@/components/PageLifecycle"
 import "@/App.css"
+
+export const pagePath = "/register/"
+
+const pageMetadata = {
+    "bodyClass": "register-page",
+    "language": "en",
+    "links": [],
+    "pagePath": "/register/",
+    "redirect": null,
+    "scripts": [
+        { "source": "../../js/i18n.js", "type": "module" }
+    ],
+    "styles": [],
+    "title": "Bloom - Register"
+}
 
 function formatDateInput(date: Date) {
     const year = date.getFullYear()
@@ -31,15 +47,6 @@ function Register() {
 
     const youngestBirthday = yearsAgo(13)
     const oldestBirthday = yearsAgo(120)
-
-    useEffect(() => {
-        document.body.classList.add("register-page")
-        document.title = "Bloom - Register"
-
-        return () => {
-            document.body.classList.remove("register-page")
-        }
-    }, [])
 
     async function handleRegister(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -132,7 +139,7 @@ function Register() {
     }
 
     return (
-        <>
+        <PageLifecycle {...pageMetadata}>
             <div className="CenterBox">
                 <h1 style={{ textAlign: "center", marginBottom: 0 }}>Welcome To Bloom!</h1>
                 <p style={{ textAlign: "center", marginTop: 4, fontSize: 14, color: "grey" }}>
@@ -276,7 +283,7 @@ try {
                     <div className="loading-spinner" />
                 </div>
             )}
-        </>
+        </PageLifecycle>
     )
 }
 

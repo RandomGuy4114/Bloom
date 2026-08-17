@@ -654,7 +654,10 @@ const spanish = {
   "Loading activities and events...": "Cargando actividades y eventos...",
   "No events match your search.": "Ningún evento coincide con tu búsqueda.",
   "No events are available.": "No hay eventos disponibles.",
-  "Konami Code activated! You found the secret!": "¡Código Konami activado! ¡Encontraste el secreto!"
+  "Konami Code activated! You found the secret!": "¡Código Konami activado! ¡Encontraste el secreto!",
+  "You have been warned for breaking Bloom's terms of service.": "Has recibido una advertencia por infringir los términos de servicio de Bloom.",
+  "Someone": "Alguien",
+  "a community": "una comunidad"
 };
 
 let currentLanguage = supportedLanguages.has(localStorage.getItem(languageStorageKey))

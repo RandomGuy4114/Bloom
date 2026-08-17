@@ -1,8 +1,24 @@
-import { type FormEvent, useEffect, useState } from "react"
+import { type FormEvent, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase/client"
+import PageLifecycle from "../../components/PageLifecycle"
 import "../../App.css"
+
+export const pagePath = "/login/"
+
+const pageMetadata = {
+    "bodyClass": "login-page",
+    "language": "en",
+    "links": [],
+    "pagePath": "/login/",
+    "redirect": null,
+    "scripts": [
+        { "source": "../../js/i18n.js", "type": "module" }
+    ],
+    "styles": [],
+    "title": "Bloom - Login"
+}
 
 function Login() {
     const router = useRouter()
@@ -10,15 +26,6 @@ function Login() {
     const [password, setPassword] = useState("")
     const [message, setMessage] = useState("")
     const [loading, setLoading] = useState(false)
-
-    useEffect(() => {
-        document.body.classList.add("login-page")
-        document.title = "Bloom - Login"
-
-        return () => {
-            document.body.classList.remove("login-page")
-        }
-    }, [])
 
     async function handleLogin(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -109,7 +116,7 @@ function Login() {
     }
 
     return (
-        <>
+        <PageLifecycle {...pageMetadata}>
             <div className="CenterBox">
                 <h1 style={{ textAlign: "center", marginBottom: 0 }}>Welcome Back To Bloom!</h1>
                 <p style={{ textAlign: "center", marginTop: 4, fontSize: 14, color: "grey" }}>
@@ -187,7 +194,7 @@ function Login() {
                     <div className="loading-spinner" />
                 </div>
             )}
-        </>
+        </PageLifecycle>
     )
 }
 
