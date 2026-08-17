@@ -1,9 +1,9 @@
 // Dependencies
 
-import { initializeBusinessNavigation, requireBusinessAccount } from "./business-common.js?v=msx4sye2";
-import { applyTheme, getAvailableThemes, PAGE_URLS, withLoadingOverlay } from "./main.js?v=msx4sye2";
-import { getLanguage, setLanguage } from "./i18n.js?v=msx4sye2";
-import { supabase } from "./supabase.js?v=msx4sye2";
+import { initializeBusinessNavigation, requireBusinessAccount } from "./business-common.js?v=msx5mblu";
+import { applyTheme, getAvailableThemes, PAGE_URLS, withLoadingOverlay } from "./main.js?v=msx5mblu";
+import { getLanguage, setLanguage } from "./i18n.js?v=msx5mblu";
+import { supabase } from "./supabase.js?v=msx5mblu";
 
 // Definitions
 

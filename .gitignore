@@ -6,6 +6,7 @@ node_modules/
 next-env.d.ts
 dist/
 dist-ssr/
+tsconfig.tsbuildinfo
 
 # Generated at build time by scripts/sync-legacy.mjs
 src/generated/

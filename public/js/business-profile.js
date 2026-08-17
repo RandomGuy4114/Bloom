@@ -1,8 +1,8 @@
 // Dependencies
 
-import { initializeBusinessNavigation, requireBusinessAccount } from "./business-common.js?v=msx4sye2";
-import { withLoadingOverlay } from "./main.js?v=msx4sye2";
-import { supabase } from "./supabase.js?v=msx4sye2";
+import { initializeBusinessNavigation, requireBusinessAccount } from "./business-common.js?v=msx5mblu";
+import { withLoadingOverlay } from "./main.js?v=msx5mblu";
+import { supabase } from "./supabase.js?v=msx5mblu";
 
 // Definitions
 
