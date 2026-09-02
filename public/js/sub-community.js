@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js?v=msx5ymzr";
+import { supabase } from "./supabase.js?v=mtk6ih8q";
 import {
   getCurrentUserOrRedirect,
   getPostImageUrls,
@@ -8,8 +8,8 @@ import {
   reportPost,
   showCurrentUser,
   withLoadingOverlay,
-} from "./main.js?v=msx5ymzr";
-import { t } from "./i18n.js?v=msx5ymzr";
+} from "./main.js?v=mtk6ih8q";
+import { t } from "./i18n.js?v=mtk6ih8q";
 
 const subcommunityId = new URLSearchParams(window.location.search).get("subcommunityID");
 const usernameLabel = document.getElementById("username-label");

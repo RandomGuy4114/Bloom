@@ -1,28 +1,22 @@
 // Dependencies
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js";
+import { createBrowserClient } from "https://esm.sh/@supabase/ssr";
 
 // Definitions
+//
+// This must use the same cookie-backed session storage as the Next.js app's
+// client (src/lib/supabase/client.ts). The legacy pages previously created a
+// separate client backed by localStorage, so a session established via the
+// new login/Google OAuth flow (which is cookie-based) was invisible here,
+// causing getCurrentUserOrRedirect() to bounce logged-in users back to the
+// legacy login screen.
 
 const clientKey = "__bloomSupabaseClient";
 
 if (!globalThis[clientKey]) {
-  globalThis[clientKey] = createClient(
+  globalThis[clientKey] = createBrowserClient(
     "https://auilmosognuitlpoqchn.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1aWxtb3NvZ251aXRscG9xY2huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMTk4NDQsImV4cCI6MjA5ODU5NTg0NH0.13MZws5hs7hg7o3N6Ojz-nEi0qVBhGMkxJcwc9o-DVc",
-    {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storage: window.localStorage,
-      },
-      global: {
-        headers: {
-          "X-Client-Info": "bloom-web",
-        },
-      },
-    },
+    "sb_publishable_tk45nARRDwS9I4iLJ-8KbA_iqq_avnG",
   );
 }
 
